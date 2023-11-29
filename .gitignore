@@ -1,0 +1,20 @@
+# Ignore compiled Python files
+__pycache__/
+
+# Ignore local configuration files
+config.local.yaml
+
+# Ignore temporary or generated files
+*.log
+*.out
+
+# Ignore raw data because too large and old pre-processed data
+eeg_data/raw/
+eeg_data/old/
+# Ignore system-specific files
+.DS_Store
+Thumbs.db
+
+# Ignore virtual environment files
+venv/
+
