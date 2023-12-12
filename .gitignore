@@ -8,9 +8,8 @@ config.local.yaml
 *.log
 *.out
 
-# Ignore raw data because too large and old pre-processed data
-eeg_data/raw/
-eeg_data/old/
+# Ignore eeg data because too large -> TODO: add datalad backup?
+eeg_data/
 # Ignore system-specific files
 .DS_Store
 Thumbs.db
