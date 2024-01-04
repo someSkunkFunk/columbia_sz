@@ -7,11 +7,11 @@ def get_subj_cat(subj_num, eeg_dir=None):
     """
     if eeg_dir is None:
         # lookup based on folder structure of eeg_dir, default:
-        eeg_dir = os.path.join(os.getcwd(), '..', "eeg_data")
-    hc_folder = os.path.join(eeg_dir, "hc")
-    sp_folder = os.path.join(eeg_dir, "sp")
+        eeg_dir = os.path.join( '..', "eeg_data")
+    hc_folder = os.path.join(eeg_dir, "raw", "hc")
+    sp_folder = os.path.join(eeg_dir, "raw","sp")
 
-
+    # print("eeg_dir: ", eeg_dir)
     if os.path.exists(os.path.join(hc_folder, subj_num)):
         return "hc"
     elif os.path.exists(os.path.join(sp_folder, subj_num)):
