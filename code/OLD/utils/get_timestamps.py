@@ -4,7 +4,7 @@ import os
 from scipy import signal
 from utils import get_lp_env, set_thresh, segment, get_stim_wav, match_waves
     
-def get_timestamps(subj_eeg, eeg_dir, subj_num, choose_hc_sp, stims_dict, blocks):
+def get_timestamps(subj_eeg, eeg_dir, subj_num, subj_cat, stims_dict, blocks):
     fs_audio = stims_dict['fs'][0] # 11025 foriginally #TODO: UNHARDCODE
     fs_eeg = 2400 #TODO: UNHARDCODE
     segment_blocks=False 
@@ -14,12 +14,11 @@ def get_timestamps(subj_eeg, eeg_dir, subj_num, choose_hc_sp, stims_dict, blocks
     lpf_cut = 0.1 # lowpass cutoff for envelope-based segmetation
 
     # store indices for each block {"block_num":{"stim_nm": (start, end, rconfidence)}}
-    stim_start_end = {}
-    confidence_vals = []
+    timestamps = {}
     for block_num in blocks:
-        stim_start_end[block_num] = {}
+        timestamps[block_num] = {}
         # get stim order file
-        stim_order_fnm = os.path.join(eeg_dir, choose_hc_sp, 
+        stim_order_fnm = os.path.join(eeg_dir, subj_cat, 
                                     subj_num, "original",
                                     "_".join([block_num, "stimorder.mat"])
                                     )
@@ -68,7 +67,7 @@ def get_timestamps(subj_eeg, eeg_dir, subj_num, choose_hc_sp, stims_dict, blocks
                         continue
                     elif (x.size < stim_wav.size) and (segment_ii+1) == len(block_segments):
                         # stim missing and no confidence will be calculated
-                        stim_start_end[block_num][stim_nm] = (None, None, None)
+                        timestamps[block_num][stim_nm] = (None, None, None)
 
                     print("checkpoint: matching waves")
                     # NOTE: stim_on_off is relative to segment start, not full block recording
@@ -79,19 +78,19 @@ def get_timestamps(subj_eeg, eeg_dir, subj_num, choose_hc_sp, stims_dict, blocks
                         stim_start = np.where(stim_on_off)[0][0] + np.where(block_on_off)[0][0]
                         stim_end = np.where(stim_on_off)[0][1] + np.where(block_on_off)[0][0]
                         # save indices and confidence 
-                        stim_start_end[block_num][stim_nm] = (stim_start, stim_end, confidence_val)
+                        timestamps[block_num][stim_nm] = (stim_start, stim_end, confidence_val)
                         # don't look at recording up to this point again
                         block_segments[segment_ii] = x[np.where(stim_on_off)[0][0]:] 
                         # move onto next stim
                         break
                     else:
                         # missing stims
-                        stim_start_end[block_num][stim_nm] = (None, None, confidence_val)
+                        timestamps[block_num][stim_nm] = (None, None, confidence_val)
                         # move onto next stim
                         break
             else:
                 if (x.size < stim_wav.size):
-                    stim_start_end[block_num][stim_nm] = (None, None, None)
+                    timestamps[block_num][stim_nm] = (None, None, None)
                     continue
 
                 print("checkpoint: matching waves")
@@ -102,7 +101,7 @@ def get_timestamps(subj_eeg, eeg_dir, subj_num, choose_hc_sp, stims_dict, blocks
                     stim_start = np.where(stim_on_off)[0][0] + prev_end
                     stim_end = np.where(stim_on_off)[0][1] + prev_end
                     # save indices and confidence 
-                    stim_start_end[block_num][stim_nm] = (stim_start, stim_end, confidence_val)
+                    timestamps[block_num][stim_nm] = (stim_start, stim_end, confidence_val)
                     # don't look at recording up to this point again
                     if which_corr.lower() == 'envs':
                         x = rec_env[stim_end:]
@@ -115,7 +114,7 @@ def get_timestamps(subj_eeg, eeg_dir, subj_num, choose_hc_sp, stims_dict, blocks
                     continue
                 else:
                     # missing stims
-                    stim_start_end[block_num][stim_nm] = (None, None, confidence_val)
+                    timestamps[block_num][stim_nm] = (None, None, confidence_val)
                     # move onto next stim
                     continue
-    return stim_start_end
+    return timestamps

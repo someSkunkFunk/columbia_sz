@@ -12,3 +12,4 @@ from .mat2dict import mat2dict
 from .make_time_vector import make_time_vector
 from .load_subj_data import load_subj_data
 from .load_stims_dict import load_stims_dict
+from .match_waves import match_waves

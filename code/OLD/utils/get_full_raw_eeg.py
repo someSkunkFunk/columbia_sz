@@ -1,10 +1,10 @@
 import os
 import h5py
 import numpy as np
-def get_full_raw_eeg(eeg_dir, subj_cat:str, subj_num:str, blocks=None):
+def get_full_raw_eeg(raw_dir, subj_cat:str, subj_num:str, blocks=None):
     
     """
-    eeg_dir: root directory where eeg data is stored
+    raw_dir: root directory where raw eeg data is stored
     subj_cat: ("hc" or "sp") sub-directory for healthy control subjects or schizophrenia patients
     subj_num: individual subject number
     blocks: which blocks to get for that subject
@@ -15,7 +15,6 @@ def get_full_raw_eeg(eeg_dir, subj_cat:str, subj_num:str, blocks=None):
         # get all 6 blocks by default
         blocks = [f"B{ii}" for ii in range(1, 6+1)]
     # get raw data hdf5 fnms
-    raw_dir=os.path.join(eeg_dir, "raw")
     eeg_fnms = [fnm for fnm in os.listdir(os.path.join(raw_dir, subj_cat, subj_num, "original")) if fnm.endswith('.hdf5')]
     #NOTE: below assumes data for all six blocks present in original folder
     #NOTE: also assumes that block names in order.. for subj 3244 B1 was not present but eeg_fnms_dict assigned keys w block names

@@ -31,7 +31,7 @@ blocks = [f"B{ii}" for ii in range(1, n_blocks+1)]
 
 
 #%%
-# get timestamps, then preprocess
+# setup
 filt_band_lims = [1.0, 15] #Hz; highpass, lowpass cutoffs
 filt_o = 3 # order of filter (effective order x2 of this since using zero-phase)
 fs_trf = 100 # Hz, downsample frequency for trf analysis
@@ -39,96 +39,63 @@ processed_dir_path=os.path.join(eeg_dir, "preprocessed") #directory where proces
 #NOTE: need to uncomment bottom line when running slurm job via bash, commented for debugging purposes
 # subj_num=os.environ["subj_num"] #TODO: make bash go thru list of all subjects
 subj_cat=utils.get_subj_cat(subj_num) #note: checked get_subj_cat, should be fine
+raw_dir=os.path.join(eeg_dir, "raw")
+subj_eeg = utils.get_full_raw_eeg(raw_dir, subj_cat, subj_num, blocks=blocks)
 
-subj_eeg = utils.get_full_raw_eeg(eeg_dir, subj_cat, subj_num, blocks=blocks)
-#NOTE:CODE UPDATED UP TO THIS POINT
-#%%
+#%% 
+# Find timestamps
 save_path = os.path.join(processed_dir_path, subj_cat, subj_num)
 # check if directory exists, else make one
 if not os.path.isdir(save_path):
-    os.mkdir(save_path)
+    print(f"preprocessed dir for {subj_num, subj_cat} not found, creating one.")
+    os.makedirs(save_path, exist_ok=True)
 # check if timestamps fl exists already
-stim_start_end_pkl = os.path.join(save_path, f"{subj_num}_stim_start_end.pkl")
-if os.path.exists(stim_start_end_pkl):
+timestamps_path = os.path.join(save_path, f"{subj_num}_timestamps.pkl")
+if os.path.exists(timestamps_path):
     # if already have timestamps, load from pkl:
-    print(f"{subj_num, choose_hc_sp} already has timestamps, loading from pkl...")
-    with open(stim_start_end_pkl, 'rb') as pkl_fl: 
-        stim_start_end = pickle.load(pkl_fl)
+    print(f"{subj_num, subj_cat} already has timestamps, loading from pkl.")
+    with open(timestamps_path, 'rb') as pkl_fl: 
+        timestamps = pickle.load(pkl_fl)
 else:
-    print(f"finding timestamps for {subj_num, choose_hc_sp} ...")
+    print(f"Generating timestamps for {subj_num, subj_cat} ...")
     # get timestamps
-    stim_start_end = utils.get_timestamps(subj_eeg, eeg_dir, subj_num, choose_hc_sp, stims_dict, blocks)
+    timestamps = utils.get_timestamps(subj_eeg, raw_dir, subj_num, subj_cat, stims_dict, blocks)
     #  save stim timestamps
-    with open(os.path.join(save_path, subj_num+'_stim_start_end.pkl'), 'wb') as f:
-        pickle.dump(stim_start_end, f)
+    with open(os.path.join(save_path, subj_num+'_timestamps.pkl'), 'wb') as f:
+        pickle.dump(timestamps, f)
+#%%
 # preprocess each block separately
-if os.path.exists(os.path.join(save_path, subj_num+"_prepr_data.pkl")) and not redoing:
-    continue
-elif os.path.exists(os.path.join(save_path, subj_num+"_prepr_data.pkl")) and redoing:
-    print(f'deleting existing preprocessed file for subj {subj_num}')
-    os.remove(os.path.join(save_path, subj_num+"_prepr_data.pkl"))
-    print(f're-slicing time stamps for {subj_num}')
-    stim_start_end_ds = {}
-    print(f"Start: preprocessing for {subj_num, choose_hc_sp}")
-    for block, raw_eeg in subj_eeg.items():
-        print(f"start: {block}")
-        stim_start_end_ds[block] = {}
-        # filter and resample
-        if fs_eeg / 2 <= fs_trf:
-            raise NotImplementedError("Nyquist") 
-        sos = signal.butter(filt_o, filt_band_lims, btype='bandpass', output='sos', fs=fs_eeg)
-        raw_eeg = signal.sosfiltfilt(sos, raw_eeg, axis=0)
-        ds_factor = int(np.floor((raw_eeg.shape[0]-1)*(fs_trf/fs_eeg)))
-        subj_eeg[block] = signal.resample(raw_eeg, ds_factor, axis=0)
-        # resample timestamps
-        for stim_nm, (start, end, confidence) in stim_start_end[block].items():
-            if start is not None:
-                s_ds = int(np.floor(start*(fs_trf/fs_eeg)))
-                e_ds = int(np.floor(end*(fs_trf/fs_eeg))) #NOTE: off by one error maybe?
-                stim_start_end_ds[block][stim_nm] = (s_ds, e_ds, confidence)
-            else:
-                stim_start_end_ds[block][stim_nm] = (None, None, confidence)
-    # align downsampled eeg using ds timestamps
-    print(f"Preprocessing done for {subj_num, choose_hc_sp}. algining and slicing eeg")
-    #TODO: resulting pkl file has nothing... probably align responses doing something weird?
-    subj_data = utils.align_responses(subj_eeg, stim_start_end_ds, stims_dict)
-    subj_data['fs'] = fs_trf
-    print("subj_data before pickling:")
-    print(subj_data.head())
-    # print("shape of eeg response for first stim:", subj_data['eeg'][0].shape)
-    subj_data.to_pickle(os.path.join(save_path, subj_num+"_prepr_data.pkl"))
-    print(f"{subj_num, choose_hc_sp} preprocessing and segmentation complete.")
-else:
-    stim_start_end_ds = {}
-    print(f"Start: preprocessing for {subj_num, choose_hc_sp}")
-    for block, raw_eeg in subj_eeg.items():
-        print(f"start: {block}")
-        stim_start_end_ds[block] = {}
-        # filter and resample
-        if fs_eeg / 2 <= fs_trf:
-            raise NotImplementedError("Nyquist") 
-        sos = signal.butter(filt_o, filt_band_lims, btype='bandpass', output='sos', fs=fs_eeg)
-        raw_eeg = signal.sosfiltfilt(sos, raw_eeg, axis=0)
-        ds_factor = int(np.floor((raw_eeg.shape[0]-1)*(fs_trf/fs_eeg)))
-        subj_eeg[block] = signal.resample(raw_eeg, ds_factor, axis=0)
-        # resample timestamps
-        for stim_nm, (start, end, confidence) in stim_start_end[block].items():
-            if start is not None:
-                s_ds = int(np.floor(start*(fs_trf/fs_eeg)))
-                e_ds = int(np.floor(end*(fs_trf/fs_eeg))) #NOTE: off by one error maybe?
-                stim_start_end_ds[block][stim_nm] = (s_ds, e_ds, confidence)
-            else:
-                stim_start_end_ds[block][stim_nm] = (None, None, confidence)
 
-    # align downsampled eeg using ds timestamps
-    print(f"Preprocessing done for {subj_num, choose_hc_sp}. algining and slicing eeg")
-    #TODO: resulting pkl file has nothing... probably align responses doing something weird?
-    subj_data = utils.align_responses(subj_eeg, stim_start_end_ds, stims_dict)
-    subj_data['fs'] = fs_trf
-    print("subj_data before pickling:")
-    print(subj_data.head())
-    subj_data.to_pickle(os.path.join(save_path, subj_num+"_prepr_data.pkl"))
-    print(f"{subj_num, choose_hc_sp} preprocessing and segmentation complete.")
+timestamps_ds = {}
+print(f"Start: preprocessing for {subj_num, subj_cat}")
+for block, raw_eeg in subj_eeg.items():
+    print(f"start: {block}")
+    timestamps_ds[block] = {}
+    # filter and resample
+    if fs_eeg / 2 <= fs_trf:
+        raise NotImplementedError("Nyquist") 
+    sos = signal.butter(filt_o, filt_band_lims, btype='bandpass', output='sos', fs=fs_eeg)
+    raw_eeg = signal.sosfiltfilt(sos, raw_eeg, axis=0)
+    ds_factor = int(np.floor((raw_eeg.shape[0]-1)*(fs_trf/fs_eeg)))
+    subj_eeg[block] = signal.resample(raw_eeg, ds_factor, axis=0)
+    # resample timestamps
+    for stim_nm, (start, end, confidence) in timestamps[block].items():
+        if start is not None:
+            s_ds = int(np.floor(start*(fs_trf/fs_eeg)))
+            e_ds = int(np.floor(end*(fs_trf/fs_eeg))) #NOTE: off by one error maybe?
+            timestamps_ds[block][stim_nm] = (s_ds, e_ds, confidence)
+        else:
+            timestamps_ds[block][stim_nm] = (None, None, confidence)
+#%%
+# align downsampled eeg using ds timestamps
+print(f"Preprocessing done for {subj_num, subj_cat}. algining and slicing eeg")
+#TODO: resulting pkl file has nothing... probably align responses doing something weird?
+subj_data = utils.align_responses(subj_eeg, timestamps_ds, stims_dict)
+subj_data['fs'] = fs_trf
+print("subj_data before pickling:")
+print(subj_data.head())
+subj_data.to_pickle(os.path.join(save_path, "aligned_resp.pkl"))
+print(f"{subj_num, subj_cat} preprocessing and segmentation complete.")
 # break
 
 
@@ -140,8 +107,8 @@ else:
 # check result for one subject
 #NOTE: visually not very convincing but we had a shitty audio to begin with, then filtered and downsampled it so....
 subj_num = "3253"
-choose_hc_sp = "hc"
-with open(os.path.join(os.getcwd(), choose_hc_sp, subj_num, subj_num+"_prepr_data.pkl"), 'rb') as pkl_fl:
+subj_cat = "hc"
+with open(os.path.join(os.getcwd(), subj_cat, subj_num, "aligned_resp.pkl"), 'rb') as pkl_fl:
     subj_data = pickle.load(pkl_fl)
 
 
