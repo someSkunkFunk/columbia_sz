@@ -16,13 +16,13 @@ import matplotlib.pyplot as plt
 import utils
 #%% 
 # specify fl paths assumes running from code as pwd
-eeg_dir =os.path.join("..", "eeg_data")
+eeg_dir=os.path.join("..", "eeg_data")
 # stim_fnm = "master_stim_file_schiz_studybis.mat" # note this is original fnm from box, we changed to just stim_info.mat
 stim_fnm="stim_info.mat"
 stim_fl_path=os.path.join(eeg_dir, "stim_info.mat")
-stims_dict = utils.get_stims_dict(stim_fl_path)
-fs_audio = stims_dict['fs'][0] # 11025 foriginally
-fs_eeg = 2400
+stims_dict=utils.get_stims_dict(stim_fl_path)
+fs_audio=stims_dict['fs'][0] # 11025 foriginally
+fs_eeg=2400
 
 
 n_blocks = 6

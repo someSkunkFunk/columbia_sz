@@ -301,12 +301,12 @@ def get_timestamps(subj_eeg, eeg_dir, subj_num, subj_cat, stims_dict, blocks):
             # downsample envelope/wav depending on which is selected for wave matching
             if which_corr.lower() == 'wavs':
                 # will "undersample" since sampling frequencies not perfect ratio
-                y = signal.resample(stim_wav, int(np.floor(stim_dur*fs_eeg))) 
+                y = signal.resample(stim_wav, int(np.floor(stim_dur*fs_eeg)+1)) 
             elif which_corr.lower() == 'envs':
                 # will "undersample" since sampling frequencies not perfect ratio
-                y = signal.resample(stim_env, int(np.floor(stim_dur*fs_eeg))) 
+                y = signal.resample(stim_env, int(np.floor(stim_dur*fs_eeg)+1)) 
                 
-            if (x.size < stim_wav.size):
+            if (x.size < y.size):
                 timestamps[block_num][stim_nm] = (None, None, None)
                 continue
 
@@ -408,21 +408,23 @@ def match_waves(x, y, confidence_lims:list, fs:int):
             on_off_times = None
             break
             
-        window_end = window_start + int(round(fs * window_size))
+        window_end = window_start + window_size
         if x[window_start:].size < y.size:
             raise NotImplementedError(f"Remaining recording envelope size is too small for stim size.")
             # on_off_times = None
             # break
-        if window_end < x.size:
+        # default case: window bounds within x range
+        if window_end <= x.size:
             r = signal.correlate(x[window_start:window_end], y, mode='valid')
             lags = signal.correlation_lags(x[window_start:window_end].size, y.size, mode='valid')
+        # if window end extends beyond last sample in x, correlate just what's left of x
         else:
             r = signal.correlate(x[window_start:], y, mode='valid')
             lags = signal.correlation_lags(x[window_start:].size, y.size, mode='valid')
 
         
-        
-        sync_lag = lags[np.argmax(np.abs(r))]
+        #NOTE: not off my one.... i think
+        sync_lag = lags[np.argmax(np.abs(r))] + window_start 
         confidence = pearsonr(x[sync_lag:sync_lag+y.size], y).statistic
         if thresh == max_thresh:
             #only save on first run through recording
@@ -437,6 +439,6 @@ def match_waves(x, y, confidence_lims:list, fs:int):
             # break
 
         # slide window until confidence threshold is reached
-        window_start += int(round(fs * window_size/2))
+        window_start += int(window_size/2)
     
     return on_off_times, confidence_val
