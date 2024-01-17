@@ -124,6 +124,7 @@ import numpy as np
 def get_full_raw_eeg(raw_dir, subj_cat:str, subj_num:str, blocks=None):
     
     """
+    ASSUMES DATA FOR ALL 6 BLOCKS IS PRESENT IN RAW FOLDER
     raw_dir: root directory where raw eeg data is stored
     subj_cat: ("hc" or "sp") sub-directory for healthy control subjects or schizophrenia patients
     subj_num: individual subject number
@@ -136,6 +137,8 @@ def get_full_raw_eeg(raw_dir, subj_cat:str, subj_num:str, blocks=None):
         blocks = [f"B{ii}" for ii in range(1, 6+1)]
     # get raw data hdf5 fnms
     eeg_fnms = [fnm for fnm in os.listdir(os.path.join(raw_dir, subj_cat, subj_num, "original")) if fnm.endswith('.hdf5')]
+    #NOTE LISTDIR DOESN'T GIVE THEM IN ORDER, sorting assumes block data files names consistent acrosss subjects
+    eeg_fnms.sort()
     #NOTE: below assumes data for all six blocks present in original folder
     #NOTE: also assumes that block names in order.. for subj 3244 B1 was not present but eeg_fnms_dict assigned keys w block names
     # that were off by one because of it...
@@ -176,11 +179,12 @@ def get_missing_stim_nms(timestamps):
                 missing_stims.append(stim_nm)
     return missing_stims
 
-def get_stim_wav(stims_dict, stim_nm, has_wav:bool, noisy_or_clean='noisy'):
-    if has_wav:
+def get_stim_wav(stims_dict, stim_nm:str, noisy_or_clean='noisy'):
+    if stim_nm.lower().endswith('.wav'):
         # remove '.wav' from name to match stim mat file
         stim_indx = stims_dict['ID'] == stim_nm[:-4]
     else:
+        # assume just string of name
         stim_indx = stims_dict['ID'] == stim_nm
     
     if noisy_or_clean == 'noisy':
@@ -279,9 +283,10 @@ def get_timestamps(subj_eeg, eeg_dir, subj_num, subj_cat, stims_dict, blocks):
         block_stim_order = spio.loadmat(stim_order_fnm, squeeze_me=True)['StimOrder']
         # get recording envelope
         rec_wav = subj_eeg[block_num][:,-1]
-        rec_env = np.abs(signal.hilbert(rec_wav))
+        
 
         if which_corr.lower() == 'envs':
+            rec_env = np.abs(signal.hilbert(rec_wav))
             x = rec_env
         elif which_corr.lower() =='wavs':
             x = rec_wav
@@ -291,14 +296,14 @@ def get_timestamps(subj_eeg, eeg_dir, subj_num, subj_cat, stims_dict, blocks):
         for stim_ii, stim_nm in enumerate(block_stim_order):
             print(f"processing stim {stim_ii+1} of {block_stim_order.size}")
             # grab stim wav
-            stim_wav_og = get_stim_wav(stims_dict, stim_nm, has_wav=True)
+            stim_wav_og = get_stim_wav(stims_dict, stim_nm)
             stim_dur = (stim_wav_og.size - 1)/fs_audio
             #TODO: what if window only gets part of stim? 
             # apply antialiasing filter to stim wav and get envelope  
             sos = signal.butter(8, fs_eeg/3, fs=fs_audio, output='sos')
             stim_wav = signal.sosfiltfilt(sos, stim_wav_og)
             stim_env = np.abs(signal.hilbert(stim_wav))
-            # downsample envelope/wav depending on which is selected for wave matching
+            # downsample envelope or wav to eeg fs
             if which_corr.lower() == 'wavs':
                 # will "undersample" since sampling frequencies not perfect ratio
                 y = signal.resample(stim_wav, int(np.floor(stim_dur*fs_eeg)+1)) 
@@ -310,10 +315,12 @@ def get_timestamps(subj_eeg, eeg_dir, subj_num, subj_cat, stims_dict, blocks):
                 timestamps[block_num][stim_nm] = (None, None, None)
                 continue
 
-            print("checkpoint: matching waves")
-            stim_on_off, confidence_val = match_waves(x, y, confidence_lims, fs_eeg)
-            print("checkpoint: waves matched")
-            if stim_on_off is not None:
+            print("matching waves")
+            stim_on_off, confidence_val, over_thresh = match_waves(x, y, confidence_lims, fs_eeg)
+            print(f"confidence_val: {confidence_val}, above threshold: {over_thresh}")
+            #NOTE: code below used to depend on stim_on_off being none, but now checks over_thresh to decide 
+            # if timestamps should be recorded
+            if over_thresh:
 
                 stim_start = np.where(stim_on_off)[0][0] + prev_end
                 stim_end = np.where(stim_on_off)[0][1] + prev_end
@@ -376,7 +383,7 @@ def load_stims_dict():
 from scipy import signal
 from scipy.stats import pearsonr
 import numpy as np
-def match_waves(x, y, confidence_lims:list, fs:int):
+def match_waves(x, y, confidence_lims:list, fs:int, standardize=True):
     '''
     x: long waveform (1d array)
     y: shorter waveform (1d array)
@@ -388,14 +395,21 @@ def match_waves(x, y, confidence_lims:list, fs:int):
 
     max_thresh, min_thresh = confidence_lims
     reduce_delta = 0.01
-    confidence = 0.00
+    current_confidence = 0.00
+    max_confidence=0.00
     thresh = max_thresh
     window_size = 2*y.size
     window_start = 0
-    on_off_times = np.zeros(x.size, dtype=bool)
+    on_off_times=np.zeros(x.size, dtype=bool)
+    exceed_thresh=False
+    if standardize:
+        x=(x-np.mean(x))/np.std(x)
+        y=(y-np.mean(y))/np.std(y)
     # should find a clear peak if stim there
     print('checkpoint: before while loop')
-    while confidence < thresh:
+    while current_confidence < thresh:
+        window_end = window_start + window_size
+        # print(f"window_start, end: {window_start, window_end}")
         if y.size > x[window_start:].size:
                 #reached end of x, reduce threshold
                 thresh -= reduce_delta 
@@ -405,10 +419,11 @@ def match_waves(x, y, confidence_lims:list, fs:int):
         if thresh <= min_thresh:
             # could not find stim, go on to next stim
             print(f"Could not find stim with min thresh. Skipping...")
-            on_off_times = None
+            # raise NotImplementedError('check windows make sense')
+            # on_off_times = None
             break
             
-        window_end = window_start + window_size
+        
         if x[window_start:].size < y.size:
             raise NotImplementedError(f"Remaining recording envelope size is too small for stim size.")
             # on_off_times = None
@@ -424,21 +439,39 @@ def match_waves(x, y, confidence_lims:list, fs:int):
 
         
         #NOTE: not off my one.... i think
-        sync_lag = lags[np.argmax(np.abs(r))] + window_start 
-        confidence = pearsonr(x[sync_lag:sync_lag+y.size], y).statistic
-        if thresh == max_thresh:
+        sync_lag = lags[np.argmax(np.abs(r))] + window_start
+        # calculate pearson corr between standardized segments
+        x_segment=x[sync_lag:sync_lag+y.size]
+        # x_norm=(x_segment-np.mean(x_segment))/np.std(x_segment)
+        # y_norm=(y-np.mean(y))/np.std(y)
+        # current_confidence = abs(pearsonr(x_norm, y_norm).statistic)
+        current_confidence = abs(pearsonr(x_segment, y).statistic)
+        
+        if thresh == max_thresh and current_confidence > max_confidence:
             #only save on first run through recording
-            confidence_val = confidence
-        if sync_lag < 0 and confidence > thresh:
-            raise NotImplementedError('Lags shouldnt be negative?')
-        if confidence >= thresh:
-            # print(f'Confidence exceeds threshold at lag={sync_lag}, recording timestamps.')
-            #TODO: probably makes more sense to just keep the indices rather than full array
+           
+           #update return value and update max to beat
+            max_confidence=current_confidence
+
+            # TODO: edit code so it always returns maximum sync timestamps
+            # but specify if met threshold condition usinng bool variable uostream
+            # instead 
+            # reset to zero, update with max confidence lags
+            on_off_times[:]=0
             on_off_times[sync_lag] += 1 #onset
             on_off_times[sync_lag+y.size] += 1 #offset
+        if sync_lag < 0 and current_confidence > thresh:
+            raise NotImplementedError('Lags shouldnt be negative?')
+        if current_confidence >= thresh:
+            # print(f'Confidence exceeds threshold at lag={sync_lag}, recording timestamps.')
+            exceed_thresh=True
+            # #TODO: probably makes more sense to just keep the indices rather than full array
+            # on_off_times[sync_lag] += 1 #onset
+            # on_off_times[sync_lag+y.size] += 1 #offset
             # break
 
-        # slide window until confidence threshold is reached
+        # slide window until confidence threshold is reached, update confidence 
         window_start += int(window_size/2)
+   
     
-    return on_off_times, confidence_val
+    return on_off_times, max_confidence, exceed_thresh
