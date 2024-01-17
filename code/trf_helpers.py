@@ -54,7 +54,7 @@ def setup_xy(subj_data, stim_envs, subj_cat, subj_num, reduce_trials_by=None, ou
             # stitch trials together by block/pauses rather than stories;
             #  should give more than 18 trial
             fs_og = 2400 #NOTE: timestamps fs at og eeg fs but that info not in pickle file
-            timestamps_fnm = os.path.join(os.getcwd(), "..", 'eeg_data', subj_cat, subj_num, subj_num+"_stim_start_end.pkl")
+            timestamps_fnm = os.path.join("..", 'eeg_data', "timestamps", subj_cat, subj_num, "timestamps.pkl")
             with open(timestamps_fnm, 'rb') as f:
                 stim_start_end = pickle.load(f)
             times_between = get_time_between_stims(stim_start_end, fs_og)

@@ -360,12 +360,13 @@ import pickle
 # from .get_subj_cat import get_subj_cat
 def load_subj_data(subj_num, eeg_dir=None):
     '''
-    helper to load subject data as pandas dataframe (pkl fl)
+    helper to load segmented and preprocessed
+    subject data as pandas dataframe (from pkl fl)
     '''
     subj_cat = get_subj_cat(subj_num)
     if eeg_dir is None:
-        eeg_dir = os.path.join(os.getcwd(), '..', "eeg_data")
-    subj_data_fnm = subj_num+"_prepr_data.pkl"
+        eeg_dir = os.path.join(os.getcwd(), '..', "eeg_data", "preprocessed")
+    subj_data_fnm = "aligned_resp.pkl"
     with open(os.path.join(eeg_dir, subj_cat, subj_num, subj_data_fnm), 'rb') as file:
         subj_data = pickle.load(file)
     return subj_data
@@ -373,6 +374,7 @@ def load_subj_data(subj_num, eeg_dir=None):
 import pickle
 import os
 def load_stims_dict():
+    ##TODO: needa re-save stim_info.mat as dict for this to work
     stims_fnm = os.path.join("..",
                                 "eeg_data",
                                 'stims_dict.pkl')

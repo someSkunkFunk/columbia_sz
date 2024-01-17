@@ -98,26 +98,4 @@ if __name__=='__main__':
     # trf, r, lam = nested_cv_wrapper(subj_num, lim_stim=6)
     trf, r, lam, (S, R, nms) = nested_cv_wrapper(subj_num, lim_stim=6, return_xy=True, save_results=False)   
 
-#%%
-from mne.channels import read_custom_montage
-from mne.viz import plot_topomap
-def get_gtec_pos():
-    locs_fnm = os.path.join('..', '..', '..', '..', '..', 'Lalor Lab Box', 'Research Projects', 'Ed - Columbia Sz', 'EEG', 'EEG For Emeline', 'Schizophrenia EEG Study', 'Functions in EEG Study', 'gtec62.locs')
-    montage = read_custom_montage(locs_fnm)
-    pos = montage.get_positions()
-    posarr=np.asarray([xyz[:2] for key, xyz in pos['ch_pos'].items()])
-    return posarr
-#%%
-# skeleton code for topoplot
-# TODO: remove this stuff
-if __name__=='__main__':
-
-    
-    
-    for n_lag in range(trf.weights.shape[1]):  # which lag to plot topo for
-    # evokeds = trf.to_mne_evoked(montage)[0]
-    #TODO: are we going to need the reference electrodes we removed?
-        plot_topomap(trf.weights.squeeze()[:, n_lag], posarr)
-
-
 

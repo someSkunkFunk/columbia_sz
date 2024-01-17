@@ -15,7 +15,7 @@ from mtrf.stats import crossval, nested_crossval
 
 
 #%%
-# define functions
+# define wrapper and run the shit
 
 
 def nested_cv_wrapper(subj_num,
@@ -43,7 +43,12 @@ def nested_cv_wrapper(subj_num,
 
     subj_cat = utils.get_subj_cat(subj_num)
     subj_data = utils.load_subj_data(subj_num)
-    stims_dict = utils.load_stims_dict()
+    # stims_dict = utils.load_stims_dict() #TODO: need to save stims_dict again
+    # specify fl paths assumes running from code as pwd
+    eeg_dir=os.path.join("..", "eeg_data")
+    # stim_fnm = "master_stim_file_schiz_studybis.mat" # note this is original fnm from box, we changed to just stim_info.mat
+    stim_fl_path=os.path.join(eeg_dir, "stim_info.mat")
+    stims_dict=utils.get_stims_dict(stim_fl_path)
     fs_trf = subj_data['fs'][0] # use eeg fs, assumed eeg downsampled to desired fs
     if lim_stim is not None:
         # in case we want to run to completion for testing 
@@ -92,6 +97,6 @@ def nested_cv_wrapper(subj_num,
         return trf, r_ncv, best_lam
     
 if __name__=="__main__":
-    subj_num = os.environ["subj_num"] # TODO: loop thru multiple subjects reading in from sbatch script
+    # subj_num = os.environ["subj_num"] # TODO: loop thru multiple subjects reading in from sbatch script
     #note: return_xy is False by default but when save_results is True will store them in pkl anyway
-    nested_cv_wrapper(subj_num, save_results=False)
+    trf, r_ncv, best_lam, (stimulus, response, stim_nms)=nested_cv_wrapper(subj_num, return_xy=True, save_results=True)
