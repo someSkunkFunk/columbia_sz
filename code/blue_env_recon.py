@@ -94,4 +94,4 @@ def nested_cv_wrapper(subj_num,
 if __name__=="__main__":
     subj_num = os.environ["subj_num"] # TODO: loop thru multiple subjects reading in from sbatch script
     #note: return_xy is False by default but when save_results is True will store them in pkl anyway
-    nested_cv_wrapper(subj_num, save_results=True)
+    nested_cv_wrapper(subj_num, save_results=False)

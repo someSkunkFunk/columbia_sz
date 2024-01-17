@@ -8,7 +8,7 @@
 #SBATCH -n 20 ##Number of tasks
 #SBATCH -J columbia_sz_standard_60gbmem_20tasks
 #SBATCH --partition=standard
-#SBATCH --output=preprocess_segment_pt2.txt
+#SBATCH --output=preprocess_segment_pt2.log
 
 ##SBATCH --array=1-26 
 ##SBATCH --depend=afterany:17146968

@@ -1,1 +1,0 @@
-/var/spool/slurm/job22368004/slurm_script: line 50: syntax error: unexpected end of file
