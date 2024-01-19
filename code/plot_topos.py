@@ -17,7 +17,7 @@ def get_gtec_pos():
     locs_fl_pth = os.path.join('..',"eeg_data", "raw", 'gtec62.locs')
     montage = read_custom_montage(locs_fl_pth)
     pos = montage.get_positions()
-    posarr=np.asarray([xyz[:2] for key, xyz in pos['ch_pos'].items()])
+    posarr=np.asarray([xyz[:2] for _y, xyz in pos['ch_pos'].items()])
     return posarr
 #%%
 # skeleton code for topoplot
@@ -37,5 +37,6 @@ if __name__=='__main__':
     # evokeds = trf.to_mne_evoked(montage)[0]
     #TODO: are we going to need the reference electrodes we removed?
         plot_topomap(weights.squeeze()[:, n_lag], posarr)
+
 
 

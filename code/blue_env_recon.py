@@ -97,6 +97,6 @@ def nested_cv_wrapper(subj_num,
         return trf, r_ncv, best_lam
     
 if __name__=="__main__":
-    # subj_num = os.environ["subj_num"] # TODO: loop thru multiple subjects reading in from sbatch script
+    subj_num = os.environ["subj_num"] # TODO: loop thru multiple subjects reading in from sbatch script
     #note: return_xy is False by default but when save_results is True will store them in pkl anyway
-    trf, r_ncv, best_lam, (stimulus, response, stim_nms)=nested_cv_wrapper(subj_num, return_xy=True, save_results=True)
+    nested_cv_wrapper(subj_num, return_xy=False, save_results=True)
