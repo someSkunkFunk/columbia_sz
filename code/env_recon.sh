@@ -41,9 +41,9 @@ subjs=(
 source /scratch/apalaci6/miniconda3/bin/activate lalor0
 for subj_num in "${subjs[@]}"
 do
+    echo "running subject $subj_num"
     export subj_num
     python /scratch/apalaci6/columbia_sz/code/$script_name.py
+    echo "$subj_num trf complete"
 done
-
-
-
+echo "all subjects complete."
