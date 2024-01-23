@@ -2,20 +2,20 @@
 ##SCRIPT NOTES:
 
 
-## bash script for segmenting and preprocessing eeg data
-#SBATCH -t 2-12:00:00
+## bash script for plotting topos
+#SBATCH -t 01:10:00
 #SBATCH --mem=60gb
-#SBATCH -n 20 ##Number of tasks
-#SBATCH -J env_recons
+#SBATCH -n 1 ##Number of tasks
+#SBATCH -J plot_topos
 #SBATCH --partition=standard
-#SBATCH --output=env_recons.log
+#SBATCH --output=plot_topos.log
 
 ##SBATCH --array=1-26 
 ##SBATCH --depend=afterany:17146968
 #SBATCH --mail-type=END
 #SBATCH --mail-user=apalaci6@ur.rochester.edu
 
-script_name='blue_env_recon' ##name of python script to run
+script_name='plot_topos' ##name of python script to run
 subjs=(
     3253  
     3316  
@@ -44,6 +44,6 @@ do
     echo "running subject $subj_num"
     export subj_num
     python /scratch/apalaci6/columbia_sz/code/$script_name.py
-    echo "$subj_num trf complete"
+    echo "$subj_num topos complete"
 done
 echo "all subjects complete."
