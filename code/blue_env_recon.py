@@ -29,7 +29,7 @@ def nested_cv_wrapper(subj_num,
                       clean_nxor_noisy=['clean'], 
                       regs=np.logspace(-1, 8, 10),
                       reduce_trials_by = "pauses",
-                      return_xy=False,
+                      return_xy=False, envt=False
                       **kwargs):
     '''
     direction: 1 -> encoder -1 -> decoder
@@ -42,7 +42,7 @@ def nested_cv_wrapper(subj_num,
     '''
 
     subj_cat = utils.get_subj_cat(subj_num)
-    subj_data = utils.load_subj_data(subj_num)
+    subj_data = utils.load_subj_data(subj_num,evnt=evnt)
     # stims_dict = utils.load_stims_dict() #TODO: need to save stims_dict again
     # specify fl paths assumes running from code as pwd
     eeg_dir=os.path.join("..", "eeg_data")
@@ -81,7 +81,11 @@ def nested_cv_wrapper(subj_num,
             # save results
 
             results_file = "_".join([subj_num, clean_or_noisy, reduce_trials_by])+"_env_recon_results.pkl"
-            results_dir = os.path.join("..","results", subj_cat, subj_num)
+            if evnt:
+                results_dir = os.path.join("..","evnt_results", subj_cat, subj_num)
+            else:
+                results_dir = os.path.join("..","results", subj_cat, subj_num)
+
             # Check if the directory exists; if not, create it
             # note: will also create parent directories
             if not os.path.exists(results_dir):
@@ -97,6 +101,7 @@ def nested_cv_wrapper(subj_num,
         return trf, r_ncv, best_lam
     
 if __name__=="__main__":
+    evnt=True #IF TRUE USE EVNT-DERIVED DATA
     subj_num = os.environ["subj_num"] # TODO: loop thru multiple subjects reading in from sbatch script
     #note: return_xy is False by default but when save_results is True will store them in pkl anyway
-    nested_cv_wrapper(subj_num, return_xy=False, save_results=True)
+    nested_cv_wrapper(subj_num, return_xy=False, save_results=True, evnt=evnt)

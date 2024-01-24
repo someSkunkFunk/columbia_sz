@@ -358,14 +358,19 @@ import os
 import pickle
 # don't need next line?
 # from .get_subj_cat import get_subj_cat
-def load_subj_data(subj_num, eeg_dir=None):
+def load_subj_data(subj_num,eeg_dir=None,evnt=False):
     '''
     helper to load segmented and preprocessed
     subject data as pandas dataframe (from pkl fl)
     '''
     subj_cat = get_subj_cat(subj_num)
     if eeg_dir is None:
-        eeg_dir = os.path.join(os.getcwd(), '..', "eeg_data", "preprocessed")
+        if evnt==False:
+            eeg_dir = os.path.join(os.getcwd(), '..', "eeg_data", "preprocessed")
+        elif evnt:
+            eeg_dir = os.path.join(os.getcwd(), '..', "eeg_data", "preprocessed2")
+        else:
+            raise NotImplementedError(f"evnt: {evnt} error")
     subj_data_fnm = "aligned_resp.pkl"
     with open(os.path.join(eeg_dir, subj_cat, subj_num, subj_data_fnm), 'rb') as file:
         subj_data = pickle.load(file)

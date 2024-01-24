@@ -45,25 +45,26 @@ subj_eeg = utils.get_full_raw_eeg(raw_dir, subj_cat, subj_num, blocks=blocks)
 
 #%% 
 # Find timestamps
-
+#TODO:UPDATE WHERE SCRIPT LOOKS FOR TIMESTAMPS SINCE WE MOVED OUT OF PREPROCESSED FOLDER
 # check if save directory exists, else make one
 save_path = os.path.join(processed_dir_path, subj_cat, subj_num)
 if not os.path.isdir(save_path):
     print(f"preprocessed dir for {subj_num, subj_cat} not found, creating one.")
     os.makedirs(save_path, exist_ok=True)
 # check if timestamps fl exists already
-timestamps_path = os.path.join(save_path, f"{subj_num}_timestamps.pkl")
+timestamps_path = os.path.join("..","eeg_data",subj_cat,subj_num,"timestamps.pkl")
 if os.path.exists(timestamps_path):
     # if already have timestamps, load from pkl:
     print(f"{subj_num, subj_cat} already has timestamps, loading from pkl.")
     with open(timestamps_path, 'rb') as pkl_fl: 
         timestamps = pickle.load(pkl_fl)
 else:
+    #NOTE: this won't re-generate new timestamps until old timestamps fl deleted basically
     print(f"Generating timestamps for {subj_num, subj_cat} ...")
     # get timestamps
     timestamps = utils.get_timestamps(subj_eeg, raw_dir, subj_num, subj_cat, stims_dict, blocks)
     #  save stim timestamps
-    with open(os.path.join(save_path, subj_num+'_timestamps.pkl'), 'wb') as f:
+    with open(timestamps_path, 'wb') as f:
         pickle.dump(timestamps, f)
 #%%
 # preprocess each block separately
