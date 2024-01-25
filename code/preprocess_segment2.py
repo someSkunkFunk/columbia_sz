@@ -44,7 +44,7 @@ subj_eeg = utils.get_full_raw_eeg(raw_dir, subj_cat, subj_num, blocks=blocks)
 
 #%% 
 # load evnt timestamps
-
+#TODO: make evnt timestamps loading function a util
 # check if save directory exists, else make one
 save_path = os.path.join(processed_dir_path, subj_cat, subj_num)
 if not os.path.isdir(save_path):

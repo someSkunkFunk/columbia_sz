@@ -233,28 +233,65 @@ def get_subj_cat(subj_num, eeg_dir=None):
     else:
         raise NotImplementedError("subj category could not be found.")
  
-def get_time_between_stims(stim_start_end, fs):
-    times_between = {}
-    for block in stim_start_end.keys():
-        times_between[block] = {} 
-        #NOTE: I believe start/end are sample indices but should double check
-        prev_end = None
-        prev_stim_nm = None
-        for stim_nm, (start, end, _) in stim_start_end[block].items():
-            if start is not None:
-                if prev_end is None:
-                    # first stim
-                    prev_end = end
-                    prev_stim_nm = stim_nm
+def get_time_between_stims(subj_num,which_timestamps,fs):
+    subj_cat=get_subj_cat(subj_num)
+    if which_timestamps=="mine":
+        ts_pth=os.path.join("..","eeg_data","timestamps",subj_cat,subj_num,
+                            "timestamps.pkl")
+        with open(ts_pth, 'rb') as f:
+            timestamps=pickle.load(ts_pth)
+        # my timestamps are organized hierarchically by block, evnt are not
+        times_between = {}
+        for block in timestamps.keys():
+            times_between[block] = {} 
+            #NOTE: I believe start/end are sample indices but should double check
+            prev_end = None
+            prev_stim_nm = None
+            for stim_nm, (start, end, _) in timestamps[block].items():
+                if start is not None:
+                    if prev_end is None:
+                        # first stim
+                        prev_end = end
+                        prev_stim_nm = stim_nm
+                    else:
+                        # record time difference in samples and time
+                        trans_nm = prev_stim_nm+stim_nm
+                        times_between[block][trans_nm] = ( int(start-prev_end), (start - prev_end)/fs)
+                        prev_end = end
+                        prev_stim_nm = stim_nm
                 else:
-                    # record time difference in samples and time
-                    trans_nm = prev_stim_nm+stim_nm
-                    times_between[block][trans_nm] = ( int(start-prev_end), (start - prev_end)/fs)
-                    prev_end = end
-                    prev_stim_nm = stim_nm
-            else:
-                # skip missing stims
-                continue 
+                    # skip missing stims
+                    continue 
+    elif which_timestamps=="evnt":
+        ts_pth=os.path.join("..","eeg_data","timestamps",
+                            f"evnt_{subj_num}.mat")
+        evnt_mat=spio.loadmat(ts_pth)
+        # returns dict for some reason, which mat2dict doesnt like
+        evnt=evnt_mat['evnt']
+        timestamps=mat2dict(evnt)
+        del evnt, evnt_mat
+        times_between={}
+        shift=12000 #empirical shift between their timestamps and mine in samples 
+        confidence_thresh=0.4
+
+        for stim_nm in timestamps['name'][0]:
+            prev_nm=None
+            prev_end=None
+            stim_ii=timestamps['name'][0]==stim_nm
+            curr_block=stim_nm[:3].replace("0","").capitalize()
+            # check confidence threshold is met
+            #TODO: somehow need to have this line up with whatever threshold we used in preprocessing code
+            # in such a way that if we change it will not affect future results
+            if timestamps['confidence'][0,stim_ii][0][0][0]>confidence_thresh:
+                curr_start=timestamps['syncPosition'][0,stim_ii][0][0][0]+shift
+                if prev_end is not None:
+                    #first stim in block
+                    prev_nm=stim_nm
+                    raise NotImplementedError('need to figure out a smarter way to locate pauses than to reload all the wavs and calculate duration from them')
+                    # prev_end=curr_start+dur_samples
+
+
+    
     return times_between
 
 import numpy as np

@@ -28,10 +28,12 @@ def nested_cv_wrapper(subj_num,
                       drop_bad_electrodes=False,
                       clean_nxor_noisy=['clean'], 
                       regs=np.logspace(-1, 8, 10),
-                      reduce_trials_by = "pauses",
-                      return_xy=False, envt=False
-                      **kwargs):
+                      reduce_trials_by="pauses",
+                      return_xy=False, 
+                      evnt=False
+                      ):
     '''
+    NOTE: if using evnt timestamps, reduce_trials_by="pauses" will NOT work
     direction: 1 -> encoder -1 -> decoder
     lim_stim: limit to n number of stimuli for faster execution (won't save result)
     clean_nxor_noisy: non-exclusive or choose cleanr or noisy (list, turned into list if not entered as list but elements must be strings)
@@ -67,7 +69,9 @@ def nested_cv_wrapper(subj_num,
 
     for clean_or_noisy in clean_nxor_noisy:
         stim_envs = get_stim_envs(stims_dict, clean_or_noisy, fs_output=fs_trf)
-        stimulus, response, stim_nms = setup_xy(subj_data, stim_envs, subj_cat, subj_num, reduce_trials_by, outlier_idx)
+        stimulus, response, stim_nms = setup_xy(subj_data,stim_envs,
+                                                subj_num,reduce_trials_by,
+                                                outlier_idx,evnt=evnt)
         # model params
         trf = TRF(direction=direction)  # use bkwd model
         
@@ -80,28 +84,35 @@ def nested_cv_wrapper(subj_num,
         if lim_stim is None and save_results:
             # save results
 
-            results_file = "_".join([subj_num, clean_or_noisy, reduce_trials_by])+"_env_recon_results.pkl"
+            results_file = "env_recon_trf.pkl"
             if evnt:
                 results_dir = os.path.join("..","evnt_results", subj_cat, subj_num)
             else:
                 results_dir = os.path.join("..","results", subj_cat, subj_num)
-
+            if reduce_trials_by is not None:
+                trial_reduction=reduce_trials_by
+            else:
+                trial_reduction="None"
             # Check if the directory exists; if not, create it
             # note: will also create parent directories
             if not os.path.exists(results_dir):
                 os.makedirs(results_dir, exist_ok=True)
             with open(os.path.join(results_dir, results_file), 'wb') as f:
                 pickle.dump({'trf_fitted': trf, 'r_ncv': r_ncv, 'best_lam': best_lam,
-                                'stimulus': stimulus, 'response': response, 'stim_nms': stim_nms}, f)
+                                'stimulus': stimulus, 'response': response, 'stim_nms': stim_nms,
+                                'trials_reduced_by':trial_reduction}, f)
 
 
     if return_xy == True:
         return trf, r_ncv, best_lam, (stimulus, response, stim_nms)
     else:
         return trf, r_ncv, best_lam
-    
+#%%
 if __name__=="__main__":
     evnt=True #IF TRUE USE EVNT-DERIVED DATA
-    subj_num = os.environ["subj_num"] # TODO: loop thru multiple subjects reading in from sbatch script
+    
+    # subj_num = os.environ["subj_num"] 
     #note: return_xy is False by default but when save_results is True will store them in pkl anyway
-    nested_cv_wrapper(subj_num, return_xy=False, save_results=True, evnt=evnt)
+    nested_cv_wrapper(subj_num,return_xy=False,
+                      save_results=True,
+                      evnt=evnt)

@@ -41,25 +41,16 @@ import os
 import pickle
 import numpy as np
 from utils import get_time_between_stims
-def setup_xy(subj_data, stim_envs, subj_cat, subj_num, reduce_trials_by=None, outlier_idx=None):
+def setup_xy(subj_data,stim_envs,subj_num,
+              reduce_trials_by=None,outlier_idx=None,
+              evnt=False):
     #TODO: get subj_cat and subj_num from subj_data (will have to add to subj data probably)
     stimulus = []
     response = []
     stim_nms = []
     prev_nm = None
     prev_block = None
-     
-    # need timestamps to reduce by pauses
-    if reduce_trials_by == "pauses":
-            # stitch trials together by block/pauses rather than stories;
-            #  should give more than 18 trial
-            fs_og = 2400 #NOTE: timestamps fs at og eeg fs but that info not in pickle file
-            timestamps_fnm = os.path.join("..", 'eeg_data', "timestamps", subj_cat, subj_num, "timestamps.pkl")
-            with open(timestamps_fnm, 'rb') as f:
-                stim_start_end = pickle.load(f)
-            times_between = get_time_between_stims(stim_start_end, fs_og)
-
-    
+             
     for stim_nm in subj_data.dropna()['stim_nms']:
         s = np.squeeze(stim_envs[stim_nm[:-4]])
         r = np.asarray(subj_data['eeg'].loc[subj_data['stim_nms']==stim_nm])[0]
@@ -96,6 +87,15 @@ def setup_xy(subj_data, stim_envs, subj_cat, subj_num, reduce_trials_by=None, ou
                     stim_nms.append([stim_nm])
                     prev_nm = stim_nm
             elif reduce_trials_by == "pauses":
+                # stitch trials together by block/pauses rather than stories;
+                #  should give more than 18 trial
+                fs_timestamps = 2400 #NOTE: timestamps fs at og eeg fs but that info not in pickle file
+                if evnt:
+                    which_timestamps="evnt"
+                else:
+                    which_timestamps="mine"
+                
+                times_between = get_time_between_stims(subj_num,which_timestamps,fs_timestamps)
                 block = stim_nm[:3:2].capitalize()
                 # stim_ps = times_between[block]
                 if prev_nm is not None and prev_block == block:

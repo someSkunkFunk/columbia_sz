@@ -27,11 +27,11 @@ if __name__=='__main__':
     # set colorbar upper and lower bounds
     topo_lims=(-0.028, 0.028)
 
-    grand_avg=False
+    grand_avg=True
     #only matters when grand_avg is True, select only sp or 
     # only hc, else None to do all
 
-    single_cat=None
+    single_cat="hc"
     fs=100#TODO: un-hardcode
     n_elec=62
     n_lags=41

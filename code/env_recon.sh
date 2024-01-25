@@ -6,16 +6,16 @@
 #SBATCH -t 2-12:00:00
 #SBATCH --mem=60gb
 #SBATCH -n 20 ##Number of tasks
-#SBATCH -J env_recons
+#SBATCH -J evnt_env_recons
 #SBATCH --partition=standard
-#SBATCH --output=env_recons.log
+#SBATCH --output=evnt_env_recons.log
 
 ##SBATCH --array=1-26 
 ##SBATCH --depend=afterany:17146968
 #SBATCH --mail-type=END
 #SBATCH --mail-user=apalaci6@ur.rochester.edu
 
-script_name='blue_env_recon' ##name of python script to run
+script_name='env_recon' ##name of python script to run
 subjs=(
     3253  
     3316  
