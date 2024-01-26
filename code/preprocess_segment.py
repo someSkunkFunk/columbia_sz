@@ -15,6 +15,7 @@ from scipy import signal
 import matplotlib.pyplot as plt
 import utils
 
+
 # specify fl paths assumes running from code as pwd
 eeg_dir=os.path.join("..", "eeg_data")
 # stim_fnm = "master_stim_file_schiz_studybis.mat" # note this is original fnm from box, we changed to just stim_info.mat
