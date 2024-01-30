@@ -6,16 +6,18 @@
 #SBATCH -t 2-12:00:00
 #SBATCH --mem=60gb
 #SBATCH -n 20 ##Number of tasks
-#SBATCH -J evnt_preprocess_segment
+#SBATCH -J xcorr_preprocess_segment
 #SBATCH --partition=standard
-#SBATCH --output=evnt_preprocess_segment.log
+#SBATCH --output=xcorr_preprocess_segment.log
 
 ##SBATCH --array=1-26 
 ##SBATCH --depend=afterany:17146968
 #SBATCH --mail-type=END
 #SBATCH --mail-user=apalaci6@ur.rochester.edu
 
-script_name='preprocess_segment2' ##name of python script to run
+
+##name of python script to run
+script_name='preprocess_segment_xcorr'
 subjs=(
     3253  
     3316  

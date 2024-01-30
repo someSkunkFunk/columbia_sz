@@ -3,12 +3,12 @@
 #%%
 # imports, etc.
 
-import pickle
+# import pickle
 import scipy.io as spio
 import numpy as np
 import os
 # import sounddevice as sd # note not available via conda....? not sure I'll need anyway so ignore for now
-import h5py
+# import h5py
 from scipy import signal
 
 import matplotlib.pyplot as plt
@@ -34,7 +34,7 @@ blocks = [f"B{ii}" for ii in range(1, n_blocks+1)]
 filt_band_lims = [1.0, 15] #Hz; highpass, lowpass cutoffs
 filt_o = 3 # order of filter (effective order x2 of this since using zero-phase)
 fs_trf = 100 # Hz, downsample frequency for trf analysis
-processed_dir_path=os.path.join(eeg_dir, "preprocessed2") #directory where processed data goes
+processed_dir_path=os.path.join(eeg_dir, "preprocessed_evnt") #directory where processed data goes
 #NOTE: need to uncomment bottom line when running slurm job via bash, commented for debugging purposes
 subj_num=os.environ["subj_num"] #TODO: make bash go thru list of all subjects
 subj_cat=utils.get_subj_cat(subj_num) #note: checked get_subj_cat, should be fine

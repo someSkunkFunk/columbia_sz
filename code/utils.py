@@ -194,13 +194,14 @@ def get_stim_wav(stims_dict, stim_nm:str, noisy_or_clean='noisy'):
 
 import scipy.io as spio
 # from .mat2dict import mat2dict
-def get_stims_dict(stim_fnm):
+def get_stims_dict(stim_fl_pth=None):
     '''
     transform mat file to dictionary for 
     '''
     # NOTE: determined that both stim files have same orig_noisy stim wavs
-    
-    all_stims_mat = spio.loadmat(stim_fnm, squeeze_me=True)
+    if stim_fl_pth is None:
+        stim_fl_pth=os.path.join("..","eeg_data","stim_info.mat")
+    all_stims_mat = spio.loadmat(stim_fl_pth, squeeze_me=True)
 
     # NOTE: I think "orig_clean" and "orig_noisy" are regular wavs and 
     #   "aud_clean"/"aud_noisy" are 100-band spectrograms?
@@ -233,7 +234,18 @@ def get_subj_cat(subj_num, eeg_dir=None):
     else:
         raise NotImplementedError("subj category could not be found.")
  
-def get_time_between_stims(subj_num,which_timestamps,fs):
+def get_pause_times(subj_num,which_timestamps,fs):
+    '''
+    note that when using evnt timestamps, only includes those 
+    whose evnt structure confidence value is over 0.4, 
+    probably smarter to put this condition either in preprocessing 
+    (as done with our own timestamps) or in trf_helpers
+    returns
+    fs is sampling frequency of timestamps
+    pause_times
+    NOTE im pretty sure sample calculated in time are incorrect (off by 1)
+    but setupxy is using the samples number anyway
+    '''
     subj_cat=get_subj_cat(subj_num)
     if which_timestamps=="mine":
         ts_pth=os.path.join("..","eeg_data","timestamps",subj_cat,subj_num,
@@ -241,9 +253,9 @@ def get_time_between_stims(subj_num,which_timestamps,fs):
         with open(ts_pth, 'rb') as f:
             timestamps=pickle.load(ts_pth)
         # my timestamps are organized hierarchically by block, evnt are not
-        times_between = {}
+        pause_times = {}
         for block in timestamps.keys():
-            times_between[block] = {} 
+            pause_times[block] = {} 
             #NOTE: I believe start/end are sample indices but should double check
             prev_end = None
             prev_stim_nm = None
@@ -254,9 +266,10 @@ def get_time_between_stims(subj_num,which_timestamps,fs):
                         prev_end = end
                         prev_stim_nm = stim_nm
                     else:
-                        # record time difference in samples and time
+                        # record transition pause time in samples and time
                         trans_nm = prev_stim_nm+stim_nm
-                        times_between[block][trans_nm] = ( int(start-prev_end), (start - prev_end)/fs)
+                        pause_times[block][trans_nm]=(int(start-prev_end), 
+                                                      (start-prev_end)/fs)
                         prev_end = end
                         prev_stim_nm = stim_nm
                 else:
@@ -270,29 +283,50 @@ def get_time_between_stims(subj_num,which_timestamps,fs):
         evnt=evnt_mat['evnt']
         timestamps=mat2dict(evnt)
         del evnt, evnt_mat
-        times_between={}
+        pause_times={}
         shift=12000 #empirical shift between their timestamps and mine in samples 
         confidence_thresh=0.4
-
+        #NOTE: i don't like having to reload stims_dict for this part since it requires a lot of memory
+        # but until we save stim durations somewhere independent of wav files this is necessary to get
+        # end index for each stimulus (we can't trust the start/stop times in evnt yet 
+        # since unsure about consistency of shift)
+        stims_dict=get_stims_dict()
+        fs_audio=stims_dict['fs'][0]
         for stim_nm in timestamps['name'][0]:
-            prev_nm=None
-            prev_end=None
+            # prev_nm=None
+            # prev_end=None
             stim_ii=timestamps['name'][0]==stim_nm
-            curr_block=stim_nm[:3].replace("0","").capitalize()
+            stim_nm_str=stim_nm[0] # get str out of arr
+            curr_block=stim_nm_str[:3].replace("0","").capitalize()
+            if curr_block not in pause_times.keys():
+                # new block starts here
+                pause_times[curr_block]={}
+                prev_start=None
+                prev_end=None
             # check confidence threshold is met
-            #TODO: somehow need to have this line up with whatever threshold we used in preprocessing code
-            # in such a way that if we change it will not affect future results
+
             if timestamps['confidence'][0,stim_ii][0][0][0]>confidence_thresh:
                 curr_start=timestamps['syncPosition'][0,stim_ii][0][0][0]+shift
-                if prev_end is not None:
+                stim_wav=get_stim_wav(stims_dict,stim_nm_str,'clean')
+                stim_dur=(stim_wav.size-1)/fs_audio
+                del stim_wav
+                stim_len=int(stim_dur*fs+1)
+                curr_end=curr_start+stim_len
+                if prev_end is None:
                     #first stim in block
-                    prev_nm=stim_nm
-                    raise NotImplementedError('need to figure out a smarter way to locate pauses than to reload all the wavs and calculate duration from them')
-                    # prev_end=curr_start+dur_samples
+                    prev_end=curr_end
+                    prev_nm=stim_nm_str
+                else:
+                    # record transition pause time in samples and time
+                    trans_nm=prev_nm+stim_nm_str
+                    pause_times[curr_block][trans_nm]=(int(curr_start-prev_end), 
+                                                       (curr_start-prev_end)/fs)
+                    prev_end=curr_end
+                    prev_nm=stim_nm_str
+            else:
+                continue #skip missing stims
 
-
-    
-    return times_between
+    return pause_times
 
 import numpy as np
 import scipy.io as spio
@@ -300,13 +334,16 @@ import os
 from scipy import signal
 # NOTE: don't need imports from utils anymore since on same module?
 # from utils import get_lp_env, set_thresh, segment, get_stim_wav, match_waves    
-def get_timestamps(subj_eeg, eeg_dir, subj_num, subj_cat, stims_dict, blocks):
+def get_timestamps(subj_eeg,eeg_dir,subj_num,subj_cat,stims_dict,blocks,
+                   which_corr='wavs'):
+    '''
+    uses xcorr to find where recorded audio best matches 
+    stimuli waveforms (which_corr='wavs', deault) or envelopes (which_corr='envs)
+    '''
     fs_audio = stims_dict['fs'][0] # 11025 foriginally #TODO: UNHARDCODE
     fs_eeg = 2400 #TODO: UNHARDCODE
-    which_corr = 'wavs' # 'wavs' or 'envs'
     # step size for xcorr window calculation
     confidence_lims = [0.90, 0.4] #max, min pearsonr correlation thresholds
-    lpf_cut = 0.1 # lowpass cutoff for envelope-based segmetation
 
     # store indices for each block {"block_num":{"stim_nm": (start, end, rconfidence)}}
     timestamps = {}
@@ -413,16 +450,19 @@ def load_subj_data(subj_num,eeg_dir=None,evnt=False):
         subj_data = pickle.load(file)
     return subj_data
 
-import pickle
-import os
-def load_stims_dict():
-    ##TODO: needa re-save stim_info.mat as dict for this to work
-    stims_fnm = os.path.join("..",
-                                "eeg_data",
-                                'stims_dict.pkl')
-    with open(stims_fnm, 'rb') as file:
-        stims_dict = pickle.load(file)
-    return stims_dict
+
+# discontinuing use of this convenience function because it is getting inconvenient to have this and get_stims_dict
+# plus i dont have the pkl fl saved kinda superflous
+# import pickle
+# import os
+# def load_stims_dict():
+#     ##TODO: needa re-save stim_info.mat as dict for this to work
+#     stims_fnm = os.path.join("..",
+#                                 "eeg_data",
+#                                 'stims_dict.pkl')
+#     with open(stims_fnm, 'rb') as file:
+#         stims_dict = pickle.load(file)
+#     return stims_dict
 
 from scipy import signal
 from scipy.stats import pearsonr

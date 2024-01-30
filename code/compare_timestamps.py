@@ -7,8 +7,10 @@ import pickle
 import numpy as np
 from scipy.stats import pearsonr
 #%%
-#select subject
-do_all_subjs=True
+# analyze correlation values based on both sets of timestamps
+# choose if looking at one specific stimulus for one specific subject
+# or generate summary results for all stimuli/subjects
+do_all_subjs=False
 stims_pth=os.path.join("..", "eeg_data", "stim_info.mat")
 stims_dict=utils.get_stims_dict(stims_pth)
 raw_dir=os.path.join("..", "eeg_data", "raw")
@@ -128,7 +130,6 @@ else:
     subj_cat=utils.get_subj_cat(subj_num)
     subj_eeg=utils.get_full_raw_eeg(raw_dir,subj_cat,subj_num)
 
-    #%%
     # segment eeg using both timestamps
     stim_index=1
 
@@ -172,7 +173,7 @@ else:
     stim_dur=(stim_wav.size-1)/fs_audio
     eeg_wav_evnt=subj_eeg[block_evnt][shift+sync_position:shift+sync_position+int(stim_dur*fs_eeg+1),-1]
     eeg_wav_stmps=subj_eeg[block_stmps][sync_positions[0]:sync_positions[1],-1]
-    #%% 
+     
     # plot    
 
 
@@ -187,7 +188,7 @@ else:
     plt.figure()
     plt.plot(np.arange(0,eeg_wav_evnt.size)/fs_eeg,eeg_wav_evnt)
     plt.title(f'EEG WAV evnt, confidence: {evnt_confidence: .2f}')
-    #%%
+    
     # plot distributions for all confidence values
     my_confidence_vals=[]
     for (_,_,my_conf) in all_stmps:

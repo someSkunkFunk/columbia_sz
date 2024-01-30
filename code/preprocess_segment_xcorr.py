@@ -33,10 +33,15 @@ blocks = [f"B{ii}" for ii in range(1, n_blocks+1)]
 
 #%%
 # setup
+
+# determine which waveform (wav or env) to use for timestamp algo
+which_xcorr='envs'
+# determine filter params applied to EEG before segmentation 
+# NOTE: different from filter lims used in timestamp detection algo (!)
 filt_band_lims = [1.0, 15] #Hz; highpass, lowpass cutoffs
 filt_o = 3 # order of filter (effective order x2 of this since using zero-phase)
 fs_trf = 100 # Hz, downsample frequency for trf analysis
-processed_dir_path=os.path.join(eeg_dir, "preprocessed") #directory where processed data goes
+processed_dir_path=os.path.join(eeg_dir, "preprocessed_xcorr") #directory where processed data goes
 #NOTE: need to uncomment bottom line when running slurm job via bash, commented for debugging purposes
 subj_num=os.environ["subj_num"] #TODO: make bash go thru list of all subjects
 subj_cat=utils.get_subj_cat(subj_num) #note: checked get_subj_cat, should be fine
@@ -53,7 +58,8 @@ if not os.path.isdir(save_path):
     print(f"preprocessed dir for {subj_num, subj_cat} not found, creating one.")
     os.makedirs(save_path, exist_ok=True)
 # check if timestamps fl exists already
-timestamps_path = os.path.join("..","eeg_data",subj_cat,subj_num,"timestamps.pkl")
+timestamps_path = os.path.join("..","eeg_data",subj_cat,subj_num,
+                               f"{which_xcorr}_timestamps.pkl")
 if os.path.exists(timestamps_path):
     # if already have timestamps, load from pkl:
     print(f"{subj_num, subj_cat} already has timestamps, loading from pkl.")
@@ -63,7 +69,8 @@ else:
     #NOTE: this won't re-generate new timestamps until old timestamps fl deleted basically
     print(f"Generating timestamps for {subj_num, subj_cat} ...")
     # get timestamps
-    timestamps = utils.get_timestamps(subj_eeg, raw_dir, subj_num, subj_cat, stims_dict, blocks)
+    timestamps = utils.get_timestamps(subj_eeg,raw_dir,subj_num,
+                                      subj_cat,stims_dict,blocks,which_xcorr)
     #  save stim timestamps
     with open(timestamps_path, 'wb') as f:
         pickle.dump(timestamps, f)
@@ -100,7 +107,7 @@ subj_data['fs'] = fs_trf
 print("subj_data before pickling:")
 print(subj_data.head())
 print(f'saving to: {save_path}')
-subj_data.to_pickle(os.path.join(save_path, "aligned_resp.pkl"))
+subj_data.to_pickle(os.path.join(save_path, f"{which_xcorr}_aligned_resp.pkl"))
 print(f"{subj_num, subj_cat} preprocessing and segmentation complete.")
 # break
 

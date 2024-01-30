@@ -40,7 +40,7 @@ def get_stim_envs(stims_dict, clean_or_noisy, fs_output, f_lp=30):
 import os
 import pickle
 import numpy as np
-from utils import get_time_between_stims
+from utils import get_pause_times
 def setup_xy(subj_data,stim_envs,subj_num,
               reduce_trials_by=None,outlier_idx=None,
               evnt=False):
@@ -95,12 +95,12 @@ def setup_xy(subj_data,stim_envs,subj_num,
                 else:
                     which_timestamps="mine"
                 
-                times_between = get_time_between_stims(subj_num,which_timestamps,fs_timestamps)
+                pause_times = get_pause_times(subj_num,which_timestamps,fs_timestamps)
                 block = stim_nm[:3:2].capitalize()
                 # stim_ps = times_between[block]
                 if prev_nm is not None and prev_block == block:
                     # get number of samples between previous and current stim
-                    pause_tm, _ = times_between[block][prev_nm+stim_nm]
+                    pause_tm, _ = pause_times[block][prev_nm+stim_nm]
                     if pause_tm <= 1:
                         # concatenate to prev stim if in same block and story
                         stimulus[-1] = np.concatenate([stimulus[-1], s])

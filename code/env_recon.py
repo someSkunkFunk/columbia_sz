@@ -109,9 +109,9 @@ def nested_cv_wrapper(subj_num,
         return trf, r_ncv, best_lam
 #%%
 if __name__=="__main__":
-    evnt=True #IF TRUE USE EVNT-DERIVED DATA
+    evnt=True #IF TRUE USE EVNT-SEGMENTED DATA
     
-    # subj_num = os.environ["subj_num"] 
+    subj_num = os.environ["subj_num"] 
     #note: return_xy is False by default but when save_results is True will store them in pkl anyway
     nested_cv_wrapper(subj_num,return_xy=False,
                       save_results=True,
