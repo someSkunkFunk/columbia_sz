@@ -43,7 +43,7 @@ filt_o = 3 # order of filter (effective order x2 of this since using zero-phase)
 fs_trf = 100 # Hz, downsample frequency for trf analysis
 processed_dir_path=os.path.join(eeg_dir, "preprocessed_xcorr") #directory where processed data goes
 #NOTE: need to uncomment bottom line when running slurm job via bash, commented for debugging purposes
-subj_num=os.environ["subj_num"] #TODO: make bash go thru list of all subjects
+# subj_num=os.environ["subj_num"] #TODO: make bash go thru list of all subjects
 subj_cat=utils.get_subj_cat(subj_num) #note: checked get_subj_cat, should be fine
 raw_dir=os.path.join(eeg_dir, "raw")
 print(f"Fetching data for {subj_num, subj_cat}")
@@ -53,12 +53,12 @@ subj_eeg = utils.get_full_raw_eeg(raw_dir, subj_cat, subj_num, blocks=blocks)
 # Find timestamps
 #TODO:UPDATE WHERE SCRIPT LOOKS FOR TIMESTAMPS SINCE WE MOVED OUT OF PREPROCESSED FOLDER
 # check if save directory exists, else make one
-save_path = os.path.join(processed_dir_path, subj_cat, subj_num)
+save_path=os.path.join(processed_dir_path,subj_cat,subj_num)
 if not os.path.isdir(save_path):
     print(f"preprocessed dir for {subj_num, subj_cat} not found, creating one.")
     os.makedirs(save_path, exist_ok=True)
 # check if timestamps fl exists already
-timestamps_path = os.path.join("..","eeg_data",subj_cat,subj_num,
+timestamps_path = os.path.join("..","eeg_data","timestamps",subj_cat,subj_num,
                                f"{which_xcorr}_timestamps.pkl")
 if os.path.exists(timestamps_path):
     # if already have timestamps, load from pkl:

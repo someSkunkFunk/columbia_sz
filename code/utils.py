@@ -201,7 +201,7 @@ def get_stims_dict(stim_fl_pth=None):
     # NOTE: determined that both stim files have same orig_noisy stim wavs
     if stim_fl_pth is None:
         stim_fl_pth=os.path.join("..","eeg_data","stim_info.mat")
-    all_stims_mat = spio.loadmat(stim_fl_pth, squeeze_me=True)
+    all_stims_mat=spio.loadmat(stim_fl_pth, squeeze_me=True)
 
     # NOTE: I think "orig_clean" and "orig_noisy" are regular wavs and 
     #   "aud_clean"/"aud_noisy" are 100-band spectrograms?
@@ -343,11 +343,12 @@ def get_timestamps(subj_eeg,eeg_dir,subj_num,subj_cat,stims_dict,blocks,
     fs_audio = stims_dict['fs'][0] # 11025 foriginally #TODO: UNHARDCODE
     fs_eeg = 2400 #TODO: UNHARDCODE
     # step size for xcorr window calculation
-    confidence_lims = [0.90, 0.4] #max, min pearsonr correlation thresholds
+    confidence_lims = [0.80, 0.4] #max, min pearsonr correlation thresholds
 
     # store indices for each block {"block_num":{"stim_nm": (start, end, rconfidence)}}
     timestamps = {}
     for block_num in blocks:
+        print(f'timestamping for block: {block_num}')
         timestamps[block_num] = {}
         # get stim order file
         stim_order_fnm = os.path.join(eeg_dir, subj_cat, 
@@ -478,7 +479,7 @@ def match_waves(x, y, confidence_lims:list, fs:int, standardize=True):
     '''
 
     max_thresh, min_thresh = confidence_lims
-    reduce_delta = 0.01
+    reduce_delta = 0.1
     current_confidence = 0.00
     max_confidence=0.00
     thresh = max_thresh
@@ -491,71 +492,65 @@ def match_waves(x, y, confidence_lims:list, fs:int, standardize=True):
         y=(y-np.mean(y))/np.std(y)
     # should find a clear peak if stim there
     print('checkpoint: before while loop')
-    while current_confidence < thresh:
-        window_end = window_start + window_size
+    while current_confidence<thresh:
+        window_end=window_start+window_size
         # print(f"window_start, end: {window_start, window_end}")
-        if y.size > x[window_start:].size:
-                #reached end of x, reduce threshold
-                thresh -= reduce_delta 
-                window_start = int(0) # restart from beginning with lower threshold
-                # print(f"reducing threshold to {thresh}")
-                
-        if thresh <= min_thresh:
+        
+        if thresh<=min_thresh:
             # could not find stim, go on to next stim
             print(f"Could not find stim with min thresh. Skipping...")
-            # raise NotImplementedError('check windows make sense')
-            # on_off_times = None
             break
             
         
-        if x[window_start:].size < y.size:
-            raise NotImplementedError(f"Remaining recording envelope size is too small for stim size.")
+        if x[window_start:].size<y.size:
+            raise NotImplementedError(f"Remaining recording size is too small for stim size.")
             # on_off_times = None
             # break
         # default case: window bounds within x range
-        if window_end <= x.size:
-            r = signal.correlate(x[window_start:window_end], y, mode='valid')
-            lags = signal.correlation_lags(x[window_start:window_end].size, y.size, mode='valid')
+        if window_end<x.size:
+            r=signal.correlate(x[window_start:window_end],y,mode='valid')
+            lags=signal.correlation_lags(x[window_start:window_end].size,y.size,mode='valid')
         # if window end extends beyond last sample in x, correlate just what's left of x
         else:
-            r = signal.correlate(x[window_start:], y, mode='valid')
-            lags = signal.correlation_lags(x[window_start:].size, y.size, mode='valid')
+            r=signal.correlate(x[window_start:],y,mode='valid')
+            lags=signal.correlation_lags(x[window_start:].size,y.size,mode='valid')
 
         
         #NOTE: not off my one.... i think
-        sync_lag = lags[np.argmax(np.abs(r))] + window_start
+        sync_lag=lags[np.argmax(np.abs(r))]+window_start
         # calculate pearson corr between standardized segments
         x_segment=x[sync_lag:sync_lag+y.size]
-        # x_norm=(x_segment-np.mean(x_segment))/np.std(x_segment)
-        # y_norm=(y-np.mean(y))/np.std(y)
-        # current_confidence = abs(pearsonr(x_norm, y_norm).statistic)
         current_confidence = abs(pearsonr(x_segment, y).statistic)
         
-        if thresh == max_thresh and current_confidence > max_confidence:
+        if thresh==max_thresh and current_confidence>=max_confidence:
             #only save on first run through recording
-           
-           #update return value and update max to beat
+            #update return value and update max to beat
             max_confidence=current_confidence
 
-            # TODO: edit code so it always returns maximum sync timestamps
-            # but specify if met threshold condition usinng bool variable uostream
-            # instead 
-            # reset to zero, update with max confidence lags
-            on_off_times[:]=0
-            on_off_times[sync_lag] += 1 #onset
-            on_off_times[sync_lag+y.size] += 1 #offset
-        if sync_lag < 0 and current_confidence > thresh:
+            # reset timestamps to zero, update with max confidence lags
+            try:
+                # NOTE: if onset is still within range on_off_times, 
+                # on_off_times may still contain an onset timestamp
+                on_off_times[:]=0 
+                on_off_times[sync_lag]+=1 #onset
+                on_off_times[sync_lag+y.size]+=1 #offset
+            except IndexError:
+                print(f'onset,offset lags of: {sync_lag,sync_lag+y.size} are out of range for x.size: {x.size}')
+        if sync_lag<0 and current_confidence>thresh:
             raise NotImplementedError('Lags shouldnt be negative?')
-        if current_confidence >= thresh:
+        if current_confidence>=thresh:
             # print(f'Confidence exceeds threshold at lag={sync_lag}, recording timestamps.')
             exceed_thresh=True
-            # #TODO: probably makes more sense to just keep the indices rather than full array
-            # on_off_times[sync_lag] += 1 #onset
-            # on_off_times[sync_lag+y.size] += 1 #offset
+ 
             # break
 
         # slide window until confidence threshold is reached, update confidence 
         window_start += int(window_size/2)
+        if y.size>x[window_start:].size:
+                #reached end of x, reduce threshold
+                thresh-=reduce_delta 
+                window_start=int(0) # restart from beginning with lower threshold
+                
    
     
     return on_off_times, max_confidence, exceed_thresh
