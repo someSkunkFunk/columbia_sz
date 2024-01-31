@@ -33,47 +33,63 @@ blocks = [f"B{ii}" for ii in range(1, n_blocks+1)]
 
 #%%
 # setup
-
+# bash script vars
+subj_num=os.environ["subj_num"]
+which_stmps=os.environ["which_stmps"]
 # determine which waveform (wav or env) to use for timestamp algo
-which_xcorr='envs'
+which_xcorr='envs' #TODO: make this env var from bash
 # determine filter params applied to EEG before segmentation 
 # NOTE: different from filter lims used in timestamp detection algo (!)
 filt_band_lims = [1.0, 15] #Hz; highpass, lowpass cutoffs
 filt_o = 3 # order of filter (effective order x2 of this since using zero-phase)
 fs_trf = 100 # Hz, downsample frequency for trf analysis
-processed_dir_path=os.path.join(eeg_dir, "preprocessed_xcorr") #directory where processed data goes
-#NOTE: need to uncomment bottom line when running slurm job via bash, commented for debugging purposes
-# subj_num=os.environ["subj_num"] #TODO: make bash go thru list of all subjects
+processed_dir_path=os.path.join(eeg_dir, f"preprocessed_{which_stmps}") #directory where processed data goes
 subj_cat=utils.get_subj_cat(subj_num) #note: checked get_subj_cat, should be fine
 raw_dir=os.path.join(eeg_dir, "raw")
 print(f"Fetching data for {subj_num, subj_cat}")
 subj_eeg = utils.get_full_raw_eeg(raw_dir, subj_cat, subj_num, blocks=blocks)
 
 #%% 
-# Find timestamps
-#TODO:UPDATE WHERE SCRIPT LOOKS FOR TIMESTAMPS SINCE WE MOVED OUT OF PREPROCESSED FOLDER
-# check if save directory exists, else make one
-save_path=os.path.join(processed_dir_path,subj_cat,subj_num)
-if not os.path.isdir(save_path):
-    print(f"preprocessed dir for {subj_num, subj_cat} not found, creating one.")
-    os.makedirs(save_path, exist_ok=True)
-# check if timestamps fl exists already
-timestamps_path = os.path.join("..","eeg_data","timestamps",subj_cat,subj_num,
-                               f"{which_xcorr}_timestamps.pkl")
-if os.path.exists(timestamps_path):
-    # if already have timestamps, load from pkl:
-    print(f"{subj_num, subj_cat} already has timestamps, loading from pkl.")
-    with open(timestamps_path, 'rb') as pkl_fl: 
-        timestamps = pickle.load(pkl_fl)
-else:
-    #NOTE: this won't re-generate new timestamps until old timestamps fl deleted basically
-    print(f"Generating timestamps for {subj_num, subj_cat} ...")
-    # get timestamps
-    timestamps = utils.get_timestamps(subj_eeg,raw_dir,subj_num,
-                                      subj_cat,stims_dict,blocks,which_xcorr)
-    #  save stim timestamps
-    with open(timestamps_path, 'wb') as f:
-        pickle.dump(timestamps, f)
+if which_stmps=="xcorr":
+    # Find timestamps using xcorr algo
+    #TODO:UPDATE WHERE SCRIPT LOOKS FOR TIMESTAMPS SINCE WE MOVED OUT OF PREPROCESSED FOLDER
+    # check if save directory exists, else make one
+    save_path=os.path.join(processed_dir_path,subj_cat,subj_num)
+    if not os.path.isdir(save_path):
+        print(f"preprocessed dir for {subj_num, subj_cat} not found, creating one.")
+        os.makedirs(save_path, exist_ok=True)
+    # check if timestamps fl exists already
+    timestamps_path = os.path.join("..","eeg_data","timestamps",subj_cat,subj_num,
+                                f"{which_xcorr}_timestamps.pkl")
+    if os.path.exists(timestamps_path):
+        # if already have timestamps, load from pkl:
+        print(f"{subj_num, subj_cat} already has timestamps, loading from pkl.")
+        with open(timestamps_path, 'rb') as pkl_fl: 
+            timestamps = pickle.load(pkl_fl)
+    else:
+        #NOTE: this won't re-generate new timestamps until old timestamps fl deleted basically
+        print(f"Generating timestamps for {subj_num, subj_cat} ...")
+        # get timestamps
+        timestamps = utils.get_timestamps(subj_eeg,raw_dir,subj_num,
+                                        subj_cat,stims_dict,blocks,which_xcorr)
+        #  save stim timestamps
+        with open(timestamps_path, 'wb') as f:
+            pickle.dump(timestamps, f)
+if which_stmps=="evnt":
+    # load evnt timestamps
+    #TODO: make evnt timestamps loading function a util
+    # check if save directory exists, else make one
+    save_path = os.path.join(processed_dir_path, subj_cat, subj_num)
+    if not os.path.isdir(save_path):
+        print(f"preprocessed dir for {subj_num, subj_cat} not found, creating one.")
+        os.makedirs(save_path, exist_ok=True)
+    # find evnt timestamps
+    timestamps_path=os.path.join("..","eeg_data","timestamps",f"evnt_{subj_num}.mat")
+    evnt_mat=spio.loadmat(timestamps_path)
+    # returns dict for some reason, which mat2dict doesnt like
+    evnt=evnt_mat['evnt']
+    evnt=utils.mat2dict(evnt)
+
 #%%
 # preprocess each block separately
 

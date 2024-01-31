@@ -6,9 +6,9 @@
 #SBATCH -t 2-12:00:00
 #SBATCH --mem=60gb
 #SBATCH -n 20 ##Number of tasks
-#SBATCH -J xcorr_preprocess_segment
+#SBATCH -J preprocess_segment
 #SBATCH --partition=standard
-#SBATCH --output=xcorr_preprocess_segment.log
+#SBATCH --output=preprocess_segment.log
 
 ##SBATCH --array=1-26 
 ##SBATCH --depend=afterany:17146968
@@ -16,8 +16,9 @@
 #SBATCH --mail-user=apalaci6@ur.rochester.edu
 
 
-##name of python script to run
-script_name='preprocess_segment_xcorr'
+##bash vars
+which_stmps="xcorr"
+script_name="preprocess_segment"
 subjs=(
     3253  
     3316  
@@ -41,9 +42,13 @@ subjs=(
     3328
 )
 source /scratch/apalaci6/miniconda3/bin/activate lalor0
+date
+echo "segmenting using $which_stmps"
 for subj_num in "${subjs[@]}"
 do
     export subj_num
+    export which_stmps
+    echo "running subject $subj_num"
     python /scratch/apalaci6/columbia_sz/code/$script_name.py
 done
 
