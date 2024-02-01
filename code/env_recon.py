@@ -30,7 +30,7 @@ def nested_cv_wrapper(subj_num,
                       regs=np.logspace(-1, 8, 10),
                       reduce_trials_by="pauses",
                       return_xy=False, 
-                      evnt=False
+                      evnt=False,which_xcorr=None
                       ):
     '''
     NOTE: if using evnt timestamps, reduce_trials_by="pauses" will NOT work
@@ -44,8 +44,8 @@ def nested_cv_wrapper(subj_num,
     '''
 
     subj_cat = utils.get_subj_cat(subj_num)
-    subj_data = utils.load_subj_data(subj_num,evnt=evnt)
-    # stims_dict = utils.load_stims_dict() #TODO: need to save stims_dict again
+    subj_data = utils.load_preprocessed(subj_num,evnt=evnt,which_xcorr=which_xcorr)
+    print(f"preprocessed data loaded.")
     # specify fl paths assumes running from code as pwd
     eeg_dir=os.path.join("..", "eeg_data")
     # stim_fnm = "master_stim_file_schiz_studybis.mat" # note this is original fnm from box, we changed to just stim_info.mat
@@ -71,8 +71,8 @@ def nested_cv_wrapper(subj_num,
         stim_envs = get_stim_envs(stims_dict, clean_or_noisy, fs_output=fs_trf)
         stimulus, response, stim_nms = setup_xy(subj_data,stim_envs,
                                                 subj_num,reduce_trials_by,
-                                                outlier_idx,evnt=evnt)
-        # model params
+                                                outlier_idx,evnt=evnt,which_xcorr=which_xcorr)
+        # model params      
         trf = TRF(direction=direction)  # use bkwd model
         
 
@@ -88,7 +88,7 @@ def nested_cv_wrapper(subj_num,
             if evnt:
                 results_dir = os.path.join("..","evnt_results", subj_cat, subj_num)
             else:
-                results_dir = os.path.join("..","results", subj_cat, subj_num)
+                results_dir = os.path.join("..",f"{which_xcorr}_which_xcorr_results", subj_cat, subj_num)
             if reduce_trials_by is not None:
                 trial_reduction=reduce_trials_by
             else:
@@ -109,10 +109,19 @@ def nested_cv_wrapper(subj_num,
         return trf, r_ncv, best_lam
 #%%
 if __name__=="__main__":
-    evnt=True #IF TRUE USE EVNT-SEGMENTED DATA
+    which_stmps=os.environ["which_stmps"]
+    if which_stmps.lower()=="xcorr":
+        evnt=False
+        which_xcorr=os.environ["which_xcorr"]
+    elif which_stmps.lower()=="evnt":
+        evnt=True #IF TRUE USE EVNT-SEGMENTED DATA
+        which_xcorr=None #TODO: this is already default in load_preprocessed but I'm specifying it like 6 different places, how can I avoid this?
+    # code is getting really messy because of this stupidass variable, it is now in setup_xy, env_recon, get_pause_times, and anywhere timestamps are used
+    else:
+        raise NotImplementedError(f"which_stmps={which_stmps} is not an option")
     
     subj_num = os.environ["subj_num"] 
     #note: return_xy is False by default but when save_results is True will store them in pkl anyway
     nested_cv_wrapper(subj_num,return_xy=False,
                       save_results=True,
-                      evnt=evnt)
+                      evnt=evnt,which_xcorr=which_xcorr)

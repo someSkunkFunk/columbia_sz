@@ -94,7 +94,7 @@ if which_stmps=="evnt":
 # preprocess each block separately
 
 timestamps_ds = {}
-print(f"Start: preprocessing for {subj_num, subj_cat}")
+print(f"Start: preprocessing and segmenting for {subj_num, subj_cat}")
 for block, raw_eeg in subj_eeg.items():
     print(f"start: {block}")
     timestamps_ds[block] = {}

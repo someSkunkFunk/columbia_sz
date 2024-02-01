@@ -43,7 +43,7 @@ import numpy as np
 from utils import get_pause_times
 def setup_xy(subj_data,stim_envs,subj_num,
               reduce_trials_by=None,outlier_idx=None,
-              evnt=False):
+              evnt=False,which_xcorr=None):
     #TODO: get subj_cat and subj_num from subj_data (will have to add to subj data probably)
     stimulus = []
     response = []
@@ -95,7 +95,7 @@ def setup_xy(subj_data,stim_envs,subj_num,
                 else:
                     which_timestamps="mine"
                 
-                pause_times = get_pause_times(subj_num,which_timestamps,fs_timestamps)
+                pause_times = get_pause_times(subj_num,which_timestamps,fs_timestamps,which_xcorr=which_xcorr)
                 block = stim_nm[:3:2].capitalize()
                 # stim_ps = times_between[block]
                 if prev_nm is not None and prev_block == block:

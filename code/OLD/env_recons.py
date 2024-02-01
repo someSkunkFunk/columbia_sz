@@ -43,7 +43,7 @@ def nested_cv_wrapper(subj_num,
     '''
 
     subj_cat = utils.get_subj_cat(subj_num)
-    subj_data = utils.load_subj_data(subj_num)
+    subj_data = utils.load_preprocessed(subj_num)
     stims_dict = utils.load_stims_dict()
     fs_trf = subj_data['fs'][0] # use eeg fs, assumed eeg downsampled to desired fs
     if lim_stim is not None:

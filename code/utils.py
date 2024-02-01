@@ -234,7 +234,7 @@ def get_subj_cat(subj_num, eeg_dir=None):
     else:
         raise NotImplementedError("subj category could not be found.")
  
-def get_pause_times(subj_num,which_timestamps,fs):
+def get_pause_times(subj_num,which_timestamps,fs,which_xcorr=None):
     '''
     note that when using evnt timestamps, only includes those 
     whose evnt structure confidence value is over 0.4, 
@@ -249,9 +249,9 @@ def get_pause_times(subj_num,which_timestamps,fs):
     subj_cat=get_subj_cat(subj_num)
     if which_timestamps=="mine":
         ts_pth=os.path.join("..","eeg_data","timestamps",subj_cat,subj_num,
-                            "timestamps.pkl")
+                            f"{which_xcorr}_timestamps.pkl")
         with open(ts_pth, 'rb') as f:
-            timestamps=pickle.load(ts_pth)
+            timestamps=pickle.load(f)
         # my timestamps are organized hierarchically by block, evnt are not
         pause_times = {}
         for block in timestamps.keys():
@@ -433,7 +433,7 @@ import os
 import pickle
 # don't need next line?
 # from .get_subj_cat import get_subj_cat
-def load_subj_data(subj_num,eeg_dir=None,evnt=False):
+def load_preprocessed(subj_num,eeg_dir=None,evnt=False,which_xcorr=None):
     '''
     helper to load segmented and preprocessed
     subject data as pandas dataframe (from pkl fl)
@@ -441,12 +441,16 @@ def load_subj_data(subj_num,eeg_dir=None,evnt=False):
     subj_cat = get_subj_cat(subj_num)
     if eeg_dir is None:
         if evnt==False:
-            eeg_dir = os.path.join(os.getcwd(), '..', "eeg_data", "preprocessed")
+            eeg_dir = os.path.join(os.getcwd(), '..', "eeg_data", "preprocessed_xcorr")
         elif evnt:
-            eeg_dir = os.path.join(os.getcwd(), '..', "eeg_data", "preprocessed2")
+            eeg_dir = os.path.join(os.getcwd(), '..', "eeg_data", "preprocessed_evnt")
         else:
             raise NotImplementedError(f"evnt: {evnt} error")
-    subj_data_fnm = "aligned_resp.pkl"
+    if which_xcorr is None and evnt:
+        subj_data_fnm = "aligned_resp.pkl"
+    else:
+        # only xcorr-aligned data has which_xcorr prefix
+        subj_data_fnm = f"{which_xcorr}_aligned_resp.pkl"
     with open(os.path.join(eeg_dir, subj_cat, subj_num, subj_data_fnm), 'rb') as file:
         subj_data = pickle.load(file)
     return subj_data
