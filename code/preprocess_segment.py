@@ -3,18 +3,14 @@
 # for subjects without timestamps, first get the timestamps, then preprocess and segment
 #%%
 # imports, etc.
-
 import pickle
 import scipy.io as spio
 import numpy as np
 import os
 # import sounddevice as sd # note not available via conda....? not sure I'll need anyway so ignore for now
-import h5py
 from scipy import signal
-
 import matplotlib.pyplot as plt
 import utils
-
 
 # specify fl paths assumes running from code as pwd
 eeg_dir=os.path.join("..", "eeg_data")
@@ -24,35 +20,31 @@ stim_fl_path=os.path.join(eeg_dir, "stim_info.mat")
 stims_dict=utils.get_stims_dict(stim_fl_path)
 fs_audio=stims_dict['fs'][0] # 11025 foriginally
 fs_eeg=2400
-
-
+fs_trf = 100 # Hz, downsampling frequency for trf analysis
 n_blocks = 6
 blocks = [f"B{ii}" for ii in range(1, n_blocks+1)]
-
-
-
 #%%
 # setup
 # bash script vars
-subj_num=os.environ["subj_num"]
-which_stmps=os.environ["which_stmps"]
+###########################################################################################
+# subj_num=os.environ["subj_num"]
+# which_stmps=os.environ["which_stmps"] #xcorr or evnt
+#####################################################################################
 # determine which waveform (wav or env) to use for timestamp algo
-which_xcorr='envs' #TODO: make this env var from bash
+which_xcorr='wavs' #TODO: make this env var from bash
+timestamps_bad=True #CHANGE ONCE WE ARE SATISFIED WITH SEGMENTATION
 # determine filter params applied to EEG before segmentation 
 # NOTE: different from filter lims used in timestamp detection algo (!)
 filt_band_lims = [1.0, 15] #Hz; highpass, lowpass cutoffs
 filt_o = 3 # order of filter (effective order x2 of this since using zero-phase)
-fs_trf = 100 # Hz, downsample frequency for trf analysis
 processed_dir_path=os.path.join(eeg_dir, f"preprocessed_{which_stmps}") #directory where processed data goes
 subj_cat=utils.get_subj_cat(subj_num) #note: checked get_subj_cat, should be fine
 raw_dir=os.path.join(eeg_dir, "raw")
 print(f"Fetching data for {subj_num, subj_cat}")
 subj_eeg = utils.get_full_raw_eeg(raw_dir, subj_cat, subj_num, blocks=blocks)
-
 #%% 
 if which_stmps=="xcorr":
     # Find timestamps using xcorr algo
-    #TODO:UPDATE WHERE SCRIPT LOOKS FOR TIMESTAMPS SINCE WE MOVED OUT OF PREPROCESSED FOLDER
     # check if save directory exists, else make one
     save_path=os.path.join(processed_dir_path,subj_cat,subj_num)
     if not os.path.isdir(save_path):
@@ -61,17 +53,30 @@ if which_stmps=="xcorr":
     # check if timestamps fl exists already
     timestamps_path = os.path.join("..","eeg_data","timestamps",subj_cat,subj_num,
                                 f"{which_xcorr}_timestamps.pkl")
-    if os.path.exists(timestamps_path):
+    if os.path.exists(timestamps_path) and not timestamps_bad:
         # if already have timestamps, load from pkl:
         print(f"{subj_num, subj_cat} already has timestamps, loading from pkl.")
         with open(timestamps_path, 'rb') as pkl_fl: 
             timestamps = pickle.load(pkl_fl)
     else:
-        #NOTE: this won't re-generate new timestamps until old timestamps fl deleted basically
         print(f"Generating timestamps for {subj_num, subj_cat} ...")
         # get timestamps
         timestamps = utils.get_timestamps(subj_eeg,raw_dir,subj_num,
                                         subj_cat,stims_dict,blocks,which_xcorr)
+        # check resulting times
+        total_soundtime=0
+        missing_stims_list=[]
+        for block in timestamps:
+            block_sound_time=0
+            for stim_nm, (start, end, confidence) in timestamps[block].items():
+                if all([start,end,confidence]):
+                    block_sound_time+=(end-start-1)/fs_eeg
+                else:
+                    missing_stims_list.append(stim_nm)
+            print(f"in block {block}, total sound time is {block_sound_time:.3f} s.")
+            total_soundtime+=block_sound_time
+        print(f"total sound time: {total_soundtime:.3f} s.")
+        print(f"missing stims:\n{missing_stims_list}")
         #  save stim timestamps
         with open(timestamps_path, 'wb') as f:
             pickle.dump(timestamps, f)
@@ -89,7 +94,6 @@ if which_stmps=="evnt":
     # returns dict for some reason, which mat2dict doesnt like
     evnt=evnt_mat['evnt']
     evnt=utils.mat2dict(evnt)
-
 #%%
 # preprocess each block separately
 
@@ -117,7 +121,6 @@ for block, raw_eeg in subj_eeg.items():
 #%%
 # align downsampled eeg using ds timestamps
 print(f"Preprocessing done for {subj_num, subj_cat}. algining and slicing eeg")
-#TODO: resulting pkl file has nothing... probably align responses doing something weird?
 subj_data = utils.align_responses(subj_eeg, timestamps_ds, stims_dict)
 subj_data['fs'] = fs_trf
 print("subj_data before pickling:")

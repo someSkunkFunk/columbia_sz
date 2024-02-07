@@ -1,3 +1,23 @@
+import os
+def get_all_subj_nums(single_cat=None):
+    '''
+    single_cat=None (get all, default), "hc", "sp"
+    helper to get all subj nums from raw directory folder structure;
+    returns: list of all subj nums, 
+    '''
+    eeg_dir=os.path.join('..',"eeg_data","raw")
+    hc_pth=os.path.join(eeg_dir,"hc")
+    sp_pth=os.path.join(eeg_dir,"sp")
+    if single_cat is None:
+        all_subjs=os.listdir(hc_pth)+os.listdir(sp_pth)
+    elif single_cat=='hc':
+        all_subjs=os.listdir(hc_pth)
+    elif single_cat=='sp':
+        all_subjs=os.listdir(sp_pth)
+    else:
+        raise NotImplementedError(f'{single_cat} is not an option for <single_cat>')
+    return all_subjs
+
 import numpy as np
 import pandas as pd
 def align_responses(subj_eeg:dict, stim_start_end:dict, stims_dict:dict):
@@ -18,6 +38,9 @@ def align_responses(subj_eeg:dict, stim_start_end:dict, stims_dict:dict):
             S_names.append(stim_nm)
             # timestamps.append(stim_info[:2])
             confidence_vals.append(stim_info[2])
+            if stim_info[2] is None:
+                # added to find out why subj_data after preprocessing and segmenting has some None values
+                print(f"stim_nm is None for {stim_nm} in utils.align_responses()!")
     S_names = np.array(S_names)
     # timestamps = np.array(timestamps)
     confidence_vals = np.array(confidence_vals)
@@ -358,7 +381,6 @@ def get_timestamps(subj_eeg,eeg_dir,subj_num,subj_cat,stims_dict,blocks,
         block_stim_order = spio.loadmat(stim_order_fnm, squeeze_me=True)['StimOrder']
         # get recording envelope
         rec_wav = subj_eeg[block_num][:,-1]
-        
 
         if which_corr.lower() == 'envs':
             rec_env = np.abs(signal.hilbert(rec_wav))
@@ -369,13 +391,13 @@ def get_timestamps(subj_eeg,eeg_dir,subj_num,subj_cat,stims_dict,blocks,
             raise NotImplementedError(f"which_corr = {which_corr} is not an option")
         prev_end=0 #TODO: verify this doesn't introduce new error (check w finished subject?)
         for stim_ii, stim_nm in enumerate(block_stim_order):
-            print(f"processing stim {stim_ii+1} of {block_stim_order.size}")
+            print(f"finding {stim_nm} ({stim_ii+1} of {block_stim_order.size})")
             # grab stim wav
-            stim_wav_og = get_stim_wav(stims_dict, stim_nm)
+            stim_wav_og = get_stim_wav(stims_dict, stim_nm,'clean')
             stim_dur = (stim_wav_og.size - 1)/fs_audio
             #TODO: what if window only gets part of stim? 
             # apply antialiasing filter to stim wav and get envelope  
-            sos = signal.butter(8, fs_eeg/3, fs=fs_audio, output='sos')
+            sos = signal.butter(3, fs_eeg/3, fs=fs_audio, output='sos')
             stim_wav = signal.sosfiltfilt(sos, stim_wav_og)
             stim_env = np.abs(signal.hilbert(stim_wav))
             # downsample envelope or wav to eeg fs
@@ -391,24 +413,29 @@ def get_timestamps(subj_eeg,eeg_dir,subj_num,subj_cat,stims_dict,blocks,
                 continue
 
             print("matching waves")
-            stim_on_off, confidence_val, over_thresh = match_waves(x, y, confidence_lims, fs_eeg)
+            if which_corr=='wavs':
+                # concerned that maybe standardizing makes problem harder when using envelopes
+                stim_on_off,confidence_val,over_thresh=match_waves(x,y,confidence_lims,fs_eeg)
+            elif which_corr=='envs':
+                stim_on_off,confidence_val,over_thresh=match_waves(x,y,confidence_lims,fs_eeg,
+                                                                   standardize=False)
+
             print(f"confidence_val: {confidence_val}, above threshold: {over_thresh}")
             #NOTE: code below used to depend on stim_on_off being none, but now checks over_thresh to decide 
             # if timestamps should be recorded
             if over_thresh:
 
-                stim_start = np.where(stim_on_off)[0][0] + prev_end
-                stim_end = np.where(stim_on_off)[0][1] + prev_end
+                curr_start = np.where(stim_on_off)[0][0] + prev_end
+                curr_end = np.where(stim_on_off)[0][1] + prev_end
+                print(f"number of samples between detected endpoints: {curr_end-curr_start}")
                 # save indices and confidence 
-                timestamps[block_num][stim_nm] = (stim_start, stim_end, confidence_val)
+                timestamps[block_num][stim_nm] = (curr_start, curr_end, confidence_val)
                 # don't look at recording up to this point again
-                if which_corr.lower() == 'envs':
-                    x = rec_env[stim_end:]
-                elif which_corr.lower() =='wavs':
-                    x = rec_wav[stim_end:]
+                x = x[curr_end:]
+                print(f"size of x after new startpoint:{x.size}")
                 # mark end time of last stim found
                 # NOTE: not sure if this will work if first stim in block can't be found
-                prev_end = stim_end 
+                prev_end = curr_end 
                 # move onto next stim
                 continue
             else:
@@ -522,7 +549,7 @@ def match_waves(x, y, confidence_lims:list, fs:int, standardize=True):
         
         #NOTE: not off my one.... i think
         sync_lag=lags[np.argmax(np.abs(r))]+window_start
-        # calculate pearson corr between standardized segments
+        # calculate pearson corr between segments
         x_segment=x[sync_lag:sync_lag+y.size]
         current_confidence = abs(pearsonr(x_segment, y).statistic)
         

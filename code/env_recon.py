@@ -88,7 +88,7 @@ def nested_cv_wrapper(subj_num,
             if evnt:
                 results_dir = os.path.join("..","evnt_results", subj_cat, subj_num)
             else:
-                results_dir = os.path.join("..",f"{which_xcorr}_which_xcorr_results", subj_cat, subj_num)
+                results_dir = os.path.join("..",f"{which_xcorr}_results", subj_cat, subj_num)
             if reduce_trials_by is not None:
                 trial_reduction=reduce_trials_by
             else:

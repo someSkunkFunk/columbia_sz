@@ -20,29 +20,45 @@ def get_gtec_pos():
     pos = montage.get_positions()
     posarr=np.asarray([xyz[:2] for _y, xyz in pos['ch_pos'].items()])
     return posarr
+
+# stupid helper function 
+def get_subj_results_fnm(results_dir,subj_num=None):
+    if 'envs' in results_dir or 'wavs' in results_dir or 'evnt' in results_dir:
+            results_fnm="env_recon_trf.pkl"
+    else:
+        # old results directory naming - used wavs but bad timestamp algorithm
+        #  (honestly should just delete these)
+        results_fnm=subj_num+"_clean_pauses_env_recon_results.pkl"
+    return results_fnm
 #%%
 # topoplotting script
 
 if __name__=='__main__':
+    
     # set colorbar upper and lower bounds
-    topo_lims=(-0.028, 0.028)
+    topo_lims=(-0.006, 0.006)
 
     grand_avg=True
-    #only matters when grand_avg is True, select only sp or 
-    # only hc, else None to do all
-
-    single_cat="hc"
+    
+    results_dir=os.path.join("..","envs_results")
+    # Single cat only matters if grand_avg=True (then do grand average of single category)
+    single_cat="hc" #set to None or mute this line to get all subjects
+    # hc_pth=os.path.join(results_dir,"hc")
+    # sp_pth=os.path.join(results_dir,"sp")
     fs=100#TODO: un-hardcode
     n_elec=62
     n_lags=41
     posarr=get_gtec_pos()
+        
     if not grand_avg:
         # do one subject's topomaps
         subj_num="3328"
 
         subj_cat=utils.get_subj_cat(subj_num)
-        subj_trf_pth=os.path.join("..","results",subj_cat,subj_num,
-                                subj_num+"_clean_pauses_env_recon_results.pkl")
+        results_fnm=get_subj_results_fnm(results_dir,subj_num)
+        
+    
+        subj_trf_pth=os.path.join(results_dir,subj_cat,subj_num,results_fnm)
         with open(subj_trf_pth, 'rb') as f:
             trf_results=pickle.load(f)
         weights=trf_results['trf_fitted'].weights.squeeze()
@@ -68,23 +84,12 @@ if __name__=='__main__':
     else:
         # get all subjects and plot grand average trf weights
         avg_weights=np.zeros((n_elec,n_lags))
-        if single_cat is None:
-            hc_pth=os.path.join("..", "results","hc")
-            sp_pth=os.path.join("..", "results","sp")
-            all_subjs=os.listdir(hc_pth)+os.listdir(sp_pth)
-        elif single_cat=='hc':
-            hc_pth=os.path.join("..", "results","hc")
-            all_subjs=os.listdir(hc_pth)
-        elif single_cat=='sp':
-            sp_pth=os.path.join("..", "results","sp")
-            all_subjs=os.listdir(sp_pth)
-        else:
-            raise NotImplementedError(f'{single_cat} is not an option for <single_cat>')
+        all_subjs=utils.get_all_subj_nums(single_cat=single_cat)
         for subj_num in all_subjs:
             # load each subject's trfs, compute average weights
             subj_cat=utils.get_subj_cat(subj_num)
-            subj_trf_pth=os.path.join("..", "results", subj_cat, subj_num,
-                                  subj_num+"_clean_pauses_env_recon_results.pkl")
+            subj_fnm=get_subj_results_fnm(results_dir,subj_num)
+            subj_trf_pth=os.path.join(results_dir,subj_cat,subj_num,subj_fnm)
             with open(subj_trf_pth, 'rb') as f:
                 trf_results=pickle.load(f)
             avg_weights+=trf_results['trf_fitted'].weights.squeeze()
