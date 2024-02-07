@@ -26,12 +26,23 @@ blocks = [f"B{ii}" for ii in range(1, n_blocks+1)]
 #%%
 # setup
 # bash script vars
+# 
 ###########################################################################################
-# subj_num=os.environ["subj_num"]
-# which_stmps=os.environ["which_stmps"] #xcorr or evnt
+if "subj_num" in os.environ: 
+    subj_num=os.environ["subj_num"]
+    which_stmps=os.environ["which_stmps"] #xcorr or evnt
+    which_xcorr=os.environ["which_xcorr"]
 #####################################################################################
-# determine which waveform (wav or env) to use for timestamp algo
-which_xcorr='wavs' #TODO: make this env var from bash
+#manual vars
+#####################################################################################
+else:
+    print("using manually inputted vars")
+    subj_num="3253"
+    which_stmps="xcorr"
+    script_name="preprocess_segment"
+    which_xcorr="wavs"
+    # noisy_or_clean="clean" #NOTE: clean is default and setting them here does nothing
+##################################################################################
 timestamps_bad=True #CHANGE ONCE WE ARE SATISFIED WITH SEGMENTATION
 # determine filter params applied to EEG before segmentation 
 # NOTE: different from filter lims used in timestamp detection algo (!)
@@ -61,7 +72,7 @@ if which_stmps=="xcorr":
     else:
         print(f"Generating timestamps for {subj_num, subj_cat} ...")
         # get timestamps
-        timestamps = utils.get_timestamps(subj_eeg,raw_dir,subj_num,
+        timestamps=utils.get_timestamps(subj_eeg,raw_dir,subj_num,
                                         subj_cat,stims_dict,blocks,which_xcorr)
         # check resulting times
         total_soundtime=0

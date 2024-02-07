@@ -202,7 +202,10 @@ def get_missing_stim_nms(timestamps):
                 missing_stims.append(stim_nm)
     return missing_stims
 
-def get_stim_wav(stims_dict, stim_nm:str, noisy_or_clean='noisy'):
+def get_stim_wav(stims_dict, stim_nm:str, noisy_or_clean='clean'):
+    if "noisy_or_clean" in os.environ:
+        noisy_or_clean=os.environ['noisy_or_clean']
+        print(f'yay this worked, noisy_or_clean is {noisy_or_clean}')
     if stim_nm.lower().endswith('.wav'):
         # remove '.wav' from name to match stim mat file
         stim_indx = stims_dict['ID'] == stim_nm[:-4]
@@ -358,7 +361,7 @@ from scipy import signal
 # NOTE: don't need imports from utils anymore since on same module?
 # from utils import get_lp_env, set_thresh, segment, get_stim_wav, match_waves    
 def get_timestamps(subj_eeg,eeg_dir,subj_num,subj_cat,stims_dict,blocks,
-                   which_corr='wavs'):
+                   which_xcorr='wavs'):
     '''
     uses xcorr to find where recorded audio best matches 
     stimuli waveforms (which_corr='wavs', deault) or envelopes (which_corr='envs)
@@ -382,18 +385,19 @@ def get_timestamps(subj_eeg,eeg_dir,subj_num,subj_cat,stims_dict,blocks,
         # get recording envelope
         rec_wav = subj_eeg[block_num][:,-1]
 
-        if which_corr.lower() == 'envs':
+        if which_xcorr.lower() == 'envs':
             rec_env = np.abs(signal.hilbert(rec_wav))
             x = rec_env
-        elif which_corr.lower() =='wavs':
+        elif which_xcorr.lower() =='wavs':
             x = rec_wav
         else:
-            raise NotImplementedError(f"which_corr = {which_corr} is not an option")
+            raise NotImplementedError(f"which_corr = {which_xcorr} is not an option")
         prev_end=0 #TODO: verify this doesn't introduce new error (check w finished subject?)
         for stim_ii, stim_nm in enumerate(block_stim_order):
             print(f"finding {stim_nm} ({stim_ii+1} of {block_stim_order.size})")
             # grab stim wav
-            stim_wav_og = get_stim_wav(stims_dict, stim_nm,'clean')
+            #NOTE: not sure if get_stim_wav will overwrite based on os environment vars
+            stim_wav_og = get_stim_wav(stims_dict, stim_nm)
             stim_dur = (stim_wav_og.size - 1)/fs_audio
             #TODO: what if window only gets part of stim? 
             # apply antialiasing filter to stim wav and get envelope  
@@ -401,10 +405,10 @@ def get_timestamps(subj_eeg,eeg_dir,subj_num,subj_cat,stims_dict,blocks,
             stim_wav = signal.sosfiltfilt(sos, stim_wav_og)
             stim_env = np.abs(signal.hilbert(stim_wav))
             # downsample envelope or wav to eeg fs
-            if which_corr.lower() == 'wavs':
+            if which_xcorr.lower() == 'wavs':
                 # will "undersample" since sampling frequencies not perfect ratio
                 y = signal.resample(stim_wav, int(np.floor(stim_dur*fs_eeg)+1)) 
-            elif which_corr.lower() == 'envs':
+            elif which_xcorr.lower() == 'envs':
                 # will "undersample" since sampling frequencies not perfect ratio
                 y = signal.resample(stim_env, int(np.floor(stim_dur*fs_eeg)+1)) 
                 
@@ -413,10 +417,10 @@ def get_timestamps(subj_eeg,eeg_dir,subj_num,subj_cat,stims_dict,blocks,
                 continue
 
             print("matching waves")
-            if which_corr=='wavs':
+            if which_xcorr=='wavs':
                 # concerned that maybe standardizing makes problem harder when using envelopes
                 stim_on_off,confidence_val,over_thresh=match_waves(x,y,confidence_lims,fs_eeg)
-            elif which_corr=='envs':
+            elif which_xcorr=='envs':
                 stim_on_off,confidence_val,over_thresh=match_waves(x,y,confidence_lims,fs_eeg,
                                                                    standardize=False)
 
@@ -552,7 +556,6 @@ def match_waves(x, y, confidence_lims:list, fs:int, standardize=True):
         # calculate pearson corr between segments
         x_segment=x[sync_lag:sync_lag+y.size]
         current_confidence = abs(pearsonr(x_segment, y).statistic)
-        
         if thresh==max_thresh and current_confidence>=max_confidence:
             #only save on first run through recording
             #update return value and update max to beat
@@ -567,6 +570,9 @@ def match_waves(x, y, confidence_lims:list, fs:int, standardize=True):
                 on_off_times[sync_lag+y.size]+=1 #offset
             except IndexError:
                 print(f'onset,offset lags of: {sync_lag,sync_lag+y.size} are out of range for x.size: {x.size}')
+        elif thresh < max_thresh and current_confidence==max_confidence:
+            #not functional except to observe what's happening with xcorr around maximum lag
+            pass
         if sync_lag<0 and current_confidence>thresh:
             raise NotImplementedError('Lags shouldnt be negative?')
         if current_confidence>=thresh:
