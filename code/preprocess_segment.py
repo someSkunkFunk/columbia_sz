@@ -32,6 +32,7 @@ if "subj_num" in os.environ:
     subj_num=os.environ["subj_num"]
     which_stmps=os.environ["which_stmps"] #xcorr or evnt
     which_xcorr=os.environ["which_xcorr"]
+    just_stmp=bool(os.environ["just_stmp"])
 #####################################################################################
 #manual vars
 #####################################################################################
@@ -41,9 +42,10 @@ else:
     which_stmps="xcorr"
     script_name="preprocess_segment"
     which_xcorr="wavs"
+    just_stmp=True
     # noisy_or_clean="clean" #NOTE: clean is default and setting them here does nothing
 ##################################################################################
-timestamps_bad=True #CHANGE ONCE WE ARE SATISFIED WITH SEGMENTATION
+timestamps_bad=True #CHANGE ONCE WE ARE SATISFIED WITH SEGMENTATION to load pre-computed timestamps
 # determine filter params applied to EEG before segmentation 
 # NOTE: different from filter lims used in timestamp detection algo (!)
 filt_band_lims = [1.0, 15] #Hz; highpass, lowpass cutoffs
@@ -107,39 +109,39 @@ if which_stmps=="evnt":
     evnt=utils.mat2dict(evnt)
 #%%
 # preprocess each block separately
-
-timestamps_ds = {}
-print(f"Start: preprocessing and segmenting for {subj_num, subj_cat}")
-for block, raw_eeg in subj_eeg.items():
-    print(f"start: {block}")
-    timestamps_ds[block] = {}
-    # filter and resample
-    if fs_eeg / 2 <= fs_trf:
-        raise NotImplementedError("Nyquist") 
-    sos = signal.butter(filt_o, filt_band_lims, btype='bandpass', output='sos', fs=fs_eeg)
-    raw_eeg = signal.sosfiltfilt(sos, raw_eeg, axis=0)
-    ds_factor = int(np.floor((raw_eeg.shape[0]-1)*(fs_trf/fs_eeg)))
-    subj_eeg[block] = signal.resample(raw_eeg, ds_factor, axis=0)
-    # resample timestamps
-    for stim_nm, (start, end, confidence) in timestamps[block].items():
-        if start is not None:
-            # start/end timestamps after downsampling
-            s_ds = int(np.floor(start*(fs_trf/fs_eeg)))
-            e_ds = int(np.floor(end*(fs_trf/fs_eeg))) #NOTE: off by one error maybe?
-            timestamps_ds[block][stim_nm] = (s_ds, e_ds, confidence)
-        else:
-            timestamps_ds[block][stim_nm] = (None, None, confidence)
-#%%
-# align downsampled eeg using ds timestamps
-print(f"Preprocessing done for {subj_num, subj_cat}. algining and slicing eeg")
-subj_data = utils.align_responses(subj_eeg, timestamps_ds, stims_dict)
-subj_data['fs'] = fs_trf
-print("subj_data before pickling:")
-print(subj_data.head())
-print(f'saving to: {save_path}')
-subj_data.to_pickle(os.path.join(save_path, f"{which_xcorr}_aligned_resp.pkl"))
-print(f"{subj_num, subj_cat} preprocessing and segmentation complete.")
-# break
+if not just_stmp:
+    timestamps_ds = {}
+    print(f"Start: preprocessing and segmenting for {subj_num, subj_cat}")
+    for block, raw_eeg in subj_eeg.items():
+        print(f"start: {block}")
+        timestamps_ds[block] = {}
+        # filter and resample
+        if fs_eeg / 2 <= fs_trf:
+            raise NotImplementedError("Nyquist") 
+        sos = signal.butter(filt_o, filt_band_lims, btype='bandpass', output='sos', fs=fs_eeg)
+        raw_eeg = signal.sosfiltfilt(sos, raw_eeg, axis=0)
+        ds_factor = int(np.floor((raw_eeg.shape[0]-1)*(fs_trf/fs_eeg)))
+        subj_eeg[block] = signal.resample(raw_eeg, ds_factor, axis=0)
+        # resample timestamps
+        for stim_nm, (start, end, confidence) in timestamps[block].items():
+            if start is not None:
+                # start/end timestamps after downsampling
+                s_ds = int(np.floor(start*(fs_trf/fs_eeg)))
+                e_ds = int(np.floor(end*(fs_trf/fs_eeg))) #NOTE: off by one error maybe?
+                timestamps_ds[block][stim_nm] = (s_ds, e_ds, confidence)
+            else:
+                timestamps_ds[block][stim_nm] = (None, None, confidence)
+    #%%
+    # align downsampled eeg using ds timestamps
+    print(f"Preprocessing done for {subj_num, subj_cat}. algining and slicing eeg")
+    subj_data = utils.align_responses(subj_eeg, timestamps_ds, stims_dict)
+    subj_data['fs'] = fs_trf
+    print("subj_data before pickling:")
+    print(subj_data.head())
+    print(f'saving to: {save_path}')
+    subj_data.to_pickle(os.path.join(save_path, f"{which_xcorr}_aligned_resp.pkl"))
+    print(f"{subj_num, subj_cat} preprocessing and segmentation complete.")
+    # break
 
 
  

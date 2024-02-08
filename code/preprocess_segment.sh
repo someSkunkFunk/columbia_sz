@@ -6,9 +6,9 @@
 #SBATCH -t 01:00:00
 #SBATCH --mem=60gb
 #SBATCH -n 20 ##Number of tasks
-#SBATCH -J debug_preprocess_segment
+#SBATCH -J debug_preprocess_segment_pt2
 #SBATCH --partition=debug
-#SBATCH --output=debug_preprocess_segment_noisy_envs.log
+#SBATCH --output=debug_preprocess_segment_pt2.log
 
 ##SBATCH --array=1-26 
 ##SBATCH --depend=afterany:17146968
@@ -19,10 +19,11 @@
 ##bash vars
 which_stmps="xcorr"
 script_name="preprocess_segment"
-which_xcorr="envs"
-noisy_or_clean="noisy"
+which_xcorr="wavs"
+noisy_or_clean="clean"
+just_stmp="true"
 subjs=(
-    3253  
+    ## 3253  
     ## 3316  
     ## 3317  
     ## 3318 
@@ -40,18 +41,20 @@ subjs=(
     ## 3287  
     ## 3314  
     ## 3315  
-    ## 3324  
-    ## 3328
+    3324  
+    3328
 )
 source /scratch/apalaci6/miniconda3/bin/activate lalor0
 date
 echo "segmenting using $which_stmps and $noisy_or_clean $which_xcorr"
+echo "just_stmp set to $just_stmp"
 for subj_num in "${subjs[@]}"
 do
     export subj_num
     export which_stmps
     export which_xcorr
     export noisy_or_clean
+    export just_stmp
     echo "running subject $subj_num"
     python /scratch/apalaci6/columbia_sz/code/$script_name.py
 done

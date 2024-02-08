@@ -512,47 +512,28 @@ def match_waves(x, y, confidence_lims:list, fs:int, standardize=True):
     assumes x is longer than y so that lagging y relative to x gives positive lag values 
     at the lag where the two signals overlap
     '''
-
+    #TODO: only one threshold is probably necessary
     max_thresh, min_thresh = confidence_lims
-    reduce_delta = 0.1
     current_confidence = 0.00
     max_confidence=0.00
     thresh = max_thresh
-    window_size = 2*y.size
-    window_start = 0
     on_off_times=np.zeros(x.size, dtype=bool)
     exceed_thresh=False
     if standardize:
         x=(x-np.mean(x))/np.std(x)
         y=(y-np.mean(y))/np.std(y)
     # should find a clear peak if stim there
-    print('checkpoint: before while loop')
-    while current_confidence<thresh:
-        window_end=window_start+window_size
-        # print(f"window_start, end: {window_start, window_end}")
-        
-        if thresh<=min_thresh:
-            # could not find stim, go on to next stim
-            print(f"Could not find stim with min thresh. Skipping...")
-            break
+    for thresh in confidence_lims:
             
-        
-        if x[window_start:].size<y.size:
+        if x.size<y.size:
             raise NotImplementedError(f"Remaining recording size is too small for stim size.")
-            # on_off_times = None
-            # break
-        # default case: window bounds within x range
-        if window_end<x.size:
-            r=signal.correlate(x[window_start:window_end],y,mode='valid')
-            lags=signal.correlation_lags(x[window_start:window_end].size,y.size,mode='valid')
-        # if window end extends beyond last sample in x, correlate just what's left of x
-        else:
-            r=signal.correlate(x[window_start:],y,mode='valid')
-            lags=signal.correlation_lags(x[window_start:].size,y.size,mode='valid')
+
+        r=signal.correlate(x,y,mode='valid')
+        lags=signal.correlation_lags(x.size,y.size,mode='valid')
 
         
         #NOTE: not off my one.... i think
-        sync_lag=lags[np.argmax(np.abs(r))]+window_start
+        sync_lag=lags[np.argmax(np.abs(r))]
         # calculate pearson corr between segments
         x_segment=x[sync_lag:sync_lag+y.size]
         current_confidence = abs(pearsonr(x_segment, y).statistic)
@@ -578,16 +559,11 @@ def match_waves(x, y, confidence_lims:list, fs:int, standardize=True):
         if current_confidence>=thresh:
             # print(f'Confidence exceeds threshold at lag={sync_lag}, recording timestamps.')
             exceed_thresh=True
- 
-            # break
+        if thresh==min_thresh and not exceed_thresh:
+            # could not find stim, go on to next stim
+            print(f"Could not find stim with min thresh. Skipping...")
+        
 
-        # slide window until confidence threshold is reached, update confidence 
-        window_start += int(window_size/2)
-        if y.size>x[window_start:].size:
-                #reached end of x, reduce threshold
-                thresh-=reduce_delta 
-                window_start=int(0) # restart from beginning with lower threshold
-                
-   
+
     
     return on_off_times, max_confidence, exceed_thresh
