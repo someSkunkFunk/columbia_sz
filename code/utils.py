@@ -205,7 +205,7 @@ def get_missing_stim_nms(timestamps):
 def get_stim_wav(stims_dict, stim_nm:str, noisy_or_clean='clean'):
     if "noisy_or_clean" in os.environ:
         noisy_or_clean=os.environ['noisy_or_clean']
-        print(f'yay this worked, noisy_or_clean is {noisy_or_clean}')
+        # print(f'yay this worked, noisy_or_clean is {noisy_or_clean}')
     if stim_nm.lower().endswith('.wav'):
         # remove '.wav' from name to match stim mat file
         stim_indx = stims_dict['ID'] == stim_nm[:-4]
@@ -213,10 +213,7 @@ def get_stim_wav(stims_dict, stim_nm:str, noisy_or_clean='clean'):
         # assume just string of name
         stim_indx = stims_dict['ID'] == stim_nm
     
-    if noisy_or_clean == 'noisy':
-        return stims_dict['orig_noisy'][stim_indx][0]
-    elif noisy_or_clean == 'clean':
-        return stims_dict['orig_clean'][stim_indx][0]
+    return stims_dict[f'orig_{noisy_or_clean}'][stim_indx][0]
 
 import scipy.io as spio
 # from .mat2dict import mat2dict
@@ -317,7 +314,8 @@ def get_pause_times(subj_num,which_timestamps,fs,which_xcorr=None):
         # end index for each stimulus (we can't trust the start/stop times in evnt yet 
         # since unsure about consistency of shift)
         stims_dict=get_stims_dict()
-        fs_audio=stims_dict['fs'][0]
+        # fs_audio=stims_dict['fs'][0]
+        fs_audio=16000
         for stim_nm in timestamps['name'][0]:
             # prev_nm=None
             # prev_end=None
@@ -361,16 +359,15 @@ from scipy import signal
 # NOTE: don't need imports from utils anymore since on same module?
 # from utils import get_lp_env, set_thresh, segment, get_stim_wav, match_waves    
 def get_timestamps(subj_eeg,eeg_dir,subj_num,subj_cat,stims_dict,blocks,
-                   which_xcorr='wavs'):
+                   which_xcorr='wavs',confidence_lims=[0.80, 0.4]):
     '''
     uses xcorr to find where recorded audio best matches 
     stimuli waveforms (which_corr='wavs', deault) or envelopes (which_corr='envs)
     '''
-    fs_audio = stims_dict['fs'][0] # 11025 foriginally #TODO: UNHARDCODE
-    fs_eeg = 2400 #TODO: UNHARDCODE
-    # step size for xcorr window calculation
-    confidence_lims = [0.80, 0.4] #max, min pearsonr correlation thresholds
-
+    fs_audio=stims_dict['fs'][0] # 11025 foriginally #TODO: UNHARDCODE
+    # fs_audio=16000
+    fs_eeg=2400 #TODO: UNHARDCODE
+    
     # store indices for each block {"block_num":{"stim_nm": (start, end, rconfidence)}}
     timestamps = {}
     for block_num in blocks:
@@ -382,9 +379,8 @@ def get_timestamps(subj_eeg,eeg_dir,subj_num,subj_cat,stims_dict,blocks,
                                     "_".join([block_num, "stimorder.mat"])
                                     )
         block_stim_order = spio.loadmat(stim_order_fnm, squeeze_me=True)['StimOrder']
-        # get recording envelope
+        # get experiment audio recording envelope
         rec_wav = subj_eeg[block_num][:,-1]
-
         if which_xcorr.lower() == 'envs':
             rec_env = np.abs(signal.hilbert(rec_wav))
             x = rec_env
@@ -397,7 +393,7 @@ def get_timestamps(subj_eeg,eeg_dir,subj_num,subj_cat,stims_dict,blocks,
             print(f"finding {stim_nm} ({stim_ii+1} of {block_stim_order.size})")
             # grab stim wav
             #NOTE: not sure if get_stim_wav will overwrite based on os environment vars
-            stim_wav_og = get_stim_wav(stims_dict, stim_nm)
+            stim_wav_og=get_stim_wav(stims_dict, stim_nm)
             stim_dur = (stim_wav_og.size - 1)/fs_audio
             #TODO: what if window only gets part of stim? 
             # apply antialiasing filter to stim wav and get envelope  
@@ -435,7 +431,10 @@ def get_timestamps(subj_eeg,eeg_dir,subj_num,subj_cat,stims_dict,blocks,
                 # save indices and confidence 
                 timestamps[block_num][stim_nm] = (curr_start, curr_end, confidence_val)
                 # don't look at recording up to this point again
-                x = x[curr_end:]
+                if which_xcorr=="wavs":
+                    x=rec_wav[curr_end:]
+                elif which_xcorr=="envs":
+                    x=rec_env[curr_end:]
                 print(f"size of x after new startpoint:{x.size}")
                 # mark end time of last stim found
                 # NOTE: not sure if this will work if first stim in block can't be found

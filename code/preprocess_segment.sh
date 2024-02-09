@@ -3,12 +3,12 @@
 
 
 ## bash script for segmenting and preprocessing eeg data
-#SBATCH -t 01:00:00
+#SBATCH -t 02:00:00
 #SBATCH --mem=60gb
 #SBATCH -n 20 ##Number of tasks
-#SBATCH -J debug_preprocess_segment_pt2
-#SBATCH --partition=debug
-#SBATCH --output=debug_preprocess_segment_pt2.log
+#SBATCH -J change_eeg_fs2khz
+#SBATCH --partition=interactive
+#SBATCH --output=interactive_preprocess_segment_change_eeg_fs2khz.log
 
 ##SBATCH --array=1-26 
 ##SBATCH --depend=afterany:17146968
@@ -23,24 +23,24 @@ which_xcorr="wavs"
 noisy_or_clean="clean"
 just_stmp="true"
 subjs=(
-    ## 3253  
-    ## 3316  
-    ## 3317  
-    ## 3318 
-    ## 3322  
-    ## 3323  
-    ## 3325  
-    ## 3326
-    ## 0194  
-    ## 2588  
-    ## 2621  
-    ## 2782
-    ## 3133  
-    ## 3146  
-    ## 3218  
-    ## 3287  
-    ## 3314  
-    ## 3315  
+    3253  
+    3316  
+    3317  
+    3318 
+    3322  
+    3323  
+    3325  
+    3326
+    0194  
+    2588  
+    2621
+    2782
+    3133  
+    3146  
+    3218  
+    3287  
+    3314  
+    3315  
     3324  
     3328
 )
@@ -58,6 +58,6 @@ do
     echo "running subject $subj_num"
     python /scratch/apalaci6/columbia_sz/code/$script_name.py
 done
-
+echo "all subjects complete. hooray."
 
 

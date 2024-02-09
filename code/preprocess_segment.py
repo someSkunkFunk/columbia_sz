@@ -19,10 +19,11 @@ stim_fnm="stim_info.mat"
 stim_fl_path=os.path.join(eeg_dir, "stim_info.mat")
 stims_dict=utils.get_stims_dict(stim_fl_path)
 fs_audio=stims_dict['fs'][0] # 11025 foriginally
-fs_eeg=2400
-fs_trf = 100 # Hz, downsampling frequency for trf analysis
+# fs_audio=16000 #just trying it out cuz nothing else works
+fs_eeg=2400 #trie d2kHz didn't help
+fs_trf=100 # Hz, downsampling frequency for trf analysis
 n_blocks = 6
-blocks = [f"B{ii}" for ii in range(1, n_blocks+1)]
+blocks = [f"B{ii}" for ii in range(1, n_blocks+1)]#NOTE: this is kinda unnecesary and I wanna remove it but focusing on bigger problem rn
 #%%
 # setup
 # bash script vars
@@ -45,17 +46,21 @@ else:
     just_stmp=True
     # noisy_or_clean="clean" #NOTE: clean is default and setting them here does nothing
 ##################################################################################
+confidence_lims=[0.80, 0.4]
+#print max, min pearsonr correlation thresholds
+print(f'minimum pearsonr threshold: {min(confidence_lims)}')
 timestamps_bad=True #CHANGE ONCE WE ARE SATISFIED WITH SEGMENTATION to load pre-computed timestamps
 # determine filter params applied to EEG before segmentation 
 # NOTE: different from filter lims used in timestamp detection algo (!)
-filt_band_lims = [1.0, 15] #Hz; highpass, lowpass cutoffs
-filt_o = 3 # order of filter (effective order x2 of this since using zero-phase)
+filt_band_lims=[1.0, 15] #Hz; highpass, lowpass cutoffs
+filt_o=3 # order of filter (effective order x2 of this since using zero-phase)
 processed_dir_path=os.path.join(eeg_dir, f"preprocessed_{which_stmps}") #directory where processed data goes
 subj_cat=utils.get_subj_cat(subj_num) #note: checked get_subj_cat, should be fine
 raw_dir=os.path.join(eeg_dir, "raw")
 print(f"Fetching data for {subj_num, subj_cat}")
-subj_eeg = utils.get_full_raw_eeg(raw_dir, subj_cat, subj_num, blocks=blocks)
-#%% 
+subj_eeg=utils.get_full_raw_eeg(raw_dir, subj_cat, subj_num, blocks=blocks)
+#%%
+# find timestamps
 if which_stmps=="xcorr":
     # Find timestamps using xcorr algo
     # check if save directory exists, else make one
@@ -75,7 +80,8 @@ if which_stmps=="xcorr":
         print(f"Generating timestamps for {subj_num, subj_cat} ...")
         # get timestamps
         timestamps=utils.get_timestamps(subj_eeg,raw_dir,subj_num,
-                                        subj_cat,stims_dict,blocks,which_xcorr)
+                                        subj_cat,stims_dict,blocks,which_xcorr,
+                                        confidence_lims)
         # check resulting times
         total_soundtime=0
         missing_stims_list=[]
@@ -145,54 +151,4 @@ if not just_stmp:
 
 
  
-            
-
-        
-# %%
-# check result for one subject
-# #NOTE: visually not very convincing but we had a shitty audio to begin with, then filtered and downsampled it so....
-# subj_num = "3253"
-# subj_cat = "hc"
-# with open(os.path.join(os.getcwd(), subj_cat, subj_num, "aligned_resp.pkl"), 'rb') as pkl_fl:
-#     subj_data = pickle.load(pkl_fl)
-
-
-# #%%
-# # sort stims by stim align confidence vals
-# subj_data.sort_values(by='confidence', ascending=True, inplace=True) # sort by confidence vals
-# #NOTE: ALL CODE BELOW ASSUMES subj_data RESORTED BY CONFIDENCE VALS
-# #TODO: probably better to have consistent stim ordering across subjects rather than this
-# #%%
-# # filter out nans and check if eeg recording duration is always larger than stim duration
-# stim_durs = [(stims_dict['orig_noisy'][stims_dict['ID']==s_nm[:-4]][0].size - 1)/fs_audio for s_nm in subj_data.loc[subj_data['eeg'].notna(), 'stim_nms']]
-# response_durs = [(r.size - 1)/fs_eeg for r in subj_data.loc[subj_data['eeg'].notna(), 'eeg_audio']]
-# print(np.all(response_durs < stim_durs))
-# #NOTE: so all responses consistently shorter than stims due to stim downsampling during xcorr process
-# # going to just downsample all the stims then pad responses at the beginning if needed to match stim size (shouldn't need)
-# #%%
-# # sort by confidence and visually compare
-# s_num = 700 # which to plot, in order of confidence
-# subj_data.sort_values(by='confidence', ascending=True, inplace=True)
-# stim_nm = subj_data.iloc[s_num]['stim_nms']
-# stim = utils.get_stim_wav(stims_dict, stim_nm, has_wav=True) # gets noisy by default
-# t_stim = utils.make_time_vector(fs_audio, stim.size)
-# recording = subj_data.iloc[s_num]['eeg_audio']
-# if np.isnan(recording).any():
-#     print(f"recording is {recording}")
-# else:
-#     t_recording = utils.make_time_vector(fs_eeg, recording.size)
-#     fig, ax = plt.subplots(nrows=2)
-#     ax[0].plot(t_stim, stim)
-#     ax[0].set_title('OG Stim')
-#     ax[1].plot(t_recording, recording, label=f'confidence:{subj_data.iloc[s_num].confidence}')
-#     ax[1].set_title('Recorded audio')
-#     ax[1].set_xlabel('Seconds')
-#     plt.legend()
-#     fig.suptitle(f'{subj_data.iloc[s_num].stim_nms}')
-    
-# #%%
-# # listen to stimulus
-# sd.play(stim, fs_audio)
-# #%%
-# # listen to recording (from df)
-# sd.play(recording, fs_trf)
+  
