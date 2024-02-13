@@ -33,7 +33,9 @@ if "subj_num" in os.environ:
     subj_num=os.environ["subj_num"]
     which_stmps=os.environ["which_stmps"] #xcorr or evnt
     which_xcorr=os.environ["which_xcorr"]
-    just_stmp=bool(os.environ["just_stmp"])
+    bool_dict={"true":True,"false":False}
+    just_stmp=bool_dict[os.environ["just_stmp"].lower()]
+    print(f"just_stamp translated into: {just_stmp}")
 #####################################################################################
 #manual vars
 #####################################################################################
@@ -43,10 +45,10 @@ else:
     which_stmps="xcorr"
     script_name="preprocess_segment"
     which_xcorr="wavs"
-    just_stmp=True
+    just_stmp=False
     # noisy_or_clean="clean" #NOTE: clean is default and setting them here does nothing
 ##################################################################################
-confidence_lims=[0.80, 0.4]
+confidence_lims=[0.80, 0.40]
 #print max, min pearsonr correlation thresholds
 print(f'minimum pearsonr threshold: {min(confidence_lims)}')
 timestamps_bad=True #CHANGE ONCE WE ARE SATISFIED WITH SEGMENTATION to load pre-computed timestamps
@@ -95,9 +97,10 @@ if which_stmps=="xcorr":
             print(f"in block {block}, total sound time is {block_sound_time:.3f} s.")
             total_soundtime+=block_sound_time
         print(f"total sound time: {total_soundtime:.3f} s.")
-        print(f"missing stims:\n{missing_stims_list}")
+        print(f"missing stims:\n{len(missing_stims_list)}")
         #  save stim timestamps
         with open(timestamps_path, 'wb') as f:
+            print(f"saving timestamps for {subj_num}")
             pickle.dump(timestamps, f)
 if which_stmps=="evnt":
     # load evnt timestamps
@@ -117,9 +120,9 @@ if which_stmps=="evnt":
 # preprocess each block separately
 if not just_stmp:
     timestamps_ds = {}
-    print(f"Start: preprocessing and segmenting for {subj_num, subj_cat}")
+    print(f"Starting preprocessing {subj_num, subj_cat}")
     for block, raw_eeg in subj_eeg.items():
-        print(f"start: {block}")
+        print(f"block: {block}")
         timestamps_ds[block] = {}
         # filter and resample
         if fs_eeg / 2 <= fs_trf:
@@ -131,6 +134,9 @@ if not just_stmp:
         # resample timestamps
         for stim_nm, (start, end, confidence) in timestamps[block].items():
             if start is not None:
+                #TODO: i like using all([start, end,conf]) better,
+                #  but start should be None when below confidence 
+                # anyway so fine for now
                 # start/end timestamps after downsampling
                 s_ds = int(np.floor(start*(fs_trf/fs_eeg)))
                 e_ds = int(np.floor(end*(fs_trf/fs_eeg))) #NOTE: off by one error maybe?
@@ -139,7 +145,7 @@ if not just_stmp:
                 timestamps_ds[block][stim_nm] = (None, None, confidence)
     #%%
     # align downsampled eeg using ds timestamps
-    print(f"Preprocessing done for {subj_num, subj_cat}. algining and slicing eeg")
+    print(f"Preprocessing done for {subj_num, subj_cat}. algining and segmenting eeg")
     subj_data = utils.align_responses(subj_eeg, timestamps_ds, stims_dict)
     subj_data['fs'] = fs_trf
     print("subj_data before pickling:")

@@ -39,8 +39,10 @@ def align_responses(subj_eeg:dict, stim_start_end:dict, stims_dict:dict):
             # timestamps.append(stim_info[:2])
             confidence_vals.append(stim_info[2])
             if stim_info[2] is None:
+                #NOTE: this should actually never happen because we are always 
+                # storing SOME confidence value even when low
                 # added to find out why subj_data after preprocessing and segmenting has some None values
-                print(f"stim_nm is None for {stim_nm} in utils.align_responses()!")
+                print(f"Confidence is None for {stim_nm} in utils.align_responses()!")
     S_names = np.array(S_names)
     # timestamps = np.array(timestamps)
     confidence_vals = np.array(confidence_vals)
@@ -363,6 +365,9 @@ def get_timestamps(subj_eeg,eeg_dir,subj_num,subj_cat,stims_dict,blocks,
     '''
     uses xcorr to find where recorded audio best matches 
     stimuli waveforms (which_corr='wavs', deault) or envelopes (which_corr='envs)
+    If sync point gives pearsonr confidence above minimum threshold, indices for onset/offset 
+    and confidence are stored in timestamps directory (keys are blocks) as thruples
+    if not above threshold, start and end are None but still returns confidence for max sync point found...
     '''
     fs_audio=stims_dict['fs'][0] # 11025 foriginally #TODO: UNHARDCODE
     # fs_audio=16000

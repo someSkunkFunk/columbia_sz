@@ -84,23 +84,28 @@ def nested_cv_wrapper(subj_num,
         if lim_stim is None and save_results:
             # save results
 
-            results_file = "env_recon_trf.pkl"
+            results_file = "bkwd_trf.pkl"
             if evnt:
-                results_dir = os.path.join("..","evnt_results", subj_cat, subj_num)
+                timestamps_generated_by="evnt"
+                # results_dir = os.path.join("..","evnt_results", subj_cat, subj_num)
             else:
-                results_dir = os.path.join("..",f"{which_xcorr}_results", subj_cat, subj_num)
+                timestamps_generated_by=f"xcorr{which_xcorr}"
+                # results_dir = os.path.join("..",f"{which_xcorr}_results", subj_cat, subj_num)
+            results_dir=os.path.join("..","results")
+            
             if reduce_trials_by is not None:
                 trial_reduction=reduce_trials_by
             else:
                 trial_reduction="None"
             # Check if the directory exists; if not, create it
-            # note: will also create parent directories
+            # note: will also create parent directoriesr
             if not os.path.exists(results_dir):
                 os.makedirs(results_dir, exist_ok=True)
             with open(os.path.join(results_dir, results_file), 'wb') as f:
                 pickle.dump({'trf_fitted': trf, 'r_ncv': r_ncv, 'best_lam': best_lam,
                                 'stimulus': stimulus, 'response': response, 'stim_nms': stim_nms,
-                                'trials_reduced_by':trial_reduction}, f)
+                                'trials_reduced_by':trial_reduction,
+                                'timestamps_generated_by':timestamps_generated_by}, f)
 
 
     if return_xy == True:

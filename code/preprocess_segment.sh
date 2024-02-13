@@ -6,40 +6,41 @@
 #SBATCH -t 02:00:00
 #SBATCH --mem=60gb
 #SBATCH -n 20 ##Number of tasks
-#SBATCH -J change_eeg_fs2khz
-#SBATCH --partition=interactive
-#SBATCH --output=interactive_preprocess_segment_change_eeg_fs2khz.log
+#SBATCH -J timestamp_wav
+#SBATCH --partition=standard
+#SBATCH --output=standard_preprocess_segment_wavs_pt2.log
 
 ##SBATCH --array=1-26 
 ##SBATCH --depend=afterany:17146968
 #SBATCH --mail-type=END
-#SBATCH --mail-user=apalaci6@ur.rochester.edu
+#SBATCH --mail-user=apalaci6@ur.rochester.edu 
 
 
 ##bash vars
+echo "this code is fixed now"
 which_stmps="xcorr"
 script_name="preprocess_segment"
 which_xcorr="wavs"
 noisy_or_clean="clean"
-just_stmp="true"
+just_stmp="false"
 subjs=(
-    3253  
-    3316  
-    3317  
-    3318 
-    3322  
-    3323  
-    3325  
-    3326
-    0194  
-    2588  
-    2621
-    2782
-    3133  
-    3146  
-    3218  
-    3287  
-    3314  
+    ## 3253  
+    ## 3316  
+    ## 3317  
+    ## 3318 
+    ## 3322  
+    ## 3323  
+    ## 3325  
+    ## 3326
+    ## 0194  
+    ## 2588  
+    ## 2621
+    ## 2782
+    ## 3133  
+    ## 3146  
+    ## 3218  
+    ## 3287  
+    ## 3314  
     3315  
     3324  
     3328

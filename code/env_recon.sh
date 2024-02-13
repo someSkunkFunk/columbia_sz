@@ -8,7 +8,7 @@
 #SBATCH -n 20 ##Number of tasks
 #SBATCH -J env_recon
 #SBATCH --partition=standard
-#SBATCH --output=env_recons.log
+#SBATCH --output=bkwd_trf.log
 
 ##SBATCH --array=1-26 
 ##SBATCH --depend=afterany:17146968
@@ -17,7 +17,7 @@
 
 script_name="env_recon" ##name of python script to run
 which_stmps="xcorr"
-which_xcorr="envs"
+which_xcorr="wavs"
 subjs=(
     3253  
     3316  

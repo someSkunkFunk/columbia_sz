@@ -81,6 +81,7 @@ fig,ax=plt.subplots()
 pos=ax.imshow(found_stims_mat[:].T,cmap=cmap,aspect='auto') #TODO: adjust aspect ratio to slightly thicken vertical dimension
 ax.set_ylabel('Stim')
 ax.set_xlabel('Subject')
+ax.set_title(f'{which_xcorr}')
 ax.set_yticks(trial_ticks,labels=trial_lbls)
 cb=fig.colorbar(pos,ax=ax)
 cb.set_ticks(ticks=[-1,0,1],labels=['missing','null','found'])
