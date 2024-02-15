@@ -42,16 +42,18 @@ def nested_cv_wrapper(subj_num,
     reduce_trials_by: str specifying  by grouping stories wihtin a block ("stim_nm")
     # or grouping by pauses within a block ("pauses")
     '''
-
-    subj_cat = utils.get_subj_cat(subj_num)
-    subj_data = utils.load_preprocessed(subj_num,evnt=evnt,which_xcorr=which_xcorr)
+    f_lp=15 #Hz, lowpass filter freq for get_stim_envs
+    subj_cat=utils.get_subj_cat(subj_num)
+    #NOTE that  by leaving eeg_dir blank below it's looking 
+    # in eeg_data/preproessed_xcorr by default
+    subj_data=utils.load_preprocessed(subj_num,evnt=evnt,which_xcorr=which_xcorr)
     print(f"preprocessed data loaded.")
     # specify fl paths assumes running from code as pwd
-    eeg_dir=os.path.join("..", "eeg_data")
+    eeg_dir=os.path.join("..","eeg_data")
     # stim_fnm = "master_stim_file_schiz_studybis.mat" # note this is original fnm from box, we changed to just stim_info.mat
-    stim_fl_path=os.path.join(eeg_dir, "stim_info.mat")
+    stim_fl_path=os.path.join(eeg_dir,"stim_info.mat")
     stims_dict=utils.get_stims_dict(stim_fl_path)
-    fs_trf = subj_data['fs'][0] # use eeg fs, assumed eeg downsampled to desired fs
+    fs_trf=subj_data['fs'][0] # use eeg fs, assumed eeg downsampled to desired fs
     if lim_stim is not None:
         # in case we want to run to completion for testing 
         print(f'running number of stimuli limited to {lim_stim}, wont save result...\n')
@@ -63,13 +65,13 @@ def nested_cv_wrapper(subj_num,
         clean_nxor_noisy = [clean_nxor_noisy]
           # 
     if drop_bad_electrodes:
-        outlier_idx = find_bad_electrodes(subj_data)
+        outlier_idx=find_bad_electrodes(subj_data)
     else:
-        outlier_idx = None
+        outlier_idx=None
 
     for clean_or_noisy in clean_nxor_noisy:
-        stim_envs = get_stim_envs(stims_dict, clean_or_noisy, fs_output=fs_trf)
-        stimulus, response, stim_nms = setup_xy(subj_data,stim_envs,
+        stim_envs=get_stim_envs(stims_dict, clean_or_noisy, fs_output=fs_trf,f_lp=f_lp)
+        stimulus, response, stim_nms=setup_xy(subj_data,stim_envs,
                                                 subj_num,reduce_trials_by,
                                                 outlier_idx,evnt=evnt,which_xcorr=which_xcorr)
         # model params      
@@ -77,8 +79,8 @@ def nested_cv_wrapper(subj_num,
         
 
 
-        r_ncv, best_lam = nested_crossval(trf, stimulus[:lim_stim], response[:lim_stim], fs_trf, tmin, tmax, regs, k=k)
-        
+        r_ncv, best_lam=nested_crossval(trf, stimulus[:lim_stim], response[:lim_stim], fs_trf, tmin, tmax, regs, k=k)
+        print(f"r-values: {r_ncv}, mean: {r_ncv.mean()}")
 
 
         if lim_stim is None and save_results:
@@ -91,7 +93,7 @@ def nested_cv_wrapper(subj_num,
             else:
                 timestamps_generated_by=f"xcorr{which_xcorr}"
                 # results_dir = os.path.join("..",f"{which_xcorr}_results", subj_cat, subj_num)
-            results_dir=os.path.join("..","results")
+            results_dir=os.path.join("..","results",subj_cat,subj_num)
             
             if reduce_trials_by is not None:
                 trial_reduction=reduce_trials_by
@@ -114,18 +116,26 @@ def nested_cv_wrapper(subj_num,
         return trf, r_ncv, best_lam
 #%%
 if __name__=="__main__":
-    which_stmps=os.environ["which_stmps"]
-    if which_stmps.lower()=="xcorr":
-        evnt=False
-        which_xcorr=os.environ["which_xcorr"]
-    elif which_stmps.lower()=="evnt":
-        evnt=True #IF TRUE USE EVNT-SEGMENTED DATA
-        which_xcorr=None #TODO: this is already default in load_preprocessed but I'm specifying it like 6 different places, how can I avoid this?
-    # code is getting really messy because of this stupidass variable, it is now in setup_xy, env_recon, get_pause_times, and anywhere timestamps are used
+    if "which_stmps" in os.environ and "subj_num" in os.environ:
+        subj_num=os.environ["subj_num"] 
+        which_stmps=os.environ["which_stmps"]
+        
+        if which_stmps.lower()=="xcorr":
+            evnt=False
+            which_xcorr=os.environ["which_xcorr"]
+        elif which_stmps.lower()=="evnt":
+            evnt=True #IF TRUE USE EVNT-SEGMENTED DATA
+            which_xcorr=None #TODO: this is already default in load_preprocessed but I'm specifying it like 6 different places, how can I avoid this?
+        # code is getting really messy because of this stupidass variable, it is now in setup_xy, env_recon, get_pause_times, and anywhere timestamps are used
+        else:
+            raise NotImplementedError(f"which_stmps={which_stmps} is not an option")
     else:
-        raise NotImplementedError(f"which_stmps={which_stmps} is not an option")
+        # running interactively probably for debugging purposes
+        subj_num="3328"
+        which_stmps="xcorr"
+        which_xcorr="wavs"
+        evnt=False
     
-    subj_num = os.environ["subj_num"] 
     #note: return_xy is False by default but when save_results is True will store them in pkl anyway
     nested_cv_wrapper(subj_num,return_xy=False,
                       save_results=True,

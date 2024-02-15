@@ -17,7 +17,7 @@ if __name__=='__main__':
     fs=100#TODO: un-hardcode
     n_elec=62
     n_lags=41
-    results_dir=os.path.join("..","envs_results")
+    results_dir=os.path.join("..","results")
     # get all subjects and plot grand average trf weights
     avg_weights=np.zeros((n_elec,n_lags))
     hc_subjs=utils.get_all_subj_nums(single_cat="hc")
@@ -32,13 +32,7 @@ if __name__=='__main__':
         # load each subject's trfs, compute average weights
         subj_cat=utils.get_subj_cat(subj_num)
         
-        if 'envs' in results_dir or 'wavs' in results_dir or 'evnt' in results_dir:
-            results_fnm="env_recon_trf.pkl"
-        else:
-            # old results directory naming - used wavs but bad timestamp algorithm
-            #  (honestly should just delete these)
-            results_fnm=subj_num+"_clean_pauses_env_recon_results.pkl"
-        
+        results_fnm='bkwd_trf.pkl'
         
         subj_trf_pth=os.path.join(results_dir,subj_cat,subj_num,results_fnm)
         with open(subj_trf_pth, 'rb') as f:

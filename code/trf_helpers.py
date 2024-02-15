@@ -22,6 +22,8 @@ def get_stim_envs(stims_dict, clean_or_noisy, fs_output, f_lp=30):
     f_lp: low-pass filter cutoff, 30 Hz by default (must be below fs_output/2)
     returns: stim envelopes sampled at fs_output
     '''
+    print(f"""Getting stim envelopes. verify that stim envelopes low pass filter 
+          is correct based on eeg preprocessing: {f_lp} Hz""")
     if f_lp >= fs_output/2:
         raise NotImplementedError('low-pass is not below nyquist')
     fs_stim = stims_dict['fs'][0]
