@@ -6,6 +6,7 @@
 import pickle
 import scipy.io as spio
 import numpy as np
+
 import os
 # import sounddevice as sd # note not available via conda....? not sure I'll need anyway so ignore for now
 from scipy import signal
@@ -43,7 +44,6 @@ else:
     print("using manually inputted vars")
     subj_num="3253"
     which_stmps="xcorr"
-    script_name="preprocess_segment"
     which_xcorr="wavs"
     just_stmp=False
     # noisy_or_clean="clean" #NOTE: clean is default and setting them here does nothing
@@ -51,16 +51,16 @@ else:
 confidence_lims=[0.80, 0.40]
 #print max, min pearsonr correlation thresholds
 print(f'minimum pearsonr threshold: {min(confidence_lims)}')
-timestamps_bad=True #CHANGE ONCE WE ARE SATISFIED WITH SEGMENTATION to load pre-computed timestamps
+timestamps_bad=False #we trust the stamps now, but there may be a bug in sementation
 # determine filter params applied to EEG before segmentation 
 # NOTE: different from filter lims used in timestamp detection algo (!)
 filt_band_lims=[1.0, 15] #Hz; highpass, lowpass cutoffs
 filt_o=3 # order of filter (effective order x2 of this since using zero-phase)
 processed_dir_path=os.path.join(eeg_dir, f"preprocessed_{which_stmps}") #directory where processed data goes
 subj_cat=utils.get_subj_cat(subj_num) #note: checked get_subj_cat, should be fine
-raw_dir=os.path.join(eeg_dir, "raw")
-print(f"Fetching data for {subj_num, subj_cat}")
-subj_eeg=utils.get_full_raw_eeg(raw_dir, subj_cat, subj_num, blocks=blocks)
+raw_dir=os.path.join(eeg_dir,"raw")
+print(f"Fetching data for {subj_num,subj_cat}")
+subj_eeg=utils.get_full_raw_eeg(raw_dir,subj_cat,subj_num,blocks=blocks)
 #%%
 # find timestamps
 if which_stmps=="xcorr":
@@ -71,7 +71,7 @@ if which_stmps=="xcorr":
         print(f"preprocessed dir for {subj_num, subj_cat} not found, creating one.")
         os.makedirs(save_path, exist_ok=True)
     # check if timestamps fl exists already
-    timestamps_path = os.path.join("..","eeg_data","timestamps",subj_cat,subj_num,
+    timestamps_path=os.path.join("..","eeg_data","timestamps",subj_cat,subj_num,
                                 f"{which_xcorr}_timestamps.pkl")
     if os.path.exists(timestamps_path) and not timestamps_bad:
         # if already have timestamps, load from pkl:
@@ -127,23 +127,23 @@ if not just_stmp:
         # filter and resample
         if fs_eeg / 2 <= fs_trf:
             raise NotImplementedError("Nyquist") 
-        sos = signal.butter(filt_o, filt_band_lims, btype='bandpass', output='sos', fs=fs_eeg)
-        raw_eeg = signal.sosfiltfilt(sos, raw_eeg, axis=0)
-        ds_factor = int(np.floor((raw_eeg.shape[0]-1)*(fs_trf/fs_eeg)))
-        subj_eeg[block] = signal.resample(raw_eeg, ds_factor, axis=0)
-        # resample timestamps
+        sos=signal.butter(filt_o,filt_band_lims,btype='bandpass',
+                          output='sos',fs=fs_eeg)
+        raw_eeg=signal.sosfiltfilt(sos,raw_eeg,axis=0)
+        # get number of samples in downsampled waveform
+        num_ds=int(np.floor((raw_eeg.shape[0]-1)*(fs_trf/fs_eeg)))
+        # downsample eeg
+        subj_eeg[block]=signal.resample(raw_eeg,num_ds,axis=0)
+        # downsample timestamps
         for stim_nm, (start, end, confidence) in timestamps[block].items():
-            if start is not None:
-                #TODO: i like using all([start, end,conf]) better,
-                #  but start should be None when below confidence 
-                # anyway so fine for now
-                # start/end timestamps after downsampling
-                s_ds = int(np.floor(start*(fs_trf/fs_eeg)))
-                e_ds = int(np.floor(end*(fs_trf/fs_eeg))) #NOTE: off by one error maybe?
-                timestamps_ds[block][stim_nm] = (s_ds, e_ds, confidence)
+            if all([start,end,confidence]):
+                
+                s_ds=int(np.floor(start*(fs_trf/fs_eeg)))
+                e_ds=int(np.floor(end*(fs_trf/fs_eeg))) #NOTE: off by one error maybe?
+                timestamps_ds[block][stim_nm]=(s_ds, e_ds, confidence)
             else:
-                timestamps_ds[block][stim_nm] = (None, None, confidence)
-    #%%
+                timestamps_ds[block][stim_nm]=(None, None, confidence)
+    #%
     # align downsampled eeg using ds timestamps
     print(f"Preprocessing done for {subj_num, subj_cat}. algining and segmenting eeg")
     subj_data = utils.align_responses(subj_eeg, timestamps_ds, stims_dict)

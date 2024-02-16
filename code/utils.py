@@ -1,3 +1,42 @@
+def check_timestamps(timestamps):
+    '''
+    helper to make sure timestamps are non-overlapping and strictly ascending
+    '''
+    for block in timestamps:
+        print(f"checking block {block}:")
+        nms=[]
+        starts=[]
+        ends=[]
+        for nm,(start,end,_) in timestamps[block].items():
+            if all([start,end]):
+                nms.append(nm)
+                starts.append(start)
+                ends.append(end)
+        #convert to arrays for mathing
+        starts=np.array(starts)
+        ends=np.array(ends)
+        #check non-overlapping:
+        if np.all((starts[1:]-ends[:-1])>=0) and\
+            starts[0]==np.min([starts,ends]) and\
+            ends[-1]==np.max([starts,ends]):
+            print("no indices overlap")
+        else:
+            n_overalapping=np.sum((starts[1:]-ends[:-1])<0)
+            #note: ignoring start and end; this should trivially not overlap anyway
+            print(f"{n_overalapping} indices overlap.")
+    
+        if np.all((ends>starts)):
+            print("all end indices larger than start.")
+        else:
+            print(f"{np.sum(ends<=starts)} stims have smaller end indices than start.")
+        if np.all(np.diff(starts)>=0) and np.all(np.diff(ends)>=0):
+            print("all starts, ends ascending.")
+        else:
+            print(f"{np.sum(np.diff(starts)<0)} starts not ascending, \
+                  {np.sum(np.diff(ends)<0)} ends not ascending.")
+
+
+
 import os
 def get_all_subj_nums(single_cat=None):
     '''
@@ -20,10 +59,10 @@ def get_all_subj_nums(single_cat=None):
 
 import numpy as np
 import pandas as pd
-def align_responses(subj_eeg:dict, stim_start_end:dict, stims_dict:dict):
+def align_responses(subj_eeg:dict, timestamps:dict, stims_dict:dict):
     '''
     subj_eeg: {'block_num': [time x channels] - eeg numpy array}
-    stim_start_end {'block_num': {'stim_nm': (onset_time, offset_time)} }
+    timestamps: {'block_num': {'stim_nm': (onset_time, offset_time)} }
     stims_dict: master stim directory with original stim wav files (noisy and clean)
     returns
     pandas dataframe with aligned eeg data
@@ -34,7 +73,8 @@ def align_responses(subj_eeg:dict, stim_start_end:dict, stims_dict:dict):
                 confidence
     '''
     #TODO: add optional padding around on/of time edges 
-    # "unwrapping" blocks dim
+    #NOTE: stims_dict not being used by/needed function 
+    # but kinda useful during debugging
     
 
     S_names = []
@@ -43,11 +83,10 @@ def align_responses(subj_eeg:dict, stim_start_end:dict, stims_dict:dict):
     R =[]
     R_audio = []
     for block in subj_eeg:
-        for stim_nm, (start, end, confidence) in stim_start_end[block].items():
+        for stim_nm, (start, end, confidence) in timestamps[block].items():
             S_names.append(stim_nm)
-            # timestamps.append(stim_info[:2])
             confidence_vals.append(confidence)
-            if all(start,end):
+            if all([start,end]):
                 R.append(subj_eeg[block][start:end,:62])
                 R_audio.append(subj_eeg[block][start:end,-1])
             else:
