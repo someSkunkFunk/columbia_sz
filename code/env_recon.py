@@ -42,7 +42,7 @@ def nested_cv_wrapper(subj_num,
     reduce_trials_by: str specifying  by grouping stories wihtin a block ("stim_nm")
     # or grouping by pauses within a block ("pauses")
     '''
-    f_lp=15 #Hz, lowpass filter freq for get_stim_envs
+    f_lp=49 #Hz, lowpass filter freq for get_stim_envs
     subj_cat=utils.get_subj_cat(subj_num)
     #NOTE that  by leaving eeg_dir blank below it's looking 
     # in eeg_data/preproessed_xcorr by default
@@ -70,7 +70,7 @@ def nested_cv_wrapper(subj_num,
         outlier_idx=None
 
     for clean_or_noisy in clean_nxor_noisy:
-        stim_envs=get_stim_envs(stims_dict, clean_or_noisy, fs_output=fs_trf,f_lp=f_lp)
+        stim_envs=get_stim_envs(stims_dict,clean_or_noisy,fs_output=fs_trf,f_lp=f_lp)
         stimulus, response, stim_nms=setup_xy(subj_data,stim_envs,
                                                 subj_num,reduce_trials_by,
                                                 outlier_idx,evnt=evnt,which_xcorr=which_xcorr)
@@ -103,7 +103,9 @@ def nested_cv_wrapper(subj_num,
             # note: will also create parent directoriesr
             if not os.path.exists(results_dir):
                 os.makedirs(results_dir, exist_ok=True)
-            with open(os.path.join(results_dir, results_file), 'wb') as f:
+            results_pth=os.path.join(results_dir, results_file)
+            print(f"saving results to {results_pth}")
+            with open(results_pth, 'wb') as f:
                 pickle.dump({'trf_fitted': trf, 'r_ncv': r_ncv, 'best_lam': best_lam,
                                 'stimulus': stimulus, 'response': response, 'stim_nms': stim_nms,
                                 'trials_reduced_by':trial_reduction,
@@ -131,7 +133,7 @@ if __name__=="__main__":
             raise NotImplementedError(f"which_stmps={which_stmps} is not an option")
     else:
         # running interactively probably for debugging purposes
-        subj_num="3328"
+        subj_num="3253"
         which_stmps="xcorr"
         which_xcorr="wavs"
         evnt=False

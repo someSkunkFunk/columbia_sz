@@ -34,6 +34,7 @@ if "subj_num" in os.environ:
     subj_num=os.environ["subj_num"]
     which_stmps=os.environ["which_stmps"] #xcorr or evnt
     which_xcorr=os.environ["which_xcorr"]
+
     bool_dict={"true":True,"false":False}
     just_stmp=bool_dict[os.environ["just_stmp"].lower()]
     print(f"just_stamp translated into: {just_stmp}")
@@ -121,7 +122,8 @@ if which_stmps=="evnt":
 if not just_stmp:
     timestamps_ds = {}
     print(f"Starting preprocessing {subj_num, subj_cat}")
-    for block, raw_eeg in subj_eeg.items():
+    for block, raw_data in subj_eeg.items():
+        #TODO: modify preprocessing block so that audio recording channel not filtered and can be used to check for alignment issues
         print(f"block: {block}")
         timestamps_ds[block] = {}
         # filter and resample
@@ -129,11 +131,13 @@ if not just_stmp:
             raise NotImplementedError("Nyquist") 
         sos=signal.butter(filt_o,filt_band_lims,btype='bandpass',
                           output='sos',fs=fs_eeg)
-        raw_eeg=signal.sosfiltfilt(sos,raw_eeg,axis=0)
+        filt_eeg=signal.sosfiltfilt(sos,raw_data[:,62],axis=0)
+        audio_rec=raw_data[:,-1] # leave unperturbed for alignment checking
         # get number of samples in downsampled waveform
-        num_ds=int(np.floor((raw_eeg.shape[0]-1)*(fs_trf/fs_eeg)))
+        num_ds=int(np.floor((filt_eeg.shape[0]-1)*(fs_trf/fs_eeg)))
         # downsample eeg
-        subj_eeg[block]=signal.resample(raw_eeg,num_ds,axis=0)
+        # NOTE: audio_rec not downsampled
+        subj_eeg[block]=(signal.resample(filt_eeg,num_ds,axis=0),audio_rec)
         # downsample timestamps
         for stim_nm, (start, end, confidence) in timestamps[block].items():
             if all([start,end,confidence]):
@@ -146,7 +150,8 @@ if not just_stmp:
     #%
     # align downsampled eeg using ds timestamps
     print(f"Preprocessing done for {subj_num, subj_cat}. algining and segmenting eeg")
-    subj_data = utils.align_responses(subj_eeg, timestamps_ds, stims_dict)
+    subj_data = utils.align_responses(subj_eeg, (timestamps, timestamps_ds), 
+                                      audio_rec, stims_dict)
     subj_data['fs'] = fs_trf
     print("subj_data before pickling:")
     print(subj_data.head())

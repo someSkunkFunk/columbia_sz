@@ -8,7 +8,7 @@
 #SBATCH -n 20 ##Number of tasks
 #SBATCH -J timestamp_wav
 #SBATCH --partition=standard
-#SBATCH --output=standard_preprocess_segment_wavs_pt2.log
+#SBATCH --output=standard_just_segment.log
 
 ##SBATCH --array=1-26 
 ##SBATCH --depend=afterany:17146968
@@ -24,23 +24,23 @@ which_xcorr="wavs"
 noisy_or_clean="clean"
 just_stmp="false"
 subjs=(
-    ## 3253  
-    ## 3316  
-    ## 3317  
-    ## 3318 
-    ## 3322  
-    ## 3323  
-    ## 3325  
-    ## 3326
-    ## 0194  
-    ## 2588  
-    ## 2621
-    ## 2782
-    ## 3133  
-    ## 3146  
-    ## 3218  
-    ## 3287  
-    ## 3314  
+    3253  
+    3316  
+    3317  
+    3318 
+    3322  
+    3323  
+    3325  
+    3326
+    0194  
+    2588  
+    2621
+    2782
+    3133  
+    3146  
+    3218  
+    3287  
+    3314  
     3315  
     3324  
     3328

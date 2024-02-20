@@ -14,7 +14,7 @@ def find_bad_electrodes(subj_data, criteria="4std"):
 
 from scipy import signal
 import numpy as np
-def get_stim_envs(stims_dict, clean_or_noisy, fs_output, f_lp=30):
+def get_stim_envs(stims_dict, clean_or_noisy, fs_output, f_lp=49, filt_o=1):
     ''''
     stims_dict: classic stims dict with both dirty and clean stims from stim file
     clean_or_noisy: choose which stims to downsample and extract envelopes from "clean" or "noisy"
@@ -22,20 +22,19 @@ def get_stim_envs(stims_dict, clean_or_noisy, fs_output, f_lp=30):
     f_lp: low-pass filter cutoff, 30 Hz by default (must be below fs_output/2)
     returns: stim envelopes sampled at fs_output
     '''
-    print(f"""Getting stim envelopes. verify that stim envelopes low pass filter 
-          is correct based on eeg preprocessing: {f_lp} Hz""")
+    print(f"""Getting stim envelopes using low pass butter of order {filt_o} and cutoff at {f_lp} Hz""")
     if f_lp >= fs_output/2:
         raise NotImplementedError('low-pass is not below nyquist')
-    fs_stim = stims_dict['fs'][0]
-    sos = signal.butter(3, f_lp, fs = fs_stim, output='sos')
+    fs_stim=stims_dict['fs'][0]
+    sos = signal.butter(filt_o,f_lp,output='sos',fs=fs_stim)
     # get envelopes first, then resample
     stim_envs = {stim_nm: np.abs(signal.hilbert(stim_wav)) 
                  for stim_nm, stim_wav in zip(stims_dict['ID'], stims_dict["orig_"+clean_or_noisy])}
 
-
+    #NOTE: getting envelopes first could be bad if resmple uses FFT method??
     ds_envs = {stim_nm: signal.resample(signal.sosfiltfilt(sos, stim_wav), int((stim_wav.size - 1)*fs_output/fs_stim)) 
                 for stim_nm, stim_wav in stim_envs.items()}
-    # eliminate any negative values
+    # rectify envelopes
     ds_envs = {stim_nm: np.maximum(s, 0) for stim_nm, s in ds_envs.items()}
     
     return ds_envs
@@ -46,6 +45,18 @@ from utils import get_pause_times
 def setup_xy(subj_data,stim_envs,subj_num,
               reduce_trials_by=None,outlier_idx=None,
               evnt=False,which_xcorr=None):
+    '''
+    subj_data: eeg 
+    stim_envs: envelopes of individual waveforms presented during experiment
+        should already be downsampled to eeg fs
+    reduce_trials_by: method of selecting which stimuli/trials to concatenate into one 
+            for computational purposes
+    returns
+    -
+    stimulus: concatenated stim envelopes
+    response:
+    stim_nms:
+    '''
     #TODO: get subj_cat and subj_num from subj_data (will have to add to subj data probably)
     stimulus = []
     response = []

@@ -22,7 +22,14 @@ def get_gtec_pos():
     return posarr
 
 # stupid helper function 
-def get_subj_results_fnm(results_dir,subj_num=None):
+def get_subj_results_fnm(results_dir,subj_num=None,all_same=True):
+    '''
+    function is basically a relic of when I was trying different timestamping methods 
+    and thus file naming schemes, but have since abandoned that and all results files
+    are currently the same. 
+    '''
+    if all_same:
+        return 'bkwd_trf.pkl'
     if 'envs' in results_dir or 'wavs' in results_dir or 'evnt' in results_dir:
             results_fnm="env_recon_trf.pkl"
     else:
@@ -40,7 +47,7 @@ if __name__=='__main__':
 
     grand_avg=True
     
-    results_dir=os.path.join("..","envs_results")
+    results_dir=os.path.join("..","results")
     # Single cat only matters if grand_avg=True (then do grand average of single category)
     single_cat="hc" #set to None or mute this line to get all subjects
     # hc_pth=os.path.join(results_dir,"hc")

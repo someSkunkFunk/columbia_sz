@@ -59,10 +59,11 @@ def get_all_subj_nums(single_cat=None):
 
 import numpy as np
 import pandas as pd
-def align_responses(subj_eeg:dict, timestamps:dict, stims_dict:dict):
+def align_responses(subj_eeg:dict, timestamps_tup:tuple, audio_chn, stims_dict:dict):
     '''
     subj_eeg: {'block_num': [time x channels] - eeg numpy array}
-    timestamps: {'block_num': {'stim_nm': (onset_time, offset_time)} }
+    timestamps: tuple of {'block_num': {'stim_nm': (onset_time, offset_time)} } 
+                dicts for downsampled and og timestamps
     stims_dict: master stim directory with original stim wav files (noisy and clean)
     returns
     pandas dataframe with aligned eeg data
@@ -76,19 +77,21 @@ def align_responses(subj_eeg:dict, timestamps:dict, stims_dict:dict):
     #NOTE: stims_dict not being used by/needed function 
     # but kinda useful during debugging
     
-
-    S_names = []
-    # timestamps = []
-    confidence_vals = []
-    R =[]
-    R_audio = []
+    ts_og,ts_ds=timestamps_tup
+    S_names=[]
+    confidence_vals=[]
+    R=[]
+    R_audio=[]
     for block in subj_eeg:
-        for stim_nm, (start, end, confidence) in timestamps[block].items():
+        eeg,audio_rec=subj_eeg[block]
+        for stim_nm, (start, end, confidence) in ts_ds[block].items():
             S_names.append(stim_nm)
             confidence_vals.append(confidence)
             if all([start,end]):
-                R.append(subj_eeg[block][start:end,:62])
-                R_audio.append(subj_eeg[block][start:end,-1])
+                R.append(eeg)
+                # get original timestamps since audio recording is not downsapled
+                start_og,end_og,_=ts_og[block][stim_nm]
+                R_audio.append(audio_rec[start_og:end_og])
             else:
                 R.append(np.nan)
                 R_audio.append(np.nan)
@@ -483,7 +486,9 @@ def get_timestamps(subj_eeg,eeg_dir,subj_num,subj_cat,stims_dict,blocks,
                 print(f"size of x after new startpoint:{x.size}")
                 # mark end time of last stim found
                 # NOTE: not sure if this will work if first stim in block can't be found
-                prev_end = curr_end 
+                prev_end = curr_end
+                if stim_ii==100:
+                    pass
                 # move onto next stim
                 continue
             else:
