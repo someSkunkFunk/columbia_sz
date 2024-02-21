@@ -15,7 +15,7 @@ from mtrf.stats import crossval, nested_crossval
 
 
 #%%
-# define wrapper and run the shit
+# define wrapper 
 
 
 def nested_cv_wrapper(subj_num,
@@ -71,6 +71,7 @@ def nested_cv_wrapper(subj_num,
 
     for clean_or_noisy in clean_nxor_noisy:
         stim_envs=get_stim_envs(stims_dict,clean_or_noisy,fs_output=fs_trf,f_lp=f_lp)
+        #recorded audio mostly for debuggning and checking alignment of timestamps
         stimulus,response,stim_nms,recorded_audio=setup_xy(subj_data,stim_envs,
                                                 subj_num,reduce_trials_by,
                                                 outlier_idx,evnt=evnt,which_xcorr=which_xcorr)
@@ -142,3 +143,6 @@ if __name__=="__main__":
     nested_cv_wrapper(subj_num,return_xy=False,
                       save_results=True,
                       evnt=evnt,which_xcorr=which_xcorr)
+
+                     
+

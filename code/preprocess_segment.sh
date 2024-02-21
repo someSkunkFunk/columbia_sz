@@ -6,9 +6,9 @@
 #SBATCH -t 02:00:00
 #SBATCH --mem=60gb
 #SBATCH -n 20 ##Number of tasks
-#SBATCH -J timestamp_wav
+#SBATCH -J fix_eeg_slicing
 #SBATCH --partition=standard
-#SBATCH --output=standard_just_segment.log
+#SBATCH --output=standard_just_segment_fixed.log
 
 ##SBATCH --array=1-26 
 ##SBATCH --depend=afterany:17146968

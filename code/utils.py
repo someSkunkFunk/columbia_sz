@@ -88,7 +88,7 @@ def align_responses(subj_eeg:dict, timestamps_tup:tuple, audio_chn, stims_dict:d
             S_names.append(stim_nm)
             confidence_vals.append(confidence)
             if all([start,end]):
-                R.append(eeg)
+                R.append(eeg[start:end,:])
                 # get original timestamps since audio recording is not downsapled
                 start_og,end_og,_=ts_og[block][stim_nm]
                 R_audio.append(audio_rec[start_og:end_og])
