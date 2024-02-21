@@ -71,7 +71,7 @@ def nested_cv_wrapper(subj_num,
 
     for clean_or_noisy in clean_nxor_noisy:
         stim_envs=get_stim_envs(stims_dict,clean_or_noisy,fs_output=fs_trf,f_lp=f_lp)
-        stimulus, response, stim_nms=setup_xy(subj_data,stim_envs,
+        stimulus,response,stim_nms,recorded_audio=setup_xy(subj_data,stim_envs,
                                                 subj_num,reduce_trials_by,
                                                 outlier_idx,evnt=evnt,which_xcorr=which_xcorr)
         # model params      

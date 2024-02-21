@@ -131,7 +131,7 @@ if not just_stmp:
             raise NotImplementedError("Nyquist") 
         sos=signal.butter(filt_o,filt_band_lims,btype='bandpass',
                           output='sos',fs=fs_eeg)
-        filt_eeg=signal.sosfiltfilt(sos,raw_data[:,62],axis=0)
+        filt_eeg=signal.sosfiltfilt(sos,raw_data[:,:62],axis=0)
         audio_rec=raw_data[:,-1] # leave unperturbed for alignment checking
         # get number of samples in downsampled waveform
         num_ds=int(np.floor((filt_eeg.shape[0]-1)*(fs_trf/fs_eeg)))

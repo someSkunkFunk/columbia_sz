@@ -46,6 +46,9 @@ def setup_xy(subj_data,stim_envs,subj_num,
               reduce_trials_by=None,outlier_idx=None,
               evnt=False,which_xcorr=None):
     '''
+    NOTE SINCE SEPARATED AUDIO CHANNEL, 
+    THIS FUNCTION WILL PROBABLY BREAK WHEN REDUCE_TRIALS_BY is NOT PAUSES
+    BECAUSE IT"S THE ONLY CONDITION BLOCK I EDITED POST CHANGE
     subj_data: eeg 
     stim_envs: envelopes of individual waveforms presented during experiment
         should already be downsampled to eeg fs
@@ -61,12 +64,14 @@ def setup_xy(subj_data,stim_envs,subj_num,
     stimulus = []
     response = []
     stim_nms = []
+    audio_recorded=[]
     prev_nm = None
     prev_block = None
              
     for stim_nm in subj_data.dropna()['stim_nms']:
-        s = np.squeeze(stim_envs[stim_nm[:-4]])
-        r = np.asarray(subj_data['eeg'].loc[subj_data['stim_nms']==stim_nm])[0]
+        s=np.squeeze(stim_envs[stim_nm[:-4]])
+        r=np.asarray(subj_data['eeg'].loc[subj_data['stim_nms']==stim_nm])[0]
+        audio_bit=np.asarray(subj_data['eeg_audio'].loc[subj_data['stim_nms']==stim_nm])[0]
         # filter out bad electrodes when given mask for outliers
         if outlier_idx is not None:
             r = r[:,~outlier_idx]
@@ -116,21 +121,25 @@ def setup_xy(subj_data,stim_envs,subj_num,
                     pause_tm, _ = pause_times[block][prev_nm+stim_nm]
                     if pause_tm <= 1:
                         # concatenate to prev stim if in same block and story
-                        stimulus[-1] = np.concatenate([stimulus[-1], s])
-                        response[-1] = np.concatenate([response[-1], r])
+                        stimulus[-1]=np.concatenate([stimulus[-1], s])
+                        response[-1]=np.concatenate([response[-1], r])
                         stim_nms[-1].append(stim_nm)
+                        audio_recorded[-1]=np.concatenate([audio_recorded[-1],
+                                                           audio_bit])
                         prev_nm = stim_nm
                     else:
                         # pause too long, make new list element
                         stimulus.append(s)
                         response.append(r)
                         stim_nms.append([stim_nm])
+                        audio_recorded.append(audio_bit)
                         prev_nm = stim_nm
                 else:
                     # first stim (or first block)
                     stimulus.append(s)
                     response.append(r)
                     stim_nms.append([stim_nm])
+                    audio_recorded.append(audio_bit)
                     prev_nm = stim_nm
                 prev_block = block
                     
@@ -141,4 +150,4 @@ def setup_xy(subj_data,stim_envs,subj_num,
             stimulus.append(s)
             response.append(r)
             stim_nms.append([stim_nm])
-    return stimulus, response, stim_nms
+    return stimulus, response, stim_nms, audio_recorded
