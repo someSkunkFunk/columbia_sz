@@ -37,6 +37,7 @@ if "subj_num" in os.environ:
     #bool vars need to be converted from strings
     bool_dict={"true":True,"false":False}
     do_avg_ref=bool_dict[os.environ["do_avg_ref"].lower()]
+    print(f"do_avg_ref: {do_avg_ref}")
     just_stmp=bool_dict[os.environ["just_stmp"].lower()]
     print(f"just_stamp translated into: {just_stmp}")
 #####################################################################################
@@ -131,6 +132,7 @@ if not just_stmp:
         # filter and resample
         raw_eeg=raw_data[:,:62]
         if do_avg_ref:
+            print("Re-referencing eeg to common average.")
             raw_eeg=raw_eeg-raw_eeg.mean(axis=1)[:,None]
         if fs_eeg / 2 <= fs_trf:
             raise NotImplementedError("Nyquist") 
