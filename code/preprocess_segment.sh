@@ -6,9 +6,9 @@
 #SBATCH -t 02:00:00
 #SBATCH --mem=60gb
 #SBATCH -n 20 ##Number of tasks
-#SBATCH -J fix_eeg_slicing
+#SBATCH -J avg_ref_preproc
 #SBATCH --partition=standard
-#SBATCH --output=standard_just_segment_fixed.log
+#SBATCH --output=avg_ref_preproc.log
 
 ##SBATCH --array=1-26 
 ##SBATCH --depend=afterany:17146968
@@ -17,7 +17,8 @@
 
 
 ##bash vars
-echo "this code is fixed now"
+echo "This code now includes average referencing"
+do_avg_ref="true"
 which_stmps="xcorr"
 script_name="preprocess_segment"
 which_xcorr="wavs"
@@ -56,6 +57,7 @@ do
     export which_xcorr
     export noisy_or_clean
     export just_stmp
+    export do_avg_ref
     echo "running subject $subj_num"
     python /scratch/apalaci6/columbia_sz/code/$script_name.py
 done

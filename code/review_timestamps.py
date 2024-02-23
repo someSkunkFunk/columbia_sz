@@ -9,7 +9,7 @@ from matplotlib import colors
 import pandas as pd
 
 all_subjs=utils.get_all_subj_nums()
-which_xcorr="wavs" # clean wavs seem to yield best results....
+which_xcorr="envs" # clean wavs seem to yield best results....
 stims_dict=utils.get_stims_dict()
 all_stim_nms=stims_dict["ID"] #note .wav not in name
 #%%

@@ -34,8 +34,9 @@ if "subj_num" in os.environ:
     subj_num=os.environ["subj_num"]
     which_stmps=os.environ["which_stmps"] #xcorr or evnt
     which_xcorr=os.environ["which_xcorr"]
-
+    #bool vars need to be converted from strings
     bool_dict={"true":True,"false":False}
+    do_avg_ref=bool_dict[os.environ["do_avg_ref"].lower()]
     just_stmp=bool_dict[os.environ["just_stmp"].lower()]
     print(f"just_stamp translated into: {just_stmp}")
 #####################################################################################
@@ -47,12 +48,13 @@ else:
     which_stmps="xcorr"
     which_xcorr="wavs"
     just_stmp=False
+    do_avg_ref=True
     # noisy_or_clean="clean" #NOTE: clean is default and setting them here does nothing
 ##################################################################################
 confidence_lims=[0.80, 0.40]
 #print max, min pearsonr correlation thresholds
 print(f'minimum pearsonr threshold: {min(confidence_lims)}')
-timestamps_bad=False #we trust the stamps now, but there may be a bug in sementation
+timestamps_bad=False #currently unsure where the problem is but could still be timestamps although they seem good
 # determine filter params applied to EEG before segmentation 
 # NOTE: different from filter lims used in timestamp detection algo (!)
 filt_band_lims=[1.0, 15] #Hz; highpass, lowpass cutoffs
@@ -127,11 +129,14 @@ if not just_stmp:
         print(f"block: {block}")
         timestamps_ds[block] = {}
         # filter and resample
+        raw_eeg=raw_data[:,:62]
+        if do_avg_ref:
+            raw_eeg=raw_eeg-raw_eeg.mean(axis=1)[:,None]
         if fs_eeg / 2 <= fs_trf:
             raise NotImplementedError("Nyquist") 
         sos=signal.butter(filt_o,filt_band_lims,btype='bandpass',
                           output='sos',fs=fs_eeg)
-        filt_eeg=signal.sosfiltfilt(sos,raw_data[:,:62],axis=0)
+        filt_eeg=signal.sosfiltfilt(sos,raw_eeg,axis=0)
         audio_rec=raw_data[:,-1] # leave unperturbed for alignment checking
         # get number of samples in downsampled waveform
         num_ds=int(np.floor((filt_eeg.shape[0]-1)*(fs_trf/fs_eeg)))
