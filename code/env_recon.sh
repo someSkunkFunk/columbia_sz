@@ -8,7 +8,7 @@
 #SBATCH -n 20 ##Number of tasks
 #SBATCH -J env_recon
 #SBATCH --partition=standard
-#SBATCH --output=bkwd_trf_fix_stim_filters.log
+#SBATCH --output=bkwd_trf_common_avg.log
 
 ##SBATCH --array=1-26 
 ##SBATCH --depend=afterany:17146968

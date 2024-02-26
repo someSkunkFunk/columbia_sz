@@ -487,8 +487,6 @@ def get_timestamps(subj_eeg,eeg_dir,subj_num,subj_cat,stims_dict,blocks,
                 # mark end time of last stim found
                 # NOTE: not sure if this will work if first stim in block can't be found
                 prev_end = curr_end
-                if stim_ii==100:
-                    pass
                 # move onto next stim
                 continue
             else:
@@ -577,15 +575,18 @@ def match_waves(x, y, confidence_lims:list, fs:int, standardize=True):
         if x.size<y.size:
             raise NotImplementedError(f"Remaining recording size is too small for stim size.")
 
-        r=signal.correlate(x,y,mode='valid')
-        lags=signal.correlation_lags(x.size,y.size,mode='valid')
+        r=signal.correlate(x,y,mode='full')
+        lags=signal.correlation_lags(x.size,y.size,mode='full')
 
         
         #NOTE: not off my one.... i think
+        # sync_lag=np.argmax(np.abs(r))-len(x)+1
         sync_lag=lags[np.argmax(np.abs(r))]
         # calculate pearson corr between segments
         x_segment=x[sync_lag:sync_lag+y.size]
-        current_confidence = abs(pearsonr(x_segment, y).statistic)
+        if x_segment.size != y.size:
+            pass
+        current_confidence=abs(pearsonr(x_segment, y).statistic)
         if thresh==max_thresh and current_confidence>=max_confidence:
             #only save on first run through recording
             #update return value and update max to beat

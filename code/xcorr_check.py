@@ -21,6 +21,7 @@ evnt=False
 reduce_trials_by='pauses'
 clean_or_noisy='clean'
 #%%
+# plot xcorrs for each subj, stimulus, electrode
 blocks=[f"B0{ii}" for ii in range(1,7)]
 # store trial durations in dict organized by blocks
 corrs_dict={sbj: () for sbj in all_subjs}
@@ -36,16 +37,42 @@ for subj_num in all_subjs:
     # fs_trf=subj_data['fs'][0]
     # note: getting stim envs kinda unnecessary and time consuming for this analysis
     # so maybe can edit setup_xy so it doesn't need it?
-    stimulus,response,stim_nms,_=setup_xy(subj_data,stim_envs,subj_num,
+    stimulus,response,_,_=setup_xy(subj_data,stim_envs,subj_num,
                                                        reduce_trials_by,which_xcorr=which_xcorr)
-    for s, rs in zip(stimulus,response):
-        # note that nms is a list of names, but all nms for a given block
-        # should belong to the same trial
-        subj_xcorrs=[]
-        print('evaluating xcorrs...')
-        for r in rs:
-            subj_xcorrs.append(signal.correlate(s,r,mode='valid'))
-            
+    # subj_xcorrs=[]
+    for ii, (s,rs) in enumerate(zip(stimulus,response)):
+        # subj_xcorrs.append([])
+        print(f'xcorring stim {ii+1} of {len(stimulus)} ...')
         # lags should be the same for all electrodes
-        lags=signal.correlation_lags(s.size,len(rs))
-    corrs_dict[subj_num]=(lags,subj_xcorrs)
+        lags=signal.correlation_lags(s.size,len(rs),mode='full')
+        for jj, r in enumerate(rs.T):
+            # subj_xcorrs[ii].append(signal.correlate(s,r,mode='valid'))
+            r_xcorr=signal.correlate(r,s,mode='full')
+            # plot the shit
+            fig,ax=plt.subplots()
+            ax.plot(lags/fs_trf,r_xcorr)
+            ax.set_title(f'electrode {jj} xcorr for stim/subj {ii, subj_num}')
+            ax.set_xlabel('time (s)')
+            # ax.set_xlim([-.200,.400]) #TODO: where to expect trf??
+            save_dir=os.path.join("..","figures","xcorrs",subj_cat,subj_num)
+            if not os.path.isdir(save_dir):
+                os.makedirs(save_dir,exist_ok=True)
+            fig_nm=f"xcorr_chn_{jj:0{2}}"
+            save_pth=os.path.join(save_dir,fig_nm)
+            plt.savefig(save_pth)
+            # plt.show()
+        del lags,r_xcorr,s,r,fig,ax
+    del subj_data,stimulus,response
+
+            
+    # corrs_dict[subj_num]=(lags,subj_xcorrs) # {subj_num: [[stims x channels]]}
+#%%
+# plotting 
+subj_num="3253"
+subj_cat=utils.get_subj_cat(subj_num)
+stim_ii=0 # choose some stimm to plot
+lags,subj_xcorrs=corrs_dict[subj_num]
+for chnl in range(62):
+    
+
+    

@@ -55,7 +55,7 @@ else:
 confidence_lims=[0.80, 0.40]
 #print max, min pearsonr correlation thresholds
 print(f'minimum pearsonr threshold: {min(confidence_lims)}')
-timestamps_bad=False #currently unsure where the problem is but could still be timestamps although they seem good
+timestamps_bad=True #currently unsure where the problem is but could still be timestamps although they seem good
 # determine filter params applied to EEG before segmentation 
 # NOTE: different from filter lims used in timestamp detection algo (!)
 filt_band_lims=[1.0, 15] #Hz; highpass, lowpass cutoffs
