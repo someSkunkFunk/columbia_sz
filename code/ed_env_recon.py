@@ -1,6 +1,4 @@
-# script for mtrf analysis on columbia sz dataset using bluehive
-# most up-to-date as of 9/26/23
-
+# script for mtrf analysis on Ed's test dataset to make sure problems in my trf code aren't the problem
 #%%
 # import packages
 import pickle
@@ -120,30 +118,22 @@ def nested_cv_wrapper(subj_num,
 #%%
 if __name__=="__main__":
     
-    if "which_stmps" in os.environ and "subj_num" in os.environ:
-        subj_num=os.environ["subj_num"] 
-        which_stmps=os.environ["which_stmps"]
-        
-        if which_stmps.lower()=="xcorr":
-            evnt=False
-            which_xcorr=os.environ["which_xcorr"]
-        elif which_stmps.lower()=="evnt":
-            evnt=True #IF TRUE USE EVNT-SEGMENTED DATA
-            which_xcorr=None #TODO: this is already default in load_preprocessed but I'm specifying it like 6 different places, how can I avoid this?
-        # code is getting really messy because of this stupidass variable, it is now in setup_xy, env_recon, get_pause_times, and anywhere timestamps are used
-        else:
-            raise NotImplementedError(f"which_stmps={which_stmps} is not an option")
-    else:
-        # running interactively probably for debugging purposes
-        subj_num="3253"
-        which_stmps="xcorr"
-        which_xcorr="wavs"
-        evnt=False
+    data_loc=os.path.join("..","Ed")
+    eeg_dir=os.path.join(data_loc,r"EEG Data Hong Kong")
+    envs_dir=os.path.join(data_loc,"Envelopes")
+    envs={}
+    eeg={}
+    for fnm in os.listdir(envs_dir):
+        fl_pth=os.path.join(envs_dir,fnm)
+        if fnm.endswith('.mat'):
+            #TODO: need to keep only first 20 envelopes
+            envs[fnm.strip('.mat')]=spio.loadmat(fl_pth)['envelope'][0]
+    for fnm in os.listdir(eeg_dir):
+        fl_pth=os.path.join(eeg_dir,fnm)
+        eeg[fnm[:2]]=spio.loadmat(fl_pth)['resp'][0]
+
+
     
-    #note: return_xy is False by default but when save_results is True will store them in pkl anyway
-    nested_cv_wrapper(subj_num,return_xy=False,
-                      save_results=True,
-                      evnt=evnt,which_xcorr=which_xcorr)
 
                      
 
