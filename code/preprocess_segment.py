@@ -24,6 +24,7 @@ fs_audio=stims_dict['fs'][0] # 11025 foriginally
 fs_eeg=2400 #trie d2kHz didn't help
 fs_trf=100 # Hz, downsampling frequency for trf analysis
 n_blocks = 6
+# blocks=["B6"]
 blocks = [f"B{ii}" for ii in range(1, n_blocks+1)]#NOTE: this is kinda unnecesary and I wanna remove it but focusing on bigger problem rn
 #%%
 # setup
@@ -52,9 +53,9 @@ else:
     do_avg_ref=True
     # noisy_or_clean="clean" #NOTE: clean is default and setting them here does nothing
 ##################################################################################
-confidence_lims=[0.80, 0.40]
+cutoff_ratio=12
 #print max, min pearsonr correlation thresholds
-print(f'minimum pearsonr threshold: {min(confidence_lims)}')
+print(f'xcorr cutoff: {cutoff_ratio} * std(xcorr)')
 timestamps_bad=True #currently unsure where the problem is but could still be timestamps although they seem good
 # determine filter params applied to EEG before segmentation 
 # NOTE: different from filter lims used in timestamp detection algo (!)
@@ -86,15 +87,15 @@ if which_stmps=="xcorr":
         print(f"Generating timestamps for {subj_num, subj_cat} ...")
         # get timestamps
         timestamps=utils.get_timestamps(subj_eeg,raw_dir,subj_num,
-                                        subj_cat,stims_dict,blocks,which_xcorr,
-                                        confidence_lims)
+                                        subj_cat,stims_dict,blocks,
+                                        cutoff_ratio,which_xcorr)
         # check resulting times
         total_soundtime=0
         missing_stims_list=[]
         for block in timestamps:
             block_sound_time=0
-            for stim_nm, (start, end, confidence) in timestamps[block].items():
-                if all([start,end,confidence]):
+            for stim_nm, (start, end) in timestamps[block].items():
+                if all([start,end]):
                     block_sound_time+=(end-start-1)/fs_eeg
                 else:
                     missing_stims_list.append(stim_nm)
@@ -146,14 +147,14 @@ if not just_stmp:
         # NOTE: audio_rec not downsampled
         subj_eeg[block]=(signal.resample(filt_eeg,num_ds,axis=0),audio_rec)
         # downsample timestamps
-        for stim_nm, (start, end, confidence) in timestamps[block].items():
-            if all([start,end,confidence]):
+        for stim_nm, (start, end) in timestamps[block].items():
+            if all([start,end]):
                 
                 s_ds=int(np.floor(start*(fs_trf/fs_eeg)))
                 e_ds=int(np.floor(end*(fs_trf/fs_eeg))) #NOTE: off by one error maybe?
-                timestamps_ds[block][stim_nm]=(s_ds, e_ds, confidence)
+                timestamps_ds[block][stim_nm]=(s_ds, e_ds)
             else:
-                timestamps_ds[block][stim_nm]=(None, None, confidence)
+                timestamps_ds[block][stim_nm]=(None, None)
     #%
     # align downsampled eeg using ds timestamps
     print(f"Preprocessing done for {subj_num, subj_cat}. algining and segmenting eeg")

@@ -404,7 +404,7 @@ from scipy import signal
 # NOTE: don't need imports from utils anymore since on same module?
 # from utils import get_lp_env, set_thresh, segment, get_stim_wav, match_waves    
 def get_timestamps(subj_eeg,eeg_dir,subj_num,subj_cat,stims_dict,blocks,
-                   which_xcorr='wavs',confidence_lims=[0.80, 0.4]):
+                   cutoff_ratio,which_xcorr='wavs'):
     '''
     uses xcorr to find where recorded audio best matches 
     stimuli waveforms (which_corr='wavs', deault) or envelopes (which_corr='envs)
@@ -431,9 +431,11 @@ def get_timestamps(subj_eeg,eeg_dir,subj_num,subj_cat,stims_dict,blocks,
         rec_wav = subj_eeg[block_num][:,-1]
         if which_xcorr.lower() == 'envs':
             rec_env = np.abs(signal.hilbert(rec_wav))
-            x = rec_env
+            x=rec_env
+            standardize=False
         elif which_xcorr.lower() =='wavs':
-            x = rec_wav
+            x=rec_wav
+            standardize=True
         else:
             raise NotImplementedError(f"which_corr = {which_xcorr} is not an option")
         prev_end=0 #TODO: verify this doesn't introduce new error (check w finished subject?)
@@ -451,47 +453,43 @@ def get_timestamps(subj_eeg,eeg_dir,subj_num,subj_cat,stims_dict,blocks,
             # downsample envelope or wav to eeg fs
             if which_xcorr.lower() == 'wavs':
                 # will "undersample" since sampling frequencies not perfect ratio
-                y = signal.resample(stim_wav, int(np.floor(stim_dur*fs_eeg)+1)) 
+                y = signal.resample(stim_wav, int(np.floor(stim_dur*fs_eeg)+1))
             elif which_xcorr.lower() == 'envs':
                 # will "undersample" since sampling frequencies not perfect ratio
-                y = signal.resample(stim_env, int(np.floor(stim_dur*fs_eeg)+1)) 
+                y = signal.resample(stim_env, int(np.floor(stim_dur*fs_eeg)+1))
                 
             if (x.size < y.size):
                 timestamps[block_num][stim_nm] = (None, None, None)
                 continue
 
-            print("matching waves")
-            if which_xcorr=='wavs':
-                # concerned that maybe standardizing makes problem harder when using envelopes
-                stim_on_off,confidence_val,over_thresh=match_waves(x,y,confidence_lims,fs_eeg)
-            elif which_xcorr=='envs':
-                stim_on_off,confidence_val,over_thresh=match_waves(x,y,confidence_lims,fs_eeg,
-                                                                   standardize=False)
+            print(f"matching waves, STARTPOINT:{prev_end}")
+            stim_lag,over_thresh=match_waves(x,y,fs_eeg,
+                                             cutoff_ratio=cutoff_ratio,standardize=standardize)
 
-            print(f"confidence_val: {confidence_val}, above threshold: {over_thresh}")
+            print(f"waves_matched, above threshold: {over_thresh}")
             #NOTE: code below used to depend on stim_on_off being none, but now checks over_thresh to decide 
             # if timestamps should be recorded
             if over_thresh:
 
-                curr_start = np.where(stim_on_off)[0][0] + prev_end
-                curr_end = np.where(stim_on_off)[0][1] + prev_end
-                print(f"number of samples between detected endpoints: {curr_end-curr_start}")
-                # save indices and confidence 
-                timestamps[block_num][stim_nm] = (curr_start, curr_end, confidence_val)
+                curr_start=stim_lag+prev_end
+                curr_end=curr_start+y.size 
+                print(f"NEW STARTPOINT:{curr_end}")
+                # save indices 
+                timestamps[block_num][stim_nm]=(curr_start,curr_end)
+                #TODO: edit code using timestamps to ignore confidence_val
                 # don't look at recording up to this point again
-                if which_xcorr=="wavs":
-                    x=rec_wav[curr_end:]
-                elif which_xcorr=="envs":
+                if which_xcorr.lower()=='envs':
                     x=rec_env[curr_end:]
-                print(f"size of x after new startpoint:{x.size}")
+                elif which_xcorr.lower()=='wavs':
+                    x=rec_wav[curr_end:]
                 # mark end time of last stim found
                 # NOTE: not sure if this will work if first stim in block can't be found
-                prev_end = curr_end
+                prev_end=curr_end
                 # move onto next stim
                 continue
             else:
                 # missing stims
-                timestamps[block_num][stim_nm] = (None, None, confidence_val)
+                timestamps[block_num][stim_nm] = (None, None)
                 # move onto next stim
                 continue
     return timestamps
@@ -550,7 +548,7 @@ def load_preprocessed(subj_num,eeg_dir=None,evnt=False,which_xcorr=None):
 from scipy import signal
 from scipy.stats import pearsonr
 import numpy as np
-def match_waves(x, y, confidence_lims:list, fs:int, standardize=True):
+def match_waves(x, y, fs:int, cutoff_ratio=10, standardize=True):
     '''
     x: long waveform (1d array)
     y: shorter waveform (1d array)
@@ -559,61 +557,43 @@ def match_waves(x, y, confidence_lims:list, fs:int, standardize=True):
     assumes x is longer than y so that lagging y relative to x gives positive lag values 
     at the lag where the two signals overlap
     '''
-    #TODO: only one threshold is probably necessary
-    max_thresh, min_thresh = confidence_lims
-    current_confidence = 0.00
-    max_confidence=0.00
-    thresh = max_thresh
-    on_off_times=np.zeros(x.size, dtype=bool)
+    
     exceed_thresh=False
+    stim_lag=None
     if standardize:
         x=(x-np.mean(x))/np.std(x)
         y=(y-np.mean(y))/np.std(y)
-    # should find a clear peak if stim there
-    for thresh in confidence_lims:
-            
-        if x.size<y.size:
-            raise NotImplementedError(f"Remaining recording size is too small for stim size.")
-
-        r=signal.correlate(x,y,mode='full')
-        lags=signal.correlation_lags(x.size,y.size,mode='full')
-
+    # should find a clear xcorr peak if stim there
+    
         
-        #NOTE: not off my one.... i think
-        # sync_lag=np.argmax(np.abs(r))-len(x)+1
-        sync_lag=lags[np.argmax(np.abs(r))]
-        # calculate pearson corr between segments
-        x_segment=x[sync_lag:sync_lag+y.size]
-        if x_segment.size != y.size:
-            pass
-        current_confidence=abs(pearsonr(x_segment, y).statistic)
-        if thresh==max_thresh and current_confidence>=max_confidence:
-            #only save on first run through recording
-            #update return value and update max to beat
-            max_confidence=current_confidence
+    if x.size<y.size:
+        raise NotImplementedError(f"Remaining recording size is too small for stim size.")
 
-            # reset timestamps to zero, update with max confidence lags
-            try:
-                # NOTE: if onset is still within range on_off_times, 
-                # on_off_times may still contain an onset timestamp
-                on_off_times[:]=0 
-                on_off_times[sync_lag]+=1 #onset
-                on_off_times[sync_lag+y.size]+=1 #offset
-            except IndexError:
-                print(f'onset,offset lags of: {sync_lag,sync_lag+y.size} are out of range for x.size: {x.size}')
-        elif thresh < max_thresh and current_confidence==max_confidence:
-            #not functional except to observe what's happening with xcorr around maximum lag
-            pass
-        if sync_lag<0 and current_confidence>thresh:
-            raise NotImplementedError('Lags shouldnt be negative?')
-        if current_confidence>=thresh:
-            # print(f'Confidence exceeds threshold at lag={sync_lag}, recording timestamps.')
-            exceed_thresh=True
-        if thresh==min_thresh and not exceed_thresh:
-            # could not find stim, go on to next stim
-            print(f"Could not find stim with min thresh. Skipping...")
-        
+    r=signal.correlate(x,y,mode='full')
+    lags=signal.correlation_lags(x.size,y.size,mode='full')
+    #ignore negative lags
+    r=r[(y.size-1):]
+    lags=lags[(y.size-1):]
+
+    
+    xcorr_cutoff=cutoff_ratio*np.std(r)
+    max_xcorr=np.max(np.abs(r))
+    sync_lag=lags[np.argmax(np.abs(r))]
+    # calculate pearson corr between segments
+    x_segment=x[sync_lag:sync_lag+y.size]
+    assert x_segment.size==y.size, "recording slice size should match stim waveform size"
+    # current_confidence=np.abs(pearsonr(x_segment, y).statistic)
+    if max_xcorr>xcorr_cutoff:
+        stim_lag=sync_lag
+        exceed_thresh=True
+    elif max_xcorr<=xcorr_cutoff and sync_lag==0:
+        stim_lag=sync_lag
+        exceed_thresh=True
+    else:
+        print(f"Could not find stim with min thresh. Skipping...")
+    
+    
 
 
     
-    return on_off_times, max_confidence, exceed_thresh
+    return stim_lag, exceed_thresh

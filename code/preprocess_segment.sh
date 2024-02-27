@@ -6,9 +6,9 @@
 #SBATCH -t 04:00:00
 #SBATCH --mem=60gb
 #SBATCH -n 20 ##Number of tasks
-#SBATCH -J xcorr_full
+#SBATCH -J xcorr_full_new
 #SBATCH --partition=standard
-#SBATCH --output=xcorr_full_timestamps.log
+#SBATCH --output=xcorr_full_new.log
 
 ##SBATCH --array=1-26 
 ##SBATCH --depend=afterany:17146968
@@ -17,7 +17,7 @@
 
 
 ##bash vars
-echo "This code now includes average referencing, changed xcorr method to full in find timestamps"
+echo "simplified timestamps specification and changed thresholding conditions during time stamping"
 do_avg_ref="true"
 which_stmps="xcorr"
 script_name="preprocess_segment"
