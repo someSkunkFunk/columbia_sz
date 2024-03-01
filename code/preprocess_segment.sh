@@ -6,9 +6,9 @@
 #SBATCH -t 04:00:00
 #SBATCH --mem=60gb
 #SBATCH -n 20 ##Number of tasks
-#SBATCH -J xcorr_full_new
+#SBATCH -J xcorr_debug_fails
 #SBATCH --partition=standard
-#SBATCH --output=xcorr_full_new.log
+#SBATCH --output=xcorr_debug_fails.log
 
 ##SBATCH --array=1-26 
 ##SBATCH --depend=afterany:17146968

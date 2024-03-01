@@ -24,8 +24,9 @@ fs_audio=stims_dict['fs'][0] # 11025 foriginally
 fs_eeg=2400 #trie d2kHz didn't help
 fs_trf=100 # Hz, downsampling frequency for trf analysis
 n_blocks = 6
-blocks=["B5"]
-# blocks = [f"B{ii}" for ii in range(1, n_blocks+1)]#NOTE: this is kinda unnecesary and I wanna remove it but focusing on bigger problem rn
+# blocks=["B5"]
+blocks = [f"B{ii}" for ii in range(1, n_blocks+1)]#NOTE: this is kinda unnecesary and I wanna remove it but focusing on bigger problem rn
+print(f"check blocks: {blocks}")
 #%%
 # setup
 # bash script vars
@@ -53,7 +54,7 @@ else:
     do_avg_ref=True
     # noisy_or_clean="clean" #NOTE: clean is default and setting them here does nothing
 ##################################################################################
-cutoff_ratio=12
+cutoff_ratio=10
 #print max, min pearsonr correlation thresholds
 print(f'xcorr cutoff: {cutoff_ratio} * std(xcorr)')
 timestamps_bad=True #currently unsure where the problem is but could still be timestamps although they seem good

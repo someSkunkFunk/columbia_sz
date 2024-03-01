@@ -467,6 +467,15 @@ def get_timestamps(subj_eeg,eeg_dir,subj_num,subj_cat,stims_dict,blocks,
                                              cutoff_ratio=cutoff_ratio,standardize=standardize)
 
             print(f"waves_matched, above threshold: {over_thresh}")
+            if over_thresh is None:
+                print('renaming failure case figure file...')
+                # rename failure case figure to something more informative
+                fig_pth=os.path.join("..","figures","debug","failure_case.png")
+                #NOTE: os rename might not work as expected here
+                new_pth=os.path.join("..","figures","debug",f"{subj_num}_{stim_nm[:-4]}_{stim_ii:03d}.png")
+                os.rename(fig_pth,new_pth)
+                print(f"{fig_pth} -> {new_pth} complete.")
+
             #NOTE: code below used to depend on stim_on_off being none, but now checks over_thresh to decide 
             # if timestamps should be recorded
             if over_thresh:
@@ -581,7 +590,38 @@ def match_waves(x, y, fs:int, cutoff_ratio=10, standardize=True):
     sync_lag=lags[np.argmax(np.abs(r))]
     # calculate pearson corr between segments
     x_segment=x[sync_lag:sync_lag+y.size]
-    assert x_segment.size==y.size, "recording slice size should match stim waveform size"
+    if x_segment.size!=y.size:
+        # something went wrong and we want to plot it to figure out why
+        import matplotlib.pyplot as plt
+        exceed_thresh=None #TODO: get more information out of get_timestamps when this is None
+        fig,ax=plt.subplots(3,1)
+        ax[0].plot(lags,r,label=f"sync_lag={sync_lag}")
+        ax[0].axhline(xcorr_cutoff,color="red",label=f"cutoff ratio:{cutoff_ratio}")
+        ax[0].axhline(-xcorr_cutoff,color="red")
+        ax[0].set_title('xcorr')
+        ax[0].legend()
+        ax[0].set_xlabel('lags, samples')
+
+        tx=np.arange(x.size)/fs
+        ax[1].plot(tx,x,)
+        ax[1].set_xlabel('time, s')
+        ax[1].set_title('remaining sound recording')
+        
+
+        ty=np.arange(y.size)/fs
+        tx_s=np.arange(x_segment.size)/fs
+        ax[2].plot(ty,y/np.max(np.abs(y)),label="stim")
+        ax[2].plot(tx_s,x_segment/np.max(np.abs(x))+1,label="x_segment")
+        ax[2].plot(tx[:y.size],x[:y.size]/np.max(np.abs(x))+2,label="x[:y.size]")
+        ax[2].legend()
+        ax[2].set_xlabel('time, s')
+
+        plt.tight_layout()
+        save_pth=os.path.join("..","figures","debug","failure_case.png")
+        plt.savefig(save_pth,format='png')
+        print("failure case figure saved")
+    
+    # assert x_segment.size==y.size, "recording slice size should match stim waveform size"
     # current_confidence=np.abs(pearsonr(x_segment, y).statistic)
     if max_xcorr>xcorr_cutoff:
         stim_lag=sync_lag
