@@ -557,7 +557,7 @@ def load_preprocessed(subj_num,eeg_dir=None,evnt=False,which_xcorr=None):
 from scipy import signal
 from scipy.stats import pearsonr
 import numpy as np
-def match_waves(x, y, fs:int, cutoff_ratio=10, standardize=True):
+def match_waves(x, y, fs:int, thresh_params:tuple, standardize=True):
     '''
     x: long waveform (1d array)
     y: shorter waveform (1d array)
@@ -566,7 +566,14 @@ def match_waves(x, y, fs:int, cutoff_ratio=10, standardize=True):
     assumes x is longer than y so that lagging y relative to x gives positive lag values 
     at the lag where the two signals overlap
     '''
-    
+    if thresh_params[0].lower()=='xcorr_peak':
+        cutoff_ratio=thresh_params[1]
+        # cutoff adapts based on overall xcorr stats
+    elif thresh_params[0].lower()=='pearsonr':
+        # use fixed pearsonr threshold
+        cutoff_confidence=thresh_params[1]
+
+        
     exceed_thresh=False
     stim_lag=None
     if standardize:
@@ -585,52 +592,98 @@ def match_waves(x, y, fs:int, cutoff_ratio=10, standardize=True):
     lags=lags[(y.size-1):]
 
     
-    xcorr_cutoff=cutoff_ratio*np.std(r)
+    
     max_xcorr=np.max(np.abs(r))
     sync_lag=lags[np.argmax(np.abs(r))]
     # calculate pearson corr between segments
     x_segment=x[sync_lag:sync_lag+y.size]
-    if x_segment.size!=y.size:
-        # something went wrong and we want to plot it to figure out why
-        import matplotlib.pyplot as plt
-        exceed_thresh=None #TODO: get more information out of get_timestamps when this is None
-        fig,ax=plt.subplots(3,1)
-        ax[0].plot(lags,r,label=f"sync_lag={sync_lag}")
-        ax[0].axhline(xcorr_cutoff,color="red",label=f"cutoff ratio:{cutoff_ratio}")
-        ax[0].axhline(-xcorr_cutoff,color="red")
-        ax[0].set_title('xcorr')
-        ax[0].legend()
-        ax[0].set_xlabel('lags, samples')
+    if thresh_params[0]=='xcorr_peak':
+        # use xcorr peak as confidence indicator
+        xcorr_cutoff=cutoff_ratio*np.std(r)
+        if x_segment.size!=y.size:
+            # something went wrong and we want to plot it to figure out why
+            import matplotlib.pyplot as plt
+            exceed_thresh=None #TODO: get more information out of get_timestamps when this is None
+            fig,ax=plt.subplots(3,1)
+            ax[0].plot(lags,r,label=f"sync_lag={sync_lag}")
+            ax[0].axhline(xcorr_cutoff,color="red",label=f"cutoff ratio:{cutoff_ratio}")
+            ax[0].axhline(-xcorr_cutoff,color="red")
+            ax[0].set_title('xcorr')
+            ax[0].legend()
+            ax[0].set_xlabel('lags, samples')
 
-        tx=np.arange(x.size)/fs
-        ax[1].plot(tx,x,)
-        ax[1].set_xlabel('time, s')
-        ax[1].set_title('remaining sound recording')
-        
+            tx=np.arange(x.size)/fs
+            ax[1].plot(tx,x,)
+            ax[1].set_xlabel('time, s')
+            ax[1].set_title('remaining sound recording')
+            
 
-        ty=np.arange(y.size)/fs
-        tx_s=np.arange(x_segment.size)/fs
-        ax[2].plot(ty,y/np.max(np.abs(y)),label="stim")
-        ax[2].plot(tx_s,x_segment/np.max(np.abs(x))+1,label="x_segment")
-        ax[2].plot(tx[:y.size],x[:y.size]/np.max(np.abs(x))+2,label="x[:y.size]")
-        ax[2].legend()
-        ax[2].set_xlabel('time, s')
+            ty=np.arange(y.size)/fs
+            tx_s=np.arange(x_segment.size)/fs
+            ax[2].plot(ty,y/np.max(np.abs(y)),label="stim")
+            ax[2].plot(tx_s,x_segment/np.max(np.abs(x))+1,label="x_segment")
+            ax[2].plot(tx[:y.size],x[:y.size]/np.max(np.abs(x))+2,label="x[:y.size]")
+            ax[2].legend()
+            ax[2].set_xlabel('time, s')
 
-        plt.tight_layout()
-        save_pth=os.path.join("..","figures","debug","failure_case.png")
-        plt.savefig(save_pth,format='png')
-        print("failure case figure saved")
+            plt.tight_layout()
+            save_pth=os.path.join("..","figures","debug","failure_case.png")
+            plt.savefig(save_pth,format='png')
+            print("failure case figure saved")
+        if max_xcorr>xcorr_cutoff:
+            stim_lag=sync_lag
+            exceed_thresh=True
+        elif max_xcorr<=xcorr_cutoff and sync_lag==0:
+            stim_lag=sync_lag
+            exceed_thresh=True
+        else:
+            print(f"Could not find stim with min thresh. Skipping...")
+    elif thresh_params[1]=='pearsonr':
+        if x_segment.size!=y.size:
+            #plot the fucking bullshit
+            import matplotlib.pyplot as plt
+            exceed_thresh=None #TODO: get more information out of get_timestamps when this is None
+            fig,ax=plt.subplots(3,1)
+            ax[0].plot(lags,r,label=f"sync_lag={sync_lag}")
+            ax[0].set_title('xcorr')
+            ax[0].legend()
+            ax[0].set_xlabel('lags, samples')
+
+            tx=np.arange(x.size)/fs
+            ax[1].plot(tx,x,)
+            ax[1].set_xlabel('time, s')
+            ax[1].set_title('remaining sound recording')
+            
+
+            ty=np.arange(y.size)/fs
+            tx_s=np.arange(x_segment.size)/fs
+            ax[2].plot(ty,y/np.max(np.abs(y)),label="stim")
+            ax[2].plot(tx_s,x_segment/np.max(np.abs(x))+1,label="x_segment")
+            ax[2].plot(tx[:y.size],x[:y.size]/np.max(np.abs(x))+2,label="x[:y.size]")
+            ax[2].legend()
+            ax[2].set_xlabel('time, s')
+
+            plt.tight_layout()
+            save_pth=os.path.join("..","figures","debug","failure_case.png")
+            plt.savefig(save_pth,format='png')
+            print("failure case figure saved")
+            
+        else:
+            # matched appropriately sized segment, proceed with caution
+            current_confidence=np.abs(pearsonr(x_segment, y).statistic)
+            if current_confidence>cutoff_confidence:
+                stim_lag=sync_lag
+                exceed_thresh=True
+            else:
+                exceed_thresh=False
+                # plot sub-threshold segments to see
+                print(f"Could not find stin with min thresh... plotting sync lag segment") 
+                import matplotlib.pyplot as plt
+                fig,ax=plt.subplots()
+                ax.plot()
+            
+            
     
-    # assert x_segment.size==y.size, "recording slice size should match stim waveform size"
-    # current_confidence=np.abs(pearsonr(x_segment, y).statistic)
-    if max_xcorr>xcorr_cutoff:
-        stim_lag=sync_lag
-        exceed_thresh=True
-    elif max_xcorr<=xcorr_cutoff and sync_lag==0:
-        stim_lag=sync_lag
-        exceed_thresh=True
-    else:
-        print(f"Could not find stim with min thresh. Skipping...")
     
     
 

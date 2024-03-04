@@ -48,7 +48,7 @@ if "subj_num" in os.environ:
 else:
     print("using manually inputted vars")
     subj_num="3253"
-    which_stmps="xcorr"
+    which_stmps="evnt"
     which_xcorr="wavs"
     just_stmp=False
     do_avg_ref=True

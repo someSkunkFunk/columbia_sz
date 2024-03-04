@@ -62,7 +62,7 @@ for subj in eeg:
         print(f"{subj} r-values: {r_ncv}, mean: {r_ncv.mean().round(3)}")
     elif trf_mode=="crossval":
         reg=100 #to match Ed's numbers
-        _=trf.train(trf, stimulus, response, fs, tmin, tmax, reg, k)
+        # _=trf.train(stimulus, response, fs, tmin, tmax, reg, k)
         r_bkwd=crossval(trf, stimulus, response, fs, tmin, tmax, reg)
         print(f"{subj} r-value: {r_bkwd.round(3)}")
 
