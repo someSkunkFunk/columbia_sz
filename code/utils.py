@@ -404,7 +404,7 @@ from scipy import signal
 # NOTE: don't need imports from utils anymore since on same module?
 # from utils import get_lp_env, set_thresh, segment, get_stim_wav, match_waves    
 def get_timestamps(subj_eeg,eeg_dir,subj_num,subj_cat,stims_dict,blocks,
-                   cutoff_ratio,which_xcorr='wavs'):
+                   thresh_params,which_xcorr='wavs'):
     '''
     uses xcorr to find where recorded audio best matches 
     stimuli waveforms (which_corr='wavs', deault) or envelopes (which_corr='envs)
@@ -412,6 +412,7 @@ def get_timestamps(subj_eeg,eeg_dir,subj_num,subj_cat,stims_dict,blocks,
     and confidence are stored in timestamps directory (keys are blocks) as thruples
     if not above threshold, start and end are None but still returns confidence for max sync point found...
     '''
+    plot_failures=False
     fs_audio=stims_dict['fs'][0] # 11025 foriginally #TODO: UNHARDCODE
     # fs_audio=16000
     fs_eeg=2400 #TODO: UNHARDCODE
@@ -429,8 +430,8 @@ def get_timestamps(subj_eeg,eeg_dir,subj_num,subj_cat,stims_dict,blocks,
         block_stim_order = spio.loadmat(stim_order_fnm, squeeze_me=True)['StimOrder']
         # get experiment audio recording envelope
         rec_wav = subj_eeg[block_num][:,-1]
+        rec_env = np.abs(signal.hilbert(rec_wav))
         if which_xcorr.lower() == 'envs':
-            rec_env = np.abs(signal.hilbert(rec_wav))
             x=rec_env
             standardize=False
         elif which_xcorr.lower() =='wavs':
@@ -459,15 +460,15 @@ def get_timestamps(subj_eeg,eeg_dir,subj_num,subj_cat,stims_dict,blocks,
                 y = signal.resample(stim_env, int(np.floor(stim_dur*fs_eeg)+1))
                 
             if (x.size < y.size):
-                timestamps[block_num][stim_nm] = (None, None, None)
+                timestamps[block_num][stim_nm] = (None, None)
                 continue
 
             print(f"matching waves, STARTPOINT:{prev_end}")
             stim_lag,over_thresh=match_waves(x,y,fs_eeg,
-                                             cutoff_ratio=cutoff_ratio,standardize=standardize)
+                                             thresh_params,standardize=standardize)
 
             print(f"waves_matched, above threshold: {over_thresh}")
-            if over_thresh is None:
+            if over_thresh is None and plot_failures:
                 print('renaming failure case figure file...')
                 # rename failure case figure to something more informative
                 fig_pth=os.path.join("..","figures","debug","failure_case.png")
@@ -475,6 +476,10 @@ def get_timestamps(subj_eeg,eeg_dir,subj_num,subj_cat,stims_dict,blocks,
                 new_pth=os.path.join("..","figures","debug",f"{subj_num}_{stim_nm[:-4]}_{stim_ii:03d}.png")
                 os.rename(fig_pth,new_pth)
                 print(f"{fig_pth} -> {new_pth} complete.")
+                # record timestamps as missing
+                timestamps[block_num][stim_nm] = (None, None)
+            elif over_thresh and not plot_failures:
+                timestamps[block_num][stim_nm] = (None, None)
 
             #NOTE: code below used to depend on stim_on_off being none, but now checks over_thresh to decide 
             # if timestamps should be recorded
@@ -638,7 +643,7 @@ def match_waves(x, y, fs:int, thresh_params:tuple, standardize=True):
             exceed_thresh=True
         else:
             print(f"Could not find stim with min thresh. Skipping...")
-    elif thresh_params[1]=='pearsonr':
+    elif thresh_params[0]=='pearsonr':
         if x_segment.size!=y.size:
             #plot the fucking bullshit
             import matplotlib.pyplot as plt
@@ -675,18 +680,10 @@ def match_waves(x, y, fs:int, thresh_params:tuple, standardize=True):
                 stim_lag=sync_lag
                 exceed_thresh=True
             else:
-                exceed_thresh=False
+                pass
                 # plot sub-threshold segments to see
-                print(f"Could not find stin with min thresh... plotting sync lag segment") 
-                import matplotlib.pyplot as plt
-                fig,ax=plt.subplots()
-                ax.plot()
-            
-            
-    
-    
-    
-
-
-    
+                # print(f"Could not find stin with min thresh... plotting sync lag segment") 
+                # import matplotlib.pyplot as plt
+                # fig,ax=plt.subplots()
+                # ax.plot()
     return stim_lag, exceed_thresh

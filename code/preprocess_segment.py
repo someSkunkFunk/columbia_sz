@@ -24,8 +24,8 @@ fs_audio=stims_dict['fs'][0] # 11025 foriginally
 fs_eeg=2400 #trie d2kHz didn't help
 fs_trf=100 # Hz, downsampling frequency for trf analysis
 n_blocks = 6
-# blocks=["B5"]
-blocks = [f"B{ii}" for ii in range(1, n_blocks+1)]#NOTE: this is kinda unnecesary and I wanna remove it but focusing on bigger problem rn
+blocks=["B5"]
+# blocks = [f"B{ii}" for ii in range(1, n_blocks+1)]#NOTE: this is kinda unnecesary and I wanna remove it but focusing on bigger problem rn
 print(f"check blocks: {blocks}")
 #%%
 # setup
@@ -48,15 +48,20 @@ if "subj_num" in os.environ:
 else:
     print("using manually inputted vars")
     subj_num="3253"
-    which_stmps="evnt"
+    which_stmps="xcorr"
     which_xcorr="wavs"
     just_stmp=False
     do_avg_ref=True
     # noisy_or_clean="clean" #NOTE: clean is default and setting them here does nothing
 ##################################################################################
-cutoff_ratio=10
-#print max, min pearsonr correlation thresholds
-print(f'xcorr cutoff: {cutoff_ratio} * std(xcorr)')
+thresh_params=('pearsonr', 0.4)
+# cutoff_ratio=10
+
+#print  correlation thresholds
+if thresh_params[0]=='xcorr_peak':
+    print(f'using xcorr peak thresholding; xcorr cutoff: {thresh_params[1]} * std(xcorr)')
+elif thresh_params[0]=='pearsonr':
+    print(f"using pearsonr thresholding; pearsonr threshold: {thresh_params[1]}")
 timestamps_bad=True #currently unsure where the problem is but could still be timestamps although they seem good
 # determine filter params applied to EEG before segmentation 
 # NOTE: different from filter lims used in timestamp detection algo (!)
@@ -89,7 +94,7 @@ if which_stmps=="xcorr":
         # get timestamps
         timestamps=utils.get_timestamps(subj_eeg,raw_dir,subj_num,
                                         subj_cat,stims_dict,blocks,
-                                        cutoff_ratio,which_xcorr)
+                                        thresh_params,which_xcorr)
         # check resulting times
         total_soundtime=0
         missing_stims_list=[]
