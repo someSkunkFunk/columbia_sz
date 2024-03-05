@@ -1,3 +1,28 @@
+#%%
+from scipy import signal
+import numpy as np
+def get_denv_peaks(x:np.ndarray,fs,params=None):
+    '''
+    x should be the envelope already
+    helper function that calculates smoothed envelope derivative local max,min locations
+    (onsets and offsets)
+    '''
+    x_new=x.copy() #NOTE: useful during debugging but won't need once finished
+    if params is None:
+        params={
+            'filt_ord':16,
+            'filt_freqs':0.1
+        }
+    # rectify since we looking for overall magnitude changes
+    x_new[x_new<0]*=-1.0
+    sos=signal.butter(params['filt_ord'],params['filt_freqs'],btype='low',output='sos',fs=fs)
+    x_new=signal.sosfiltfilt(sos,x_new)
+
+    pass
+
+
+#%%
+
 def check_timestamps(timestamps):
     '''
     helper to make sure timestamps are non-overlapping and strictly ascending
@@ -431,6 +456,7 @@ def get_timestamps(subj_eeg,eeg_dir,subj_num,subj_cat,stims_dict,blocks,
         # get experiment audio recording envelope
         rec_wav = subj_eeg[block_num][:,-1]
         rec_env = np.abs(signal.hilbert(rec_wav))
+        get_denv_peaks(rec_env,fs_eeg)
         if which_xcorr.lower() == 'envs':
             x=rec_env
             standardize=False

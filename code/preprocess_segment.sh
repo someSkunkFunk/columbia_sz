@@ -21,7 +21,7 @@ echo "simplified timestamps specification and changed thresholding conditions du
 do_avg_ref="true"
 which_stmps="xcorr"
 script_name="preprocess_segment"
-which_xcorr="wavs"
+which_xcorr="wavs"  
 noisy_or_clean="clean"
 just_stmp="false"
 subjs=(
