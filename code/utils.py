@@ -1,24 +1,57 @@
 #%%
 from scipy import signal
 import numpy as np
-def get_denv_peaks(x:np.ndarray,fs,params=None):
+def get_segments(envelope:np.ndarray,fs,params=None):
     '''
-    x should be the envelope already
-    helper function that calculates smoothed envelope derivative local max,min locations
-    (onsets and offsets)
+    envelope: broadband envelope, assumed to be a 1D array
+    function that uses smoothed envelope thresholding to get indices for non-silent segments
+    in which match waves will look for stimuli
+
+    returns
+    -
+    smooth_envelope: smoothed envelope normalized between 0 and 1
+    segments: [n_segments x 2] array with first col containing indices of 
+                                segment start and second col the end
     '''
-    x_new=x.copy() #NOTE: useful during debugging but won't need once finished
+    smooth_envelope=envelope.copy() #NOTE: useful during debugging but won't need once finished
+    assert smooth_envelope.ndim==1, "this function assumes 1D array!"
     if params is None:
         params={
             'filt_ord':16,
-            'filt_freqs':0.1
+            'filt_freqs':0.1,
+            'min_sil': 5,
+            'seg_padding': 5,
+            'env_thresh':0.5
         }
     # rectify since we looking for overall magnitude changes
-    x_new[x_new<0]*=-1.0
+    smooth_envelope[smooth_envelope<0]*=-1.0
+    # smooth the envelope
     sos=signal.butter(params['filt_ord'],params['filt_freqs'],btype='low',output='sos',fs=fs)
-    x_new=signal.sosfiltfilt(sos,x_new)
+    smooth_envelope=signal.sosfiltfilt(sos,smooth_envelope)
+    # normalize between zero and 1
+    smooth_envelope-=smooth_envelope.min()
+    smooth_envelope/=smooth_envelope.max()
+    assert np.all(smooth_envelope<=1) and np.all(smooth_envelope>=0), "envelope range should be between 0 and 1 here!"
+    # get indices where smoothed envelope crosses 1/2, should be 1 where envelope goes above .5 
+    # the range and -1 where it goes back below
+    crossings=np.concatenate(([0], np.diff(smooth_envelope>params['env_thresh'])))
+    # separate onsets from offsets, then pad 
+    #TODO: add condition to check that amount padding via shift doesn't shift any onsets or offsets 
+    # past start/end of recording array size
+    # pad onsets by removing number of samples equal to seg_padding
+    n_shift=int(params['seg_padding']*fs)
+    onsets=np.concatenate((crossings[n_shift:]==1, np.zeros(n_shift)))
+    offsets=np.concatenate((np.zeros(n_shift), crossings[:-n_shift]==-1))
+    seg_durs=(np.argwhere(offsets)-np.argwhere(onsets))/fs #in seconds
+    # remove short pauses
+    if np.any(seg_durs<params['min_sil']):
+        rmv_indx=seg_durs<params['min_sil']
+        onsets[np.argwhere(onsets)[rmv_indx]]=0
+        offsets[np.argwhere(offsets)[rmv_indx]]=0
 
-    pass
+    segments=np.hstack([np.argwhere(onsets),np.argwhere(offsets)])
+    #TODO: check that segments is n x 2 array
+    return segments, smooth_envelope
 
 
 #%%
@@ -456,7 +489,7 @@ def get_timestamps(subj_eeg,eeg_dir,subj_num,subj_cat,stims_dict,blocks,
         # get experiment audio recording envelope
         rec_wav = subj_eeg[block_num][:,-1]
         rec_env = np.abs(signal.hilbert(rec_wav))
-        get_denv_peaks(rec_env,fs_eeg)
+        
         if which_xcorr.lower() == 'envs':
             x=rec_env
             standardize=False
@@ -466,6 +499,9 @@ def get_timestamps(subj_eeg,eeg_dir,subj_num,subj_cat,stims_dict,blocks,
         else:
             raise NotImplementedError(f"which_corr = {which_xcorr} is not an option")
         prev_end=0 #TODO: verify this doesn't introduce new error (check w finished subject?)
+        # get segments where sound happened:
+        segments, smooth_envelope=get_segments(rec_env,fs_eeg)
+        # TODO: iterate thru each segment and do match waves
         for stim_ii, stim_nm in enumerate(block_stim_order):
             print(f"finding {stim_nm} ({stim_ii+1} of {block_stim_order.size})")
             # grab stim wav
