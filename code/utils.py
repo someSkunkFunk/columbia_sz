@@ -490,21 +490,26 @@ def get_timestamps(subj_eeg,eeg_dir,subj_num,subj_cat,stims_dict,blocks,
         rec_env = np.abs(signal.hilbert(rec_wav))
         
         if which_xcorr.lower() == 'envs':
-            x=rec_env
+            x=rec_env.copy()
             standardize=False
         elif which_xcorr.lower() =='wavs':
-            x=rec_wav
-            standardize=True
+            x=rec_wav.copy()
+            standardize=False #NOTE: setting to false because now I'm zeoring out silent periods to get rid of spurious correlations and standardize is going to move the zero period I belive
         else:
             raise NotImplementedError(f"which_corr = {which_xcorr} is not an option")
-        prev_end=0 #TODO: verify this doesn't introduce new error (check w finished subject?)
+        
         # get segments where sound happened:
         print(f"splitting sound recording into segments")
         segments, smooth_envelope=get_segments(rec_env,fs_eeg)
-        print(f"{segments.shape[0]} segments found.")
-
+        n_segments=segments.shape[0]
+        print(f"{n_segments} segments found.")
+        current_segment=0
+        last_found_lag=0
         # TODO: iterate thru each segment and do match waves
         for stim_ii, stim_nm in enumerate(block_stim_order):
+            if current_segment == n_segments-1:
+                print("end of final segment reached, breaking loop, going to next block")
+                break
             print(f"finding {stim_nm} ({stim_ii+1} of {block_stim_order.size})")
             # grab stim wav
             #NOTE: not sure if get_stim_wav will overwrite based on os environment vars
@@ -523,14 +528,16 @@ def get_timestamps(subj_eeg,eeg_dir,subj_num,subj_cat,stims_dict,blocks,
                 # will "undersample" since sampling frequencies not perfect ratio
                 y = signal.resample(stim_env, int(np.floor(stim_dur*fs_eeg)+1))
                 
-            if (x.size < y.size):
-                timestamps[block_num][stim_nm] = (None, None)
-                continue
-
-            print(f"matching waves, STARTPOINT:{prev_end}")
-            stim_lag,over_thresh=match_waves(x,y,fs_eeg,
+            # if (x.size < y.size):
+            #     timestamps[block_num][stim_nm] = (None, None)
+            #     continue
+            segment_start=segments[current_segment][0]
+            segment_end=segments[current_segment][1]
+            startpoint=segment_start+last_found_lag
+            print(f"matching waves, STARTPOINT:{startpoint}")
+            sync_lag,over_thresh=match_waves(x[startpoint:segment_end+1],y,fs_eeg,
                                              thresh_params,standardize=standardize)
-
+ 
             print(f"waves_matched, above threshold: {over_thresh}")
             if over_thresh is None and plot_failures:
                 print('renaming failure case figure file...')
@@ -542,34 +549,28 @@ def get_timestamps(subj_eeg,eeg_dir,subj_num,subj_cat,stims_dict,blocks,
                 print(f"{fig_pth} -> {new_pth} complete.")
                 # record timestamps as missing
                 timestamps[block_num][stim_nm] = (None, None)
-            elif over_thresh and not plot_failures:
+            elif over_thresh is None and not plot_failures:
                 timestamps[block_num][stim_nm] = (None, None)
 
             #NOTE: code below used to depend on stim_on_off being none, but now checks over_thresh to decide 
             # if timestamps should be recorded
             if over_thresh:
-
-                curr_start=stim_lag+prev_end
-                curr_end=curr_start+y.size 
-                print(f"NEW STARTPOINT:{curr_end}")
+                curr_start=segment_start+last_found_lag+sync_lag
+                curr_end=curr_start+y.size
                 # save indices 
                 timestamps[block_num][stim_nm]=(curr_start,curr_end)
-                #TODO: edit code using timestamps to ignore confidence_val
-                # don't look at recording up to this point again
-                if which_xcorr.lower()=='envs':
-                    x=rec_env[curr_end:]
-                elif which_xcorr.lower()=='wavs':
-                    x=rec_wav[curr_end:]
-                # mark end time of last stim found
-                # NOTE: not sure if this will work if first stim in block can't be found
-                prev_end=curr_end
-                # move onto next stim
-                continue
+                # TODO: check that last_found_lag actually refers to the sample index where most recently found stim was
+                last_found_lag=curr_end-segment_start #need to subtract segment_start because we want index relative to segment
+                if last_found_lag >= (segment_end-segment_start):
+                    # reached end of segment
+                    current_segment+=1
+                print(f"found {stim_nm} with size {y.size} in segment {current_segment+1}; ends at segment lag: {last_found_lag}.")
             else:
                 # missing stims
                 timestamps[block_num][stim_nm] = (None, None)
+                print(f"failed to find {stim_nm}, moving on to next stim.")
                 # move onto next stim
-                continue
+                
     return timestamps
 
 def mat2dict(mat_array):
