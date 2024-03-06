@@ -19,9 +19,8 @@ def get_segments(envelope:np.ndarray,fs,params=None):
         params={
             'filt_ord':16,
             'filt_freqs':0.1,
-            'min_sil': 5,
-            'seg_padding': 5,
-            'env_thresh':0.5
+            'min_sil': 3,
+            'seg_padding': 5
         }
     # rectify since we looking for overall magnitude changes
     smooth_envelope[smooth_envelope<0]*=-1.0
@@ -29,12 +28,13 @@ def get_segments(envelope:np.ndarray,fs,params=None):
     sos=signal.butter(params['filt_ord'],params['filt_freqs'],btype='low',output='sos',fs=fs)
     smooth_envelope=signal.sosfiltfilt(sos,smooth_envelope)
     # normalize between zero and 1
-    smooth_envelope-=smooth_envelope.min()
-    smooth_envelope/=smooth_envelope.max()
+    smooth_envelope=(smooth_envelope-smooth_envelope.min())/(smooth_envelope.max()-smooth_envelope.min())
+    
     assert np.all(smooth_envelope<=1) and np.all(smooth_envelope>=0), "envelope range should be between 0 and 1 here!"
-    # get indices where smoothed envelope crosses 1/2, should be 1 where envelope goes above .5 
+    # get indices where smoothed envelope crosses half-median, should be 1 where envelope goes above .5 
     # the range and -1 where it goes back below
-    crossings=np.concatenate(([0], np.diff(smooth_envelope>params['env_thresh'])))
+    loud_bits=(smooth_envelope>0.5*np.median(smooth_envelope)).astype(int)
+    crossings=np.diff(loud_bits,prepend=0)
     # separate onsets from offsets, then pad 
     #TODO: add condition to check that amount padding via shift doesn't shift any onsets or offsets 
     # past start/end of recording array size
@@ -472,7 +472,6 @@ def get_timestamps(subj_eeg,eeg_dir,subj_num,subj_cat,stims_dict,blocks,
     '''
     plot_failures=False
     fs_audio=stims_dict['fs'][0] # 11025 foriginally #TODO: UNHARDCODE
-    # fs_audio=16000
     fs_eeg=2400 #TODO: UNHARDCODE
     
     # store indices for each block {"block_num":{"stim_nm": (start, end, rconfidence)}}
@@ -500,7 +499,10 @@ def get_timestamps(subj_eeg,eeg_dir,subj_num,subj_cat,stims_dict,blocks,
             raise NotImplementedError(f"which_corr = {which_xcorr} is not an option")
         prev_end=0 #TODO: verify this doesn't introduce new error (check w finished subject?)
         # get segments where sound happened:
+        print(f"splitting sound recording into segments")
         segments, smooth_envelope=get_segments(rec_env,fs_eeg)
+        print(f"{segments.shape[0]} segments found.")
+
         # TODO: iterate thru each segment and do match waves
         for stim_ii, stim_nm in enumerate(block_stim_order):
             print(f"finding {stim_nm} ({stim_ii+1} of {block_stim_order.size})")
