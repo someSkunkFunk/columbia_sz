@@ -6,6 +6,11 @@ def get_segments(envelope:np.ndarray,fs,params=None):
     envelope: broadband envelope, assumed to be a 1D array
     function that uses smoothed envelope thresholding to get indices for non-silent segments
     in which match waves will look for stimuli
+    params: {
+    'filt_ord': sharpness of filter applied on smoothing envelope
+    'filt_freqs': lowpass filter frequency (or list bandpass limits if bandpass desired)
+    'min_sil': minimum silent period duration in seconds; 
+    }
 
     returns
     -
@@ -20,12 +25,18 @@ def get_segments(envelope:np.ndarray,fs,params=None):
             'filt_ord':16,
             'filt_freqs':0.1,
             'min_sil': 3,
-            'seg_padding': 5
+            'seg_padding': 2
         }
+    if isinstance(params['filt_freqs'], list) and len(params['filt_freqs'])==2:
+        _filt_type='bandpass'
+    elif isinstance(params['filt_freqs'],float):
+        _filt_type='low'
+    else:
+        raise NotImplementedError(f"params['filt_freqs'] should be float or int-> {type(params['filt_freqs'])}")
     # rectify since we looking for overall magnitude changes
     smooth_envelope[smooth_envelope<0]*=-1.0
     # smooth the envelope
-    sos=signal.butter(params['filt_ord'],params['filt_freqs'],btype='low',output='sos',fs=fs)
+    sos=signal.butter(params['filt_ord'],params['filt_freqs'],btype=_filt_type,output='sos',fs=fs)
     smooth_envelope=signal.sosfiltfilt(sos,smooth_envelope)
     # normalize between zero and 1
     smooth_envelope=(smooth_envelope-smooth_envelope.min())/(smooth_envelope.max()-smooth_envelope.min())
@@ -42,12 +53,12 @@ def get_segments(envelope:np.ndarray,fs,params=None):
     n_shift=int(params['seg_padding']*fs)
     onsets=np.concatenate((crossings[n_shift:]==1, np.zeros(n_shift)))
     offsets=np.concatenate((np.zeros(n_shift), crossings[:-n_shift]==-1))
-    seg_durs=(np.argwhere(offsets)-np.argwhere(onsets))/fs #in seconds
-    # remove short pauses
-    if np.any(seg_durs<params['min_sil']):
-        rmv_indx=seg_durs<params['min_sil']
-        onsets[np.argwhere(onsets)[rmv_indx]]=0
-        offsets[np.argwhere(offsets)[rmv_indx]]=0
+    pause_durs=(np.argwhere(onsets)[1:]-np.argwhere(offsets)[:-1])/fs #in seconds
+    # remove excessively short pauses
+    if np.any(pause_durs<params['min_sil']):
+        rmv_indx=pause_durs<params['min_sil']
+        onsets[np.argwhere(onsets)[1:][rmv_indx+1]]=0
+        offsets[np.argwhere(offsets)[:-1][rmv_indx-1]]=0
 
     segments=np.hstack([np.argwhere(onsets),np.argwhere(offsets)])
     #TODO: check that segments is n x 2 array
