@@ -25,7 +25,7 @@ def get_segments(envelope:np.ndarray,fs,params=None):
             'filt_ord':16,
             'filt_freqs':0.1,
             'min_sil': 3,
-            'seg_padding': 2
+            'seg_padding': 0.5
         }
     if isinstance(params['filt_freqs'], list) and len(params['filt_freqs'])==2:
         _filt_type='bandpass'
@@ -45,21 +45,32 @@ def get_segments(envelope:np.ndarray,fs,params=None):
     # get indices where smoothed envelope crosses half-median, should be 1 where envelope goes above .5 
     # the range and -1 where it goes back below
     loud_bits=(smooth_envelope>0.5*np.median(smooth_envelope)).astype(int)
-    crossings=np.diff(loud_bits,prepend=0)
+    crossings=np.diff(loud_bits,prepend=1) #note: prepend w 1 to avoid introducing artifactual onset at beginning
+    # remove spurious crossings at the beginning/end
+    if np.argwhere(crossings==1)[0] > np.argwhere(crossings==-1)[0]:
+        crossings[np.argwhere(crossings==-1)[0]]=0
+    if np.argwhere(crossings==1)[-1] > np.argwhere(crossings==-1)[-1]:
+        crossings[np.argwhere(crossings==1)[-1]]=0
+
     # separate onsets from offsets, then pad 
-    #TODO: add condition to check that amount padding via shift doesn't shift any onsets or offsets 
     # past start/end of recording array size
     # pad onsets by removing number of samples equal to seg_padding
     n_shift=int(params['seg_padding']*fs)
+    if np.any(crossings[:n_shift]==1):
+        raise NotImplementedError("shifting first onset too far!")
+    if np.any(crossings[-n_shift:]==-1):
+        raise NotImplementedError("shifting last offset too far!")
     onsets=np.concatenate((crossings[n_shift:]==1, np.zeros(n_shift)))
     offsets=np.concatenate((np.zeros(n_shift), crossings[:-n_shift]==-1))
     pause_durs=(np.argwhere(onsets)[1:]-np.argwhere(offsets)[:-1])/fs #in seconds
+    assert np.all(pause_durs>0), "all pauses durations should be positive (before removing short ones)!"
     # remove excessively short pauses
     if np.any(pause_durs<params['min_sil']):
         rmv_indx=pause_durs<params['min_sil']
-        onsets[np.argwhere(onsets)[1:][rmv_indx+1]]=0
-        offsets[np.argwhere(offsets)[:-1][rmv_indx-1]]=0
-
+        onsets[np.argwhere(onsets)[1:][rmv_indx]]=0
+        offsets[np.argwhere(offsets)[:-1][rmv_indx]]=0
+    pause_durs=(np.argwhere(onsets)[1:]-np.argwhere(offsets)[:-1])/fs
+    assert np.all(pause_durs>0), "all pauses durations should be positive (after removing short ones)!"
     segments=np.hstack([np.argwhere(onsets),np.argwhere(offsets)])
     #TODO: check that segments is n x 2 array
     return segments, smooth_envelope
@@ -496,9 +507,11 @@ def get_timestamps(subj_eeg,eeg_dir,subj_num,subj_cat,stims_dict,blocks,
                                     "_".join([block_num, "stimorder.mat"])
                                     )
         block_stim_order = spio.loadmat(stim_order_fnm, squeeze_me=True)['StimOrder']
-        # get experiment audio recording envelope
+        # get experiment audio recording envelope, after de-trending via highpass above 1 Hz
         rec_wav = subj_eeg[block_num][:,-1]
-        rec_env = np.abs(signal.hilbert(rec_wav))
+        filt_wav=sos=signal.butter(3,1.0,fs=fs_eeg,btype='high',output='sos')
+        filt_wav=signal.sosfiltfilt(sos,rec_wav,)
+        rec_env = np.abs(signal.hilbert(filt_wav))
         
         if which_xcorr.lower() == 'envs':
             x=rec_env.copy()
@@ -514,6 +527,41 @@ def get_timestamps(subj_eeg,eeg_dir,subj_num,subj_cat,stims_dict,blocks,
         segments, smooth_envelope=get_segments(rec_env,fs_eeg)
         n_segments=segments.shape[0]
         print(f"{n_segments} segments found.")
+        #### DEBUG PLOTTING###
+        subj_debug_dir=os.path.join("..","figures","debug",subj_num)
+        if not os.path.isdir(subj_debug_dir):
+            os.makedirs(subj_debug_dir,exist_ok=True)
+        import matplotlib.pyplot as plt
+        t=np.arange(smooth_envelope.size)/fs_eeg
+        on_times=t[segments[:,0]]
+        off_times=t[segments[:,1]]
+        plt.plot(t,filt_wav/np.max(np.abs(filt_wav)),label='highpassed recording')
+        plt.plot(t,smooth_envelope,label='smooth_env')
+        plt.stem(on_times,np.ones(on_times.shape),label='onsets',linefmt='green')
+        plt.stem(off_times,np.ones(off_times.shape),label='offsets',linefmt='red')
+        plt.xlabel('seconds')
+        plt.legend(loc='lower left')
+        plt.title(f"{subj_num} {block_num}")
+        plt.tight_layout()
+        fig_fnm=f"{subj_num}_{block_num}_segments.png"
+        fig_pth=os.path.join(subj_debug_dir,fig_fnm)
+        plt.savefig(fig_pth)
+        
+
+        for ii, (on,off) in enumerate(segments):
+            plt.figure()
+            recording_bit=filt_wav[on:off]
+            recording_bit/=np.abs(recording_bit).max()
+            plt.plot(t[on:off],recording_bit,label='highpassed recording')
+            plt.title(f"{subj_num} {block_num} segment {ii+1}")
+            plt.plot(t[on:off],smooth_envelope[on:off],label='smooth_env')
+            plt.legend()
+            plt.xlabel('seconds')
+            plt.tight_layout()
+            fig_fnm=f"{subj_num}_{block_num}_segment{ii+1}.png"
+            fig_pth=os.path.join(subj_debug_dir,fig_fnm)
+            plt.savefig(fig_pth)
+        #### END DEBUG PLOTTING###TODO: MAKE INTO A FUNCTION>>
         current_segment=0
         last_found_lag=0
         # TODO: iterate thru each segment and do match waves
@@ -721,33 +769,34 @@ def match_waves(x, y, fs:int, thresh_params:tuple, standardize=True):
             print(f"Could not find stim with min thresh. Skipping...")
     elif thresh_params[0]=='pearsonr':
         if x_segment.size!=y.size:
+            print("remaining recording length too short...")
             #plot the fucking bullshit
-            import matplotlib.pyplot as plt
-            exceed_thresh=None #TODO: get more information out of get_timestamps when this is None
-            fig,ax=plt.subplots(3,1)
-            ax[0].plot(lags,r,label=f"sync_lag={sync_lag}")
-            ax[0].set_title('xcorr')
-            ax[0].legend()
-            ax[0].set_xlabel('lags, samples')
+            # import matplotlib.pyplot as plt
+            # exceed_thresh=None #TODO: get more information out of get_timestamps when this is None
+            # fig,ax=plt.subplots(3,1)
+            # ax[0].plot(lags,r,label=f"sync_lag={sync_lag}")
+            # ax[0].set_title('xcorr')
+            # ax[0].legend()
+            # ax[0].set_xlabel('lags, samples')
 
-            tx=np.arange(x.size)/fs
-            ax[1].plot(tx,x,)
-            ax[1].set_xlabel('time, s')
-            ax[1].set_title('remaining sound recording')
+            # tx=np.arange(x.size)/fs
+            # ax[1].plot(tx,x,)
+            # ax[1].set_xlabel('time, s')
+            # ax[1].set_title('remaining sound recording')
             
 
-            ty=np.arange(y.size)/fs
-            tx_s=np.arange(x_segment.size)/fs
-            ax[2].plot(ty,y/np.max(np.abs(y)),label="stim")
-            ax[2].plot(tx_s,x_segment/np.max(np.abs(x))+1,label="x_segment")
-            ax[2].plot(tx[:y.size],x[:y.size]/np.max(np.abs(x))+2,label="x[:y.size]")
-            ax[2].legend()
-            ax[2].set_xlabel('time, s')
+            # ty=np.arange(y.size)/fs
+            # tx_s=np.arange(x_segment.size)/fs
+            # ax[2].plot(ty,y/np.max(np.abs(y)),label="stim")
+            # ax[2].plot(tx_s,x_segment/np.max(np.abs(x))+1,label="x_segment")
+            # ax[2].plot(tx[:y.size],x[:y.size]/np.max(np.abs(x))+2,label="x[:y.size]")
+            # ax[2].legend()
+            # ax[2].set_xlabel('time, s')
 
-            plt.tight_layout()
-            save_pth=os.path.join("..","figures","debug","failure_case.png")
-            plt.savefig(save_pth,format='png')
-            print("failure case figure saved")
+            # plt.tight_layout()
+            # save_pth=os.path.join("..","figures","debug","failure_case.png")
+            # plt.savefig(save_pth,format='png')
+            # print("failure case figure saved")
             
         else:
             # matched appropriately sized segment, proceed with caution
