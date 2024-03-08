@@ -495,6 +495,8 @@ def get_timestamps(subj_eeg,eeg_dir,subj_num,subj_cat,stims_dict,blocks,
     plot_failures=False
     fs_audio=stims_dict['fs'][0] # 11025 foriginally #TODO: UNHARDCODE
     fs_eeg=2400 #TODO: UNHARDCODE
+    _noisy_or_clean="noisy"
+    print(f"using {_noisy_or_clean} wav files for time-alignment.")
     
     # store indices for each block {"block_num":{"stim_nm": (start, end, rconfidence)}}
     timestamps = {}
@@ -511,23 +513,17 @@ def get_timestamps(subj_eeg,eeg_dir,subj_num,subj_cat,stims_dict,blocks,
         rec_wav = subj_eeg[block_num][:,-1]
         filt_wav=sos=signal.butter(3,1.0,fs=fs_eeg,btype='high',output='sos')
         filt_wav=signal.sosfiltfilt(sos,rec_wav,)
-        rec_env = np.abs(signal.hilbert(filt_wav))
+        filt_rec_env = np.abs(signal.hilbert(filt_wav))
         
-        if which_xcorr.lower() == 'envs':
-            x=rec_env.copy()
-            standardize=False
-        elif which_xcorr.lower() =='wavs':
-            x=rec_wav.copy()
-            standardize=False #NOTE: setting to false because now I'm zeoring out silent periods to get rid of spurious correlations and standardize is going to move the zero period I belive
-        else:
-            raise NotImplementedError(f"which_corr = {which_xcorr} is not an option")
+        
         
         # get segments where sound happened:
         print(f"splitting sound recording into segments")
-        segments, smooth_envelope=get_segments(rec_env,fs_eeg)
+        segments, smooth_envelope=get_segments(filt_rec_env,fs_eeg)
         n_segments=segments.shape[0]
         print(f"{n_segments} segments found.")
         #### DEBUG PLOTTING###
+        print("saving segment figures.")
         subj_debug_dir=os.path.join("..","figures","debug",subj_num)
         if not os.path.isdir(subj_debug_dir):
             os.makedirs(subj_debug_dir,exist_ok=True)
@@ -549,13 +545,14 @@ def get_timestamps(subj_eeg,eeg_dir,subj_num,subj_cat,stims_dict,blocks,
         
 
         for ii, (on,off) in enumerate(segments):
+            print(f"plotting segment {ii+1} of {len(segments)}...")
             plt.figure()
             recording_bit=filt_wav[on:off]
             recording_bit/=np.abs(recording_bit).max()
             plt.plot(t[on:off],recording_bit,label='highpassed recording')
             plt.title(f"{subj_num} {block_num} segment {ii+1}")
             plt.plot(t[on:off],smooth_envelope[on:off],label='smooth_env')
-            plt.legend()
+            plt.legend(loc="lower left")
             plt.xlabel('seconds')
             plt.tight_layout()
             fig_fnm=f"{subj_num}_{block_num}_segment{ii+1}.png"
@@ -572,21 +569,27 @@ def get_timestamps(subj_eeg,eeg_dir,subj_num,subj_cat,stims_dict,blocks,
             print(f"finding {stim_nm} ({stim_ii+1} of {block_stim_order.size})")
             # grab stim wav
             #NOTE: not sure if get_stim_wav will overwrite based on os environment vars
-            stim_wav_og=get_stim_wav(stims_dict, stim_nm)
+            stim_wav_og=get_stim_wav(stims_dict,stim_nm,noisy_or_clean=_noisy_or_clean)
             stim_dur = (stim_wav_og.size - 1)/fs_audio
             #TODO: what if window only gets part of stim? 
             # apply antialiasing filter to stim wav and get envelope  
-            sos = signal.butter(3, fs_eeg/3, fs=fs_audio, output='sos')
+            sos = signal.butter(3, fs_eeg/2.1, fs=fs_audio, output='sos')
             stim_wav = signal.sosfiltfilt(sos, stim_wav_og)
             stim_env = np.abs(signal.hilbert(stim_wav))
             # downsample envelope or wav to eeg fs
             if which_xcorr.lower() == 'wavs':
                 # will "undersample" since sampling frequencies not perfect ratio
-                y = signal.resample(stim_wav, int(np.floor(stim_dur*fs_eeg)+1))
+                y=signal.resample(stim_wav, int(np.floor(stim_dur*fs_eeg)+1))
+                x=filt_wav
             elif which_xcorr.lower() == 'envs':
                 # will "undersample" since sampling frequencies not perfect ratio
-                y = signal.resample(stim_env, int(np.floor(stim_dur*fs_eeg)+1))
+                y=signal.resample(stim_env, int(np.floor(stim_dur*fs_eeg)+1))
+                y[y<0]=0  # I think resampling causes some values to go negative           
+                x=filt_rec_env.copy() # did copy because was gonna reset negatives to zero but doesnt look like it actually happens here
                 
+            else:
+                raise NotImplementedError(f"which_corr = {which_xcorr} is not an option")
+
             # if (x.size < y.size):
             #     timestamps[block_num][stim_nm] = (None, None)
             #     continue
@@ -594,8 +597,8 @@ def get_timestamps(subj_eeg,eeg_dir,subj_num,subj_cat,stims_dict,blocks,
             segment_end=segments[current_segment][1]
             startpoint=segment_start+last_found_lag
             print(f"matching waves, STARTPOINT:{startpoint}")
-            sync_lag,over_thresh=match_waves(x[startpoint:segment_end+1],y,fs_eeg,
-                                             thresh_params,standardize=standardize)
+            sync_lag,over_thresh=match_waves(x[startpoint:segment_end],y,fs_eeg,
+                                             thresh_params)
  
             print(f"waves_matched, above threshold: {over_thresh}")
             if over_thresh is None and plot_failures:
@@ -705,7 +708,14 @@ def match_waves(x, y, fs:int, thresh_params:tuple, standardize=True):
         
     exceed_thresh=False
     stim_lag=None
-    if standardize:
+    if standardize and np.all(np.concatenate((x>=0, y>=0))):
+        # must be envelopes, normalize between zero and 1
+        x=(x-x.min())/(x.max()-x.min())
+        y=(y-y.min())/(y.max()-y.min())
+    elif (standardize and np.all(x>=0) and np.any(y<0)) or (standardize and np.all(y>=0) and np.any(x<0)):
+        raise NotImplementedError("x envelopes given with y wavs - both must be either env or wav")
+    elif standardize and not np.all(np.concatenate((x>=0, y>=0))):
+        # wavs given, z-score
         x=(x-np.mean(x))/np.std(x)
         y=(y-np.mean(y))/np.std(y)
     # should find a clear xcorr peak if stim there

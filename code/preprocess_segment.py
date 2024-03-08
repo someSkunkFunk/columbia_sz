@@ -24,7 +24,7 @@ fs_audio=stims_dict['fs'][0] # 11025 foriginally
 fs_eeg=2400 #trie d2kHz didn't help
 fs_trf=100 # Hz, downsampling frequency for trf analysis
 n_blocks = 6
-blocks=["B5"]
+blocks=["B6"]
 # blocks = [f"B{ii}" for ii in range(1, n_blocks+1)]#NOTE: this is kinda unnecesary and I wanna remove it but focusing on bigger problem rn
 print(f"check blocks: {blocks}")
 #%%
@@ -49,10 +49,10 @@ else:
     print("using manually inputted vars")
     subj_num="3253"
     which_stmps="xcorr"
-    which_xcorr="wavs"
+    which_xcorr="envs"
     just_stmp=False
     do_avg_ref=True
-    # noisy_or_clean="clean" #NOTE: clean is default and setting them here does nothing
+    noisy_or_clean="noisy" #NOTE: clean is default and setting them here does nothing
 ##################################################################################
 thresh_params=('pearsonr', 0.4)
 # cutoff_ratio=10
