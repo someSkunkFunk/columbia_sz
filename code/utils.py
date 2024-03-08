@@ -25,7 +25,7 @@ def get_segments(envelope:np.ndarray,fs,params=None):
             'filt_ord':16,
             'filt_freqs':0.1,
             'min_sil': 3,
-            'seg_padding': 0.5
+            'seg_padding': 0.0
         }
     if isinstance(params['filt_freqs'], list) and len(params['filt_freqs'])==2:
         _filt_type='bandpass'
@@ -56,12 +56,19 @@ def get_segments(envelope:np.ndarray,fs,params=None):
     # past start/end of recording array size
     # pad onsets by removing number of samples equal to seg_padding
     n_shift=int(params['seg_padding']*fs)
-    if np.any(crossings[:n_shift]==1):
+    if np.any(crossings[:n_shift]==1) and n_shift!=0:
         raise NotImplementedError("shifting first onset too far!")
-    if np.any(crossings[-n_shift:]==-1):
+    if np.any(crossings[-n_shift:]==-1) and n_shift!=0:
         raise NotImplementedError("shifting last offset too far!")
-    onsets=np.concatenate((crossings[n_shift:]==1, np.zeros(n_shift)))
-    offsets=np.concatenate((np.zeros(n_shift), crossings[:-n_shift]==-1))
+    if n_shift>0:
+        #doesnt affect array shape if n_shift is zero but we can save on the unnecessary concats
+        onsets=np.concatenate((crossings[n_shift:]==1, np.zeros(n_shift)))
+        offsets=np.concatenate((np.zeros(n_shift), crossings[:-n_shift]==-1))
+    elif n_shift==0:
+        onsets=crossings==1
+        offsets=crossings==-1
+    else:
+        raise NotImplementedError(f"n_shift={n_shift} not supported.")
     pause_durs=(np.argwhere(onsets)[1:]-np.argwhere(offsets)[:-1])/fs #in seconds
     assert np.all(pause_durs>0), "all pauses durations should be positive (before removing short ones)!"
     # remove excessively short pauses
@@ -524,7 +531,7 @@ def get_timestamps(subj_eeg,eeg_dir,subj_num,subj_cat,stims_dict,blocks,
         print(f"{n_segments} segments found.")
         #### DEBUG PLOTTING###
         print("saving segment figures.")
-        subj_debug_dir=os.path.join("..","figures","debug",subj_num)
+        subj_debug_dir=os.path.join("..","figures","debug",subj_num,block_num)
         if not os.path.isdir(subj_debug_dir):
             os.makedirs(subj_debug_dir,exist_ok=True)
         import matplotlib.pyplot as plt
@@ -542,6 +549,7 @@ def get_timestamps(subj_eeg,eeg_dir,subj_num,subj_cat,stims_dict,blocks,
         fig_fnm=f"{subj_num}_{block_num}_segments.png"
         fig_pth=os.path.join(subj_debug_dir,fig_fnm)
         plt.savefig(fig_pth)
+        plt.close()
         
 
         for ii, (on,off) in enumerate(segments):
@@ -555,83 +563,85 @@ def get_timestamps(subj_eeg,eeg_dir,subj_num,subj_cat,stims_dict,blocks,
             plt.legend(loc="lower left")
             plt.xlabel('seconds')
             plt.tight_layout()
-            fig_fnm=f"{subj_num}_{block_num}_segment{ii+1}.png"
+            fig_fnm=f"{subj_num}_{block_num}_segment{ii+1:02d}.png"
             fig_pth=os.path.join(subj_debug_dir,fig_fnm)
             plt.savefig(fig_pth)
+            plt.close()
         #### END DEBUG PLOTTING###TODO: MAKE INTO A FUNCTION>>
-        current_segment=0
-        last_found_lag=0
-        # TODO: iterate thru each segment and do match waves
-        for stim_ii, stim_nm in enumerate(block_stim_order):
-            if current_segment == n_segments-1:
-                print("end of final segment reached, breaking loop, going to next block")
-                break
-            print(f"finding {stim_nm} ({stim_ii+1} of {block_stim_order.size})")
-            # grab stim wav
-            #NOTE: not sure if get_stim_wav will overwrite based on os environment vars
-            stim_wav_og=get_stim_wav(stims_dict,stim_nm,noisy_or_clean=_noisy_or_clean)
-            stim_dur = (stim_wav_og.size - 1)/fs_audio
-            #TODO: what if window only gets part of stim? 
-            # apply antialiasing filter to stim wav and get envelope  
-            sos = signal.butter(3, fs_eeg/2.1, fs=fs_audio, output='sos')
-            stim_wav = signal.sosfiltfilt(sos, stim_wav_og)
-            stim_env = np.abs(signal.hilbert(stim_wav))
-            # downsample envelope or wav to eeg fs
-            if which_xcorr.lower() == 'wavs':
-                # will "undersample" since sampling frequencies not perfect ratio
-                y=signal.resample(stim_wav, int(np.floor(stim_dur*fs_eeg)+1))
-                x=filt_wav
-            elif which_xcorr.lower() == 'envs':
-                # will "undersample" since sampling frequencies not perfect ratio
-                y=signal.resample(stim_env, int(np.floor(stim_dur*fs_eeg)+1))
-                y[y<0]=0  # I think resampling causes some values to go negative           
-                x=filt_rec_env.copy() # did copy because was gonna reset negatives to zero but doesnt look like it actually happens here
+        print(f"Skipping match_waves... ")
+        # current_segment=0
+        # last_found_lag=0
+        # # TODO: iterate thru each segment and do match waves
+        # for stim_ii, stim_nm in enumerate(block_stim_order):
+        #     if current_segment == n_segments-1:
+        #         print("end of final segment reached, breaking loop, going to next block")
+        #         break
+        #     print(f"finding {stim_nm} ({stim_ii+1} of {block_stim_order.size})")
+        #     # grab stim wav
+        #     #NOTE: not sure if get_stim_wav will overwrite based on os environment vars
+        #     stim_wav_og=get_stim_wav(stims_dict,stim_nm,noisy_or_clean=_noisy_or_clean)
+        #     stim_dur = (stim_wav_og.size - 1)/fs_audio
+        #     #TODO: what if window only gets part of stim? 
+        #     # apply antialiasing filter to stim wav and get envelope  
+        #     sos = signal.butter(3, fs_eeg/2.1, fs=fs_audio, output='sos')
+        #     stim_wav = signal.sosfiltfilt(sos, stim_wav_og)
+        #     stim_env = np.abs(signal.hilbert(stim_wav))
+        #     # downsample envelope or wav to eeg fs
+        #     if which_xcorr.lower() == 'wavs':
+        #         # will "undersample" since sampling frequencies not perfect ratio
+        #         y=signal.resample(stim_wav, int(np.floor(stim_dur*fs_eeg)+1))
+        #         x=filt_wav
+        #     elif which_xcorr.lower() == 'envs':
+        #         # will "undersample" since sampling frequencies not perfect ratio
+        #         y=signal.resample(stim_env, int(np.floor(stim_dur*fs_eeg)+1))
+        #         y[y<0]=0  # I think resampling causes some values to go negative           
+        #         x=filt_rec_env.copy() # did copy because was gonna reset negatives to zero but doesnt look like it actually happens here
                 
-            else:
-                raise NotImplementedError(f"which_corr = {which_xcorr} is not an option")
+        #     else:
+        #         raise NotImplementedError(f"which_corr = {which_xcorr} is not an option")
 
-            # if (x.size < y.size):
-            #     timestamps[block_num][stim_nm] = (None, None)
-            #     continue
-            segment_start=segments[current_segment][0]
-            segment_end=segments[current_segment][1]
-            startpoint=segment_start+last_found_lag
-            print(f"matching waves, STARTPOINT:{startpoint}")
-            sync_lag,over_thresh=match_waves(x[startpoint:segment_end],y,fs_eeg,
-                                             thresh_params)
+        #     # if (x.size < y.size):
+        #     #     timestamps[block_num][stim_nm] = (None, None)
+        #     #     continue
+        #     segment_start=segments[current_segment][0]
+        #     segment_end=segments[current_segment][1]
+        #     startpoint=segment_start+last_found_lag
+        #     print(f"matching waves, STARTPOINT:{startpoint}")
+        #     sync_lag,over_thresh=match_waves(x[startpoint:segment_end],y,fs_eeg,
+        #                                      thresh_params)
  
-            print(f"waves_matched, above threshold: {over_thresh}")
-            if over_thresh is None and plot_failures:
-                print('renaming failure case figure file...')
-                # rename failure case figure to something more informative
-                fig_pth=os.path.join("..","figures","debug","failure_case.png")
-                #NOTE: os rename might not work as expected here
-                new_pth=os.path.join("..","figures","debug",f"{subj_num}_{stim_nm[:-4]}_{stim_ii:03d}.png")
-                os.rename(fig_pth,new_pth)
-                print(f"{fig_pth} -> {new_pth} complete.")
-                # record timestamps as missing
-                timestamps[block_num][stim_nm] = (None, None)
-            elif over_thresh is None and not plot_failures:
-                timestamps[block_num][stim_nm] = (None, None)
+        #     print(f"waves_matched, above threshold: {over_thresh}")
+        #     if over_thresh is None and plot_failures:
+        #         print('renaming failure case figure file...')
+        #         # rename failure case figure to something more informative
+        #         fig_pth=os.path.join("..","figures","debug","failure_case.png")
+        #         #NOTE: os rename might not work as expected here
+        #         new_pth=os.path.join("..","figures","debug",f"{subj_num}_{stim_nm[:-4]}_{stim_ii:03d}.png")
+        #         os.rename(fig_pth,new_pth)
+        #         print(f"{fig_pth} -> {new_pth} complete.")
+        #         # record timestamps as missing
+        #         timestamps[block_num][stim_nm] = (None, None)
+        #     elif over_thresh is None and not plot_failures:
+        #         timestamps[block_num][stim_nm] = (None, None)
 
-            #NOTE: code below used to depend on stim_on_off being none, but now checks over_thresh to decide 
-            # if timestamps should be recorded
-            if over_thresh:
-                curr_start=segment_start+last_found_lag+sync_lag
-                curr_end=curr_start+y.size
-                # save indices 
-                timestamps[block_num][stim_nm]=(curr_start,curr_end)
-                # TODO: check that last_found_lag actually refers to the sample index where most recently found stim was
-                last_found_lag=curr_end-segment_start #need to subtract segment_start because we want index relative to segment
-                if last_found_lag >= (segment_end-segment_start):
-                    # reached end of segment
-                    current_segment+=1
-                print(f"found {stim_nm} with size {y.size} in segment {current_segment+1}; ends at segment lag: {last_found_lag}.")
-            else:
-                # missing stims
-                timestamps[block_num][stim_nm] = (None, None)
-                print(f"failed to find {stim_nm}, moving on to next stim.")
-                # move onto next stim
+        #     #NOTE: code below used to depend on stim_on_off being none, but now checks over_thresh to decide 
+        #     # if timestamps should be recorded
+        #     if over_thresh:
+        #         curr_start=segment_start+last_found_lag+sync_lag
+        #         curr_end=curr_start+y.size
+        #         # save indices 
+        #         timestamps[block_num][stim_nm]=(curr_start,curr_end)
+        #         # TODO: check that last_found_lag actually refers to the sample index where most recently found stim was
+        #         last_found_lag=curr_end-segment_start #need to subtract segment_start because we want index relative to segment
+        #         if last_found_lag >= (segment_end-segment_start):
+        #             # reached end of segment
+        #             current_segment+=1
+        #         print(f"found {stim_nm} with size {y.size} in segment {current_segment+1}; ends at segment lag: {last_found_lag}.")
+        #     else:
+        #         # missing stims
+        #         timestamps[block_num][stim_nm] = (None, None)
+        #         print(f"failed to find {stim_nm}, moving on to next stim.")
+        #         # move onto next stim
                 
     return timestamps
 

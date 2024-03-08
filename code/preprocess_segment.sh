@@ -6,9 +6,9 @@
 #SBATCH -t 04:00:00
 #SBATCH --mem=60gb
 #SBATCH -n 20 ##Number of tasks
-#SBATCH -J xcorr_debug_fails
+#SBATCH -J segment_pauses
 #SBATCH --partition=standard
-#SBATCH --output=xcorr_debug_fails.log
+#SBATCH --output=plot_segmented_audio.log
 
 ##SBATCH --array=1-26 
 ##SBATCH --depend=afterany:17146968
@@ -17,13 +17,13 @@
 
 
 ##bash vars
-echo "simplified timestamps specification and changed thresholding conditions during time stamping"
+echo "Added code to trim out long silences in recording to improve performance; this run is just too investigate what those segments are and if consistent across subjects/blocks"
 do_avg_ref="true"
 which_stmps="xcorr"
 script_name="preprocess_segment"
 which_xcorr="wavs"  
 noisy_or_clean="clean"
-just_stmp="false"
+just_stmp="true"
 subjs=(
     3253  
     3316  

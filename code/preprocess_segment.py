@@ -24,8 +24,8 @@ fs_audio=stims_dict['fs'][0] # 11025 foriginally
 fs_eeg=2400 #trie d2kHz didn't help
 fs_trf=100 # Hz, downsampling frequency for trf analysis
 n_blocks = 6
-blocks=["B6"]
-# blocks = [f"B{ii}" for ii in range(1, n_blocks+1)]#NOTE: this is kinda unnecesary and I wanna remove it but focusing on bigger problem rn
+# blocks=["B6"]
+blocks = [f"B{ii}" for ii in range(1, n_blocks+1)]
 print(f"check blocks: {blocks}")
 #%%
 # setup
@@ -50,7 +50,7 @@ else:
     subj_num="3253"
     which_stmps="xcorr"
     which_xcorr="envs"
-    just_stmp=False
+    just_stmp=True
     do_avg_ref=True
     noisy_or_clean="noisy" #NOTE: clean is default and setting them here does nothing
 ##################################################################################
@@ -96,23 +96,26 @@ if which_stmps=="xcorr":
                                         subj_cat,stims_dict,blocks,
                                         thresh_params,which_xcorr)
         # check resulting times
-        total_soundtime=0
-        missing_stims_list=[]
-        for block in timestamps:
-            block_sound_time=0
-            for stim_nm, (start, end) in timestamps[block].items():
-                if all([start,end]):
-                    block_sound_time+=(end-start-1)/fs_eeg
-                else:
-                    missing_stims_list.append(stim_nm)
-            print(f"in block {block}, total sound time is {block_sound_time:.3f} s.")
-            total_soundtime+=block_sound_time
-        print(f"total sound time: {total_soundtime:.3f} s.")
-        print(f"missing stims:\n{len(missing_stims_list)}")
-        #  save stim timestamps
-        with open(timestamps_path, 'wb') as f:
-            print(f"saving timestamps for {subj_num}")
-            pickle.dump(timestamps, f)
+        if timestamps=={}:
+            print("timestamps dictionary is empty.")
+        else:
+            total_soundtime=0
+            missing_stims_list=[]
+            for block in timestamps:
+                block_sound_time=0
+                for stim_nm, (start, end) in timestamps[block].items():
+                    if all([start,end]):
+                        block_sound_time+=(end-start-1)/fs_eeg
+                    else:
+                        missing_stims_list.append(stim_nm)
+                print(f"in block {block}, total sound time is {block_sound_time:.3f} s.")
+                total_soundtime+=block_sound_time
+            print(f"total sound time: {total_soundtime:.3f} s.")
+            print(f"missing stims:\n{len(missing_stims_list)}")
+            #  save stim timestamps
+            with open(timestamps_path, 'wb') as f:
+                print(f"saving timestamps for {subj_num}")
+                pickle.dump(timestamps, f)
 if which_stmps=="evnt":
     # load evnt timestamps
     #TODO: make evnt timestamps loading function a util
