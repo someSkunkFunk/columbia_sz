@@ -193,9 +193,56 @@ if not just_stmp:
                             output='sos',fs=fs_eeg)
             filt_eeg=signal.sosfiltfilt(sos,raw_eeg,axis=0)
             flat_nms=[nm for arr_nm in evnt['name'][0] for nm in arr_nm]
-            flat_ndpnts=[(int(onset*fs_eeg),int(offset*fs_eeg)) for arr_on,arr_off in zip(evnt['startTime'][0],evnt['stopTime'][0]) for onset,offset in zip(arr_on,arr_off)]
+            confidence=np.array([float(s[0,0]) for s in evnt['confidence'][0]])
+            onsets=fs_eeg*np.array([float(s[0,0]) for s in evnt['startTime'][0]])
+            offsets=fs_eeg*np.array([float(s[0,0]) for s in evnt['stopTime'][0]])
+            are_integer_valued=np.allclose(np.concatenate([onsets,offsets]), np.round(np.concatenate([onsets,offsets])))
+            if are_integer_valued:
+                onsets=onsets.astype(int)
+                offsets=offsets.astype(int)
+                print(f"onsets and offsets converted to integers: {are_integer_valued}")
+            else:
+                print(f"some values in start_times,end_times are not integer valued!")
+            # array to keep track of which ones to ignore
+            bads=np.zeros(onsets.shape).astype(bool)
+            # check pause times make sense
+            pauses=onsets[1:]-offsets[:-1]
+            pause_tol=2 # pauses longer than this considered part of same segment
+            
+            if np.any(pauses<0):
+                print('pruning negative pauses')
+                
+                # gives array of indices corresponding to pauses
+                # want to compare relative confidence values to decide if 
+                # endpoints for stim before or after is kept 
+                # -> compute relative confidence differential
+                confidence_diff=np.diff(confidence)
+                # if pause is bad AND confidence_diff +
+                #  -> stim AFTER pause is more trustworthy
+                # -> remove stim onset/offset before pause if bad and -
+                bad_prepause_indx=np.argwhere((pauses<-pause_tol)&(confidence_diff<0)).squeeze()
+                # if pause is bad and confidence_diff - 
+                # -> stim BEFORE pause is more trustworthy
+                # -> remove stim on/off after pause if bad and +
+                bad_pstpause_indx=np.argwhere((pauses<-pause_tol)&(confidence_diff>0)).squeeze()
+                # make sure no confidence ties (very unlikely)
+                if len(np.argwhere((pauses<-pause_tol)&(confidence_diff==0)).squeeze())>0:
+                    raise NotImplementedError("there are {len(np.argwhere((pauses<-pause_tol)&(confidence_diff==0)).squeeze()} pad pauses with confidence ties.")
+                #TODO: code to string together stimuli og wavs and eeg audio chnl recording
+                # pertaining to the same continuous sound segment after pruning using logical or 
+                # and both pad pause indexes immediately above this (maybe functionalize the code also?)
+            else:
+                #NOTE: realizing might  not gonna work for negative pauses like I thought it would...
+                # actually if there are no negative pause times then it should be fine?
+                # should line up with offset considered a "long" pause
+                long_pauses=np.argwhere(np.abs(pauses)>pause_tol)
+                print(f"No negative pauses found. number of long pauses: {len(long_pauses)}")
+                #expecing about 15 per block x 6 blocks -> ~ 90 long pauses/segments
+
+
+            raise NotImplementedError("stop here.")
             for ii,stim_nm in enumerate(flat_nms):
-                onset,offset=flat_ndpnts[ii]
+                
                 
                 rec_wav=audio_rec[onset:offset]
                 t_rec=np.arange(rec_wav.size)/fs_eeg
