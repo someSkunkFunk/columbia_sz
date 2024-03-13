@@ -44,7 +44,7 @@ def get_segments(envelope:np.ndarray,fs,params=None):
     assert np.all(smooth_envelope<=1) and np.all(smooth_envelope>=0), "envelope range should be between 0 and 1 here!"
     # get indices where smoothed envelope crosses half-median, should be 1 where envelope goes above .5 
     # the range and -1 where it goes back below
-    loud_bits=(smooth_envelope>0.5*np.median(smooth_envelope)).astype(int)
+    loud_bits=(smooth_envelope>(np.std(smooth_envelope)+0.5*np.median(smooth_envelope))).astype(int)
     crossings=np.diff(loud_bits,prepend=1) #note: prepend w 1 to avoid introducing artifactual onset at beginning
     # remove spurious crossings at the beginning/end
     if np.argwhere(crossings==1)[0] > np.argwhere(crossings==-1)[0]:
