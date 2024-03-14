@@ -1,3 +1,19 @@
+def check_distinct_vals(x,y):
+    '''
+    works w numpy arrays, lists, and idk what else
+    can be extended to more than 2 easily but am lazy
+    returns None if it didn't work as expected.
+    '''
+    s1=set(x)
+    s2=set(y)
+    s3=s1.intersection(s2)
+    if len(s3)==0:
+        return True
+    elif len(s3)>0:
+        return False
+    else:
+        return None
+    
 #%%
 from scipy import signal
 import numpy as np

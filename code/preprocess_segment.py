@@ -132,6 +132,7 @@ if which_stmps=="evnt":
     evnt=utils.mat2dict(evnt)
 #%%
 # preprocess each block separately
+    
 if not just_stmp:
     if which_stmps.lower()=='xcorr':
         timestamps_ds = {}
@@ -203,14 +204,27 @@ if not just_stmp:
                 print(f"onsets and offsets converted to integers: {are_integer_valued}")
             else:
                 print(f"some values in start_times,end_times are not integer valued!")
-            # array to keep track of which ones to ignore
-            bads=np.zeros(onsets.shape).astype(bool)
+            # prune low-confidence values,record figure for posterity:
+            conf_thresh=0.4
+            import matplotlib.pyplot as plt
+            plt.hist(confidence,bins=50)
+            plt.title(f"{subj_num} Evnt confidence vals")
+            save_pth=os.path.join("..","figures","evnt_info",f"{subj_num}_confidence_hist.png")
+            if not os.path.isdir(os.path.dirname(save_pth)):
+                os.makedirs(os.path.dirname(save_pth),exist_ok=True)
+            plt.axvline(conf_thresh,label=f'confidence threshold: {conf_thresh}')
+            plt.savefig(save_pth)
+            plt.show()
+            plt.close()
+            onsets=onsets[np.nonzero(confidence>conf_thresh)]
+            offsets=offsets[np.nonzero(confidence>conf_thresh)]
+            confidence=confidence[np.nonzero(confidence>conf_thresh)]
             # check pause times make sense
             pauses=onsets[1:]-offsets[:-1]
             pause_tol=2 # pauses longer than this considered part of same segment
-            
-            if np.any(pauses<0):
-                print('pruning negative pauses')
+            #NOTE: maybe better to have separate parameter for pause tolerance and negative pause tolerance?
+            if np.any(pauses<-pause_tol):
+                print('pruning stimuli around negative pauses based on relative confidence.')
                 
                 # gives array of indices corresponding to pauses
                 # want to compare relative confidence values to decide if 
@@ -220,24 +234,54 @@ if not just_stmp:
                 # if pause is bad AND confidence_diff +
                 #  -> stim AFTER pause is more trustworthy
                 # -> remove stim onset/offset before pause if bad and -
-                bad_prepause_indx=np.argwhere((pauses<-pause_tol)&(confidence_diff<0)).squeeze()
+                bad_prepause_indx=np.flatnonzero((pauses<-pause_tol)&(confidence_diff<0))
                 # if pause is bad and confidence_diff - 
                 # -> stim BEFORE pause is more trustworthy
                 # -> remove stim on/off after pause if bad and +
-                bad_pstpause_indx=np.argwhere((pauses<-pause_tol)&(confidence_diff>0)).squeeze()
+                bad_pstpause_indx=np.flatnonzero((pauses<-pause_tol)&(confidence_diff>0))
+                #check for distinct index values
+                if utils.check_distinct_vals(bad_prepause_indx,bad_pstpause_indx):
+                    pass
+                else:
+                    raise NotImplementedError(f'indices should be different in bad_(pre,pst)_pause_indx arrays')
                 # make sure no confidence ties (very unlikely)
-                if len(np.argwhere((pauses<-pause_tol)&(confidence_diff==0)).squeeze())>0:
-                    raise NotImplementedError("there are {len(np.argwhere((pauses<-pause_tol)&(confidence_diff==0)).squeeze()} pad pauses with confidence ties.")
+                if len(np.flatnonzero((pauses<-pause_tol)&(confidence_diff==0)))>0:
+                    raise NotImplementedError( f"there are {len(np.flatnonzero((pauses<-pause_tol)&(confidence_diff==0)))} bad pauses with confidence ties.")
+                # add one to post_pause, pretty sure this has to be done after uniqueness check, but resuling masks
+                # should still index unique onsets/offsets
+                bad_pstpause_indx+=1
+                
+                # check for uniqueness again (pretty sure they'll be unique still)
+                if utils.check_distinct_vals(bad_prepause_indx,bad_pstpause_indx):
+                    pass
+                else:
+                    raise NotImplementedError(f'Indices were unique bad_(pre,pst)_pause_indx arrays before adding one to pst, but now theyre not. and thats bad.')                 
+                # prune the bad pauses as advertised, then re-evaluate pauses for segmenting
+                mask=np.ones(onsets.shape).astype(bool)
+                mask[np.concatenate([bad_prepause_indx,bad_pstpause_indx])]=False
+                onsets=onsets[mask]
+                offsets=offsets[mask]
+                del mask
+                pauses=onsets[1:]-offsets[:-1]
+                if np.any(pauses<-pause_tol):
+                    raise NotImplementedError("we got a problem here.")
+                else:
+                    print('negative pauses removed.')
+            print("begin segmenting based on pauses.")
+            long_pauses=np.nonzero(pauses>pause_tol)
+            segment_onsets=onsets[long_pauses]
+            segment_offsets=offsets[1+long_pauses]
+                
+                
+                
+                
+                
+                
                 #TODO: code to string together stimuli og wavs and eeg audio chnl recording
                 # pertaining to the same continuous sound segment after pruning using logical or 
                 # and both pad pause indexes immediately above this (maybe functionalize the code also?)
-            else:
-                #NOTE: realizing might  not gonna work for negative pauses like I thought it would...
-                # actually if there are no negative pause times then it should be fine?
-                # should line up with offset considered a "long" pause
-                long_pauses=np.argwhere(np.abs(pauses)>pause_tol)
-                print(f"No negative pauses found. number of long pauses: {len(long_pauses)}")
                 #expecing about 15 per block x 6 blocks -> ~ 90 long pauses/segments
+
 
 
             raise NotImplementedError("stop here.")
