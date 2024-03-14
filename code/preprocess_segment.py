@@ -205,7 +205,7 @@ if not just_stmp:
             else:
                 print(f"some values in start_times,end_times are not integer valued!")
             # prune low-confidence values,record figure for posterity:
-            conf_thresh=0.4
+            conf_thresh=0.0
             import matplotlib.pyplot as plt
             plt.hist(confidence,bins=50)
             plt.title(f"{subj_num} Evnt confidence vals")
@@ -216,14 +216,18 @@ if not just_stmp:
             plt.savefig(save_pth)
             plt.show()
             plt.close()
-            onsets=onsets[np.nonzero(confidence>conf_thresh)]
-            offsets=offsets[np.nonzero(confidence>conf_thresh)]
-            confidence=confidence[np.nonzero(confidence>conf_thresh)]
+            high_confidence=np.flatnonzero(confidence>conf_thresh)
+            print(f"trimming {confidence.size-high_confidence.size} low confidence stims.")
+            onsets=onsets[high_confidence]
+            offsets=offsets[high_confidence]
+            confidence=confidence[high_confidence]
+            #TODO: account for start times being relative to different blocks!!!
             # check pause times make sense
             pauses=onsets[1:]-offsets[:-1]
             pause_tol=2 # pauses longer than this considered part of same segment
             #NOTE: maybe better to have separate parameter for pause tolerance and negative pause tolerance?
             if np.any(pauses<-pause_tol):
+                print(f'there are {np.sum(pauses<-pause_tol)} bad pauses...')
                 print('pruning stimuli around negative pauses based on relative confidence.')
                 
                 # gives array of indices corresponding to pauses
@@ -231,27 +235,35 @@ if not just_stmp:
                 # endpoints for stim before or after is kept 
                 # -> compute relative confidence differential
                 confidence_diff=np.diff(confidence)
+                conf_diff_tol=0.1 # if differential is lower than this, throw away both stimuli before and after pause
                 # if pause is bad AND confidence_diff +
                 #  -> stim AFTER pause is more trustworthy
-                # -> remove stim onset/offset before pause if bad and -
-                bad_prepause_indx=np.flatnonzero((pauses<-pause_tol)&(confidence_diff<0))
+                # -> remove stim onset/offset BEFORE pause if bad and +
+                bad_prepause_indx=np.flatnonzero(((pauses<-pause_tol)&(confidence_diff>0)|
+                                                  ((pauses<-pause_tol)&(np.abs(confidence_diff)<conf_diff_tol))))
                 # if pause is bad and confidence_diff - 
                 # -> stim BEFORE pause is more trustworthy
-                # -> remove stim on/off after pause if bad and +
-                bad_pstpause_indx=np.flatnonzero((pauses<-pause_tol)&(confidence_diff>0))
+                # -> remove stim on/off AFTER pause if bad and -
+                bad_pstpause_indx=np.flatnonzero(((pauses<-pause_tol)&(confidence_diff<0)|
+                                                  ((pauses<-pause_tol)&(np.abs(confidence_diff)<conf_diff_tol))))
+
+
                 #check for distinct index values
-                if utils.check_distinct_vals(bad_prepause_indx,bad_pstpause_indx):
-                    pass
-                else:
-                    raise NotImplementedError(f'indices should be different in bad_(pre,pst)_pause_indx arrays')
-                # make sure no confidence ties (very unlikely)
-                if len(np.flatnonzero((pauses<-pause_tol)&(confidence_diff==0)))>0:
-                    raise NotImplementedError( f"there are {len(np.flatnonzero((pauses<-pause_tol)&(confidence_diff==0)))} bad pauses with confidence ties.")
+                #NOTE COMMENTING OUT BC now that relative confidence is a factor, pre/post won't necessarily be unique if low differential
+                # if utils.check_distinct_vals(bad_prepause_indx,bad_pstpause_indx):
+                #     pass
+                # else:
+                #     raise NotImplementedError(f'indices should be different in bad_(pre,pst)_pause_indx arrays')
+                # # make sure no confidence ties (very unlikely)
+                # if len(np.flatnonzero((pauses<-pause_tol)&(confidence_diff==0)))>0:
+                #     raise NotImplementedError( f"there are {len(np.flatnonzero((pauses<-pause_tol)&(confidence_diff==0)))} bad pauses with confidence ties.")
                 # add one to post_pause, pretty sure this has to be done after uniqueness check, but resuling masks
                 # should still index unique onsets/offsets
                 bad_pstpause_indx+=1
+                #NOTE: putting this code after adding one to post-pauses because for case where
+                # confidence differential is low, decided to throw away both bordering stimuli
                 
-                # check for uniqueness again (pretty sure they'll be unique still)
+                # check for uniqueness as each index should be unique to individual stimuli
                 if utils.check_distinct_vals(bad_prepause_indx,bad_pstpause_indx):
                     pass
                 else:
@@ -259,14 +271,17 @@ if not just_stmp:
                 # prune the bad pauses as advertised, then re-evaluate pauses for segmenting
                 mask=np.ones(onsets.shape).astype(bool)
                 mask[np.concatenate([bad_prepause_indx,bad_pstpause_indx])]=False
+                print(f"trimming {(~mask).sum()} stimuli with bad pause times.")
+
                 onsets=onsets[mask]
                 offsets=offsets[mask]
-                del mask
+                
                 pauses=onsets[1:]-offsets[:-1]
                 if np.any(pauses<-pause_tol):
                     raise NotImplementedError("we got a problem here.")
                 else:
                     print('negative pauses removed.')
+            del mask
             print("begin segmenting based on pauses.")
             long_pauses=np.nonzero(pauses>pause_tol)
             segment_onsets=onsets[long_pauses]
