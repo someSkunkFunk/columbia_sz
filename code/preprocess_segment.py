@@ -179,8 +179,31 @@ if not just_stmp:
         print(f"{subj_num, subj_cat} preprocessing and segmentation complete.")
         # break
     elif which_stmps.lower()=='evnt':
-        print(f"segmenting eeg based on evnt timestamps")
+        print(f"using evnt timestamps to segment eeg.")
+        print("extracting evnt data...")
+        evnt_nms=np.array([nm for arr_nm in evnt['name'][0] for nm in arr_nm])
+        evnt_blocks=[nm[:3].capitalize() for nm in evnt_nms]
+        evnt_confidence=np.array([float(s[0,0]) for s in evnt['confidence'][0]])
+        evnt_onsets=fs_eeg*np.array([float(s[0,0]) for s in evnt['startTime'][0]])
+        evnt_offsets=fs_eeg*np.array([float(s[0,0]) for s in evnt['stopTime'][0]])
+        are_integer_valued=np.allclose(np.concatenate([evnt_onsets,evnt_offsets]), np.round(np.concatenate([evnt_onsets,evnt_offsets])))
+        if are_integer_valued:
+            evnt_onsets=evnt_onsets.astype(int)
+            evnt_offsets=evnt_offsets.astype(int)
+            print(f"onsets and offsets converted to integers: {are_integer_valued}")
+        else:
+            print(f"some values in start_times,end_times are not integer valued!")
+        
+        # split into blocks 
+          
         for block, raw_data in subj_eeg.items():
+            print(f"segmenting block {block}...")
+            block_idx=[eb.replace('0','')==blocks[0] for eb in evnt_blocks]
+            block_idx=np.array(block_idx,dtype=bool)
+            stim_nms=evnt_nms[block_idx]
+            confidence=evnt_confidence[block_idx]
+            onsets=evnt_onsets[block_idx]
+            offsets=evnt_offsets[block_idx]
             # filter and resample
             raw_eeg=raw_data[:,:62]
             audio_rec=raw_data[:,-1] # leave unperturbed for alignment checking
@@ -193,23 +216,13 @@ if not just_stmp:
             sos=signal.butter(filt_o,filt_band_lims,btype='bandpass',
                             output='sos',fs=fs_eeg)
             filt_eeg=signal.sosfiltfilt(sos,raw_eeg,axis=0)
-            flat_nms=[nm for arr_nm in evnt['name'][0] for nm in arr_nm]
-            confidence=np.array([float(s[0,0]) for s in evnt['confidence'][0]])
-            onsets=fs_eeg*np.array([float(s[0,0]) for s in evnt['startTime'][0]])
-            offsets=fs_eeg*np.array([float(s[0,0]) for s in evnt['stopTime'][0]])
-            are_integer_valued=np.allclose(np.concatenate([onsets,offsets]), np.round(np.concatenate([onsets,offsets])))
-            if are_integer_valued:
-                onsets=onsets.astype(int)
-                offsets=offsets.astype(int)
-                print(f"onsets and offsets converted to integers: {are_integer_valued}")
-            else:
-                print(f"some values in start_times,end_times are not integer valued!")
+            # BELOW THIS LINE, CHANGE EVNT REFERENCES TO BLOCK REFERENCES
             # prune low-confidence values,record figure for posterity:
             conf_thresh=0.0
             import matplotlib.pyplot as plt
             plt.hist(confidence,bins=50)
-            plt.title(f"{subj_num} Evnt confidence vals")
-            save_pth=os.path.join("..","figures","evnt_info",f"{subj_num}_confidence_hist.png")
+            plt.title(f"{subj_num}, {block} Evnt confidence vals")
+            save_pth=os.path.join("..","figures","evnt_info",f"{subj_num}_{block}_confidence_hist.png")
             if not os.path.isdir(os.path.dirname(save_pth)):
                 os.makedirs(os.path.dirname(save_pth),exist_ok=True)
             plt.axvline(conf_thresh,label=f'confidence threshold: {conf_thresh}')
@@ -281,11 +294,40 @@ if not just_stmp:
                     raise NotImplementedError("we got a problem here.")
                 else:
                     print('negative pauses removed.')
-            del mask
+                del mask
+            else:
+                print("no negative pauses to remove.")
+
+
             print("begin segmenting based on pauses.")
-            long_pauses=np.nonzero(pauses>pause_tol)
-            segment_onsets=onsets[long_pauses]
-            segment_offsets=offsets[1+long_pauses]
+            long_pauses=np.flatnonzero(pauses>pause_tol)
+            segment_offsets=offsets[long_pauses]
+            segment_onsets=onsets[long_pauses+1]
+            # correct for missing first onset, last offset
+            segment_offsets=np.concatenate([segment_offsets,offsets[-1][None]])
+            segment_onsets=np.concatenate([onsets[0][None],segment_onsets])
+
+
+            #group stimuli by segments
+            for seg_start,seg_end in zip(segment_onsets,segment_offsets):
+                # seg_start,seg_end correspond to audio_rec samples
+                rec_seg=audio_rec[seg_start:seg_end]
+                seg_idx=np.flatnonzero((seg_start<=onsets)&(onsets<seg_end))
+                seg_stims=stim_nms[seg_idx]
+                # realizing we wont need the actual onsets and offsets 
+                # since can just slice the whole segment as one piece 
+                # from recording
+                # seg_ons=onsets[seg_idx]
+                # seg_offs=offsets[seg_idx]
+                fig,ax=plt.subplots(2)
+                
+                for stim_nm in seg_stims:
+                    #note grabs clean by default
+                    stim_wav=utils.get_stim_wav(stims_dict,stim_nm)
+
+                raise NotImplementedError("stop here.")
+                
+
                 
                 
                 
@@ -299,19 +341,7 @@ if not just_stmp:
 
 
 
-            raise NotImplementedError("stop here.")
-            for ii,stim_nm in enumerate(flat_nms):
-                
-                
-                rec_wav=audio_rec[onset:offset]
-                t_rec=np.arange(rec_wav.size)/fs_eeg
-                
-                stim_wav=utils.get_stim_wav(stims_dict,str(stim_nm))
-                t_stim=np.arange(stim_wav.size)/fs_audio
-                plt.plot(t_stim,stim_wav,label='stim wav')
-                plt.plot(t_rec,rec_wav/rec_wav.max(),label='recording')
-                plt.legend()
-                plt.show()
+
 
                 break
             break
