@@ -309,21 +309,40 @@ if not just_stmp:
 
 
             #group stimuli by segments
-            for seg_start,seg_end in zip(segment_onsets,segment_offsets):
+            prev_stim_end=0
+            for ii, (seg_start,seg_end) in enumerate(zip(segment_onsets,segment_offsets)):
                 # seg_start,seg_end correspond to audio_rec samples
                 rec_seg=audio_rec[seg_start:seg_end]
+                t_rec=np.arange(seg_start,seg_end)/fs_eeg
                 seg_idx=np.flatnonzero((seg_start<=onsets)&(onsets<seg_end))
-                seg_stims=stim_nms[seg_idx]
-                # realizing we wont need the actual onsets and offsets 
-                # since can just slice the whole segment as one piece 
-                # from recording
-                # seg_ons=onsets[seg_idx]
-                # seg_offs=offsets[seg_idx]
-                fig,ax=plt.subplots(2)
+                nms_in_seg=stim_nms[seg_idx]
+                stims_in_seg=[]
                 
-                for stim_nm in seg_stims:
+                seg_start_time=seg_start/fs_eeg
+                fig,ax=plt.subplots(2,sharex=True)
+                ax[0].plot(t_rec,rec_seg/np.abs(rec_seg).max(),label=f"segment {ii+1}")
+                ax[0].set_title(f"{subj_num} {block} segment {ii+1}")
+                prev_stim_end=seg_start_time
+                for stim_nm in nms_in_seg:
                     #note grabs clean by default
                     stim_wav=utils.get_stim_wav(stims_dict,stim_nm)
+                    stims_in_seg.append(stim_wav)
+                    t_stim=np.arange(stim_wav.size)/fs_audio
+                    t_stim+=prev_stim_end
+                    ax[1].plot(t_stim,stim_wav,label=f'{stim_nm[:-4]}')
+                    prev_stim_end=t_stim[-1]
+                ax[1].set_xlabel('time, s')
+                box0=ax[0].get_position()
+                ax[0].set_position([box0.x0,box0.y0+box0.height*0.1,
+                                    box0.width,box0.height*0.9])
+                box1=ax[1].get_position()
+                ax[1].set_position([box1.x0,box1.y0+box1.height*0.1,
+                                    box1.width,box1.height*0.9])
+                ax[1].legend(loc='upper center',bbox_to_anchor=(0.5,-0.05),
+                             ncol=len(nms_in_seg),
+                             fontsize=9) #NOTE: can move using anchor box or some shit to make more readbale
+                plt.show()
+                    
 
                 raise NotImplementedError("stop here.")
                 
