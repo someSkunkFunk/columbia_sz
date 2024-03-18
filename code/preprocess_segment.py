@@ -77,10 +77,10 @@ subj_eeg=utils.get_full_raw_eeg(raw_dir,subj_cat,subj_num,blocks=blocks)
 if which_stmps=="xcorr":
     # Find timestamps using xcorr algo
     # check if save directory exists, else make one
-    save_path=os.path.join(processed_dir_path,subj_cat,subj_num)
-    if not os.path.isdir(save_path):
+    output_dir=os.path.join(processed_dir_path,subj_cat,subj_num)
+    if not os.path.isdir(output_dir):
         print(f"preprocessed dir for {subj_num, subj_cat} not found, creating one.")
-        os.makedirs(save_path, exist_ok=True)
+        os.makedirs(output_dir, exist_ok=True)
     # check if timestamps fl exists already
     timestamps_path=os.path.join("..","eeg_data","timestamps",subj_cat,subj_num,
                                 f"{which_xcorr}_timestamps.pkl")
@@ -120,10 +120,10 @@ if which_stmps=="evnt":
     # load evnt timestamps
     #TODO: make evnt timestamps loading function a util
     # check if save directory exists, else make one
-    save_path = os.path.join(processed_dir_path, subj_cat, subj_num)
-    if not os.path.isdir(save_path):
+    output_dir = os.path.join(processed_dir_path, subj_cat, subj_num)
+    if not os.path.isdir(output_dir):
         print(f"preprocessed dir for {subj_num, subj_cat} not found, creating one.")
-        os.makedirs(save_path, exist_ok=True)
+        os.makedirs(output_dir, exist_ok=True)
     # find evnt timestamps
     timestamps_path=os.path.join("..","eeg_data","timestamps",f"evnt_{subj_num}.mat")
     evnt_mat=spio.loadmat(timestamps_path)
@@ -174,8 +174,8 @@ if not just_stmp:
         subj_data['fs'] = fs_trf
         print("subj_data before pickling:")
         print(subj_data.head())
-        print(f'saving to: {save_path}')
-        subj_data.to_pickle(os.path.join(save_path, f"{which_xcorr}_aligned_resp.pkl"))
+        print(f'saving to: {output_dir}')
+        subj_data.to_pickle(os.path.join(output_dir, f"{which_xcorr}_aligned_resp.pkl"))
         print(f"{subj_num, subj_cat} preprocessing and segmentation complete.")
         # break
     elif which_stmps.lower()=='evnt':
@@ -195,7 +195,7 @@ if not just_stmp:
             print(f"some values in start_times,end_times are not integer valued!")
         
         # split into blocks 
-          
+        subj_output={} # save results in a python dictionary
         for block, raw_data in subj_eeg.items():
             print(f"segmenting block {block}...")
             block_idx=[eb.replace('0','')==blocks[0] for eb in evnt_blocks]
@@ -220,13 +220,14 @@ if not just_stmp:
             # prune low-confidence values,record figure for posterity:
             conf_thresh=0.0
             import matplotlib.pyplot as plt
-            plt.hist(confidence,bins=50)
+            plt.hist(confidence,bins=25)
             plt.title(f"{subj_num}, {block} Evnt confidence vals")
-            save_pth=os.path.join("..","figures","evnt_info",f"{subj_num}_{block}_confidence_hist.png")
-            if not os.path.isdir(os.path.dirname(save_pth)):
-                os.makedirs(os.path.dirname(save_pth),exist_ok=True)
+            fig_pth=os.path.join("..","figures","evnt_info",subj_num,block,f"{subj_num}_{block}_confidence_hist.png")
+            if not os.path.isdir(os.path.dirname(fig_pth)):
+                os.makedirs(os.path.dirname(fig_pth),exist_ok=True)
             plt.axvline(conf_thresh,label=f'confidence threshold: {conf_thresh}')
-            plt.savefig(save_pth)
+            plt.savefig(fig_pth)
+            del fig_pth
             plt.show()
             plt.close()
             high_confidence=np.flatnonzero(confidence>conf_thresh)
@@ -310,67 +311,70 @@ if not just_stmp:
 
             #group stimuli by segments
             prev_stim_end=0
-            for ii, (seg_start,seg_end) in enumerate(zip(segment_onsets,segment_offsets)):
+            for seg_ii, (seg_start,seg_end) in enumerate(zip(segment_onsets,segment_offsets)):
+                
+                seg_nm=f"{block}_{seg_ii+1:02}"
+                print(f"getting eeg from segment {seg_ii+1} of {len(segment_onsets)}")
                 # seg_start,seg_end correspond to audio_rec samples
+                eeg_seg=filt_eeg[seg_start:seg_end]
                 rec_seg=audio_rec[seg_start:seg_end]
                 t_rec=np.arange(seg_start,seg_end)/fs_eeg
                 seg_idx=np.flatnonzero((seg_start<=onsets)&(onsets<seg_end))
                 nms_in_seg=stim_nms[seg_idx]
-                stims_in_seg=[]
+
                 
                 seg_start_time=seg_start/fs_eeg
-                fig,ax=plt.subplots(2,sharex=True)
-                ax[0].plot(t_rec,rec_seg/np.abs(rec_seg).max(),label=f"segment {ii+1}")
-                ax[0].set_title(f"{subj_num} {block} segment {ii+1}")
+
+                #plotting
+
+                
+                # Calculate the legend size
+                fig_legend, ax_legend = plt.subplots()
+                #NOTE: I think this is where the no artists with labels found warning is originating from 
+                ax_legend.legend(loc='upper center', bbox_to_anchor=(0.5, -0.05), ncol=len(nms_in_seg))
+                legend=ax_legend.get_legend()
+                legend_box = legend.get_window_extent().transformed(fig_legend.dpi_scale_trans.inverted())
+                fig_legend.clear()
+                fig_width=8
+                fig_height=6
+                
+                # plot the data
+                fig,ax=plt.subplots(2,sharex=True,figsize=(fig_width,fig_height))
+                ax[0].plot(t_rec,rec_seg/np.abs(rec_seg).max(),label=f"segment {seg_ii+1}")
+                ax[0].set_title(f"{subj_num} {block} segment {seg_ii+1:02}")
                 prev_stim_end=seg_start_time
                 for stim_nm in nms_in_seg:
                     #note grabs clean by default
                     stim_wav=utils.get_stim_wav(stims_dict,stim_nm)
-                    stims_in_seg.append(stim_wav)
+                    # stims_in_seg.append(stim_nm)
                     t_stim=np.arange(stim_wav.size)/fs_audio
                     t_stim+=prev_stim_end
                     ax[1].plot(t_stim,stim_wav,label=f'{stim_nm[:-4]}')
                     prev_stim_end=t_stim[-1]
-                ax[1].set_xlabel('time, s')
+                ax[0].set_xlabel('time, s, relative to block start')
                 box0=ax[0].get_position()
-                ax[0].set_position([box0.x0,box0.y0+box0.height*0.1,
-                                    box0.width,box0.height*0.9])
+                ax[0].set_position([box0.x0,box0.y0+box0.height*0.2,
+                                    box0.width,box0.height*0.8])
                 box1=ax[1].get_position()
-                ax[1].set_position([box1.x0,box1.y0+box1.height*0.1,
-                                    box1.width,box1.height*0.9])
-                ax[1].legend(loc='upper center',bbox_to_anchor=(0.5,-0.05),
-                             ncol=len(nms_in_seg),
-                             fontsize=9) #NOTE: can move using anchor box or some shit to make more readbale
+                ax[1].set_position([box1.x0,box1.y0+box1.height*0.2,
+                                    box1.width,box1.height*0.8])
+                # adjust figure with legend outside of axes
+                fig.subplots_adjust(bottom=legend_box.ymin * fig_height / (fig_height - legend_box.height))
+                fig_pth=os.path.join("..","figures","evnt_info",subj_num,block,f"{subj_num}_{block}_{round(seg_ii+1):02}.png")
+                ax[1].legend(loc='upper center',bbox_to_anchor=(0.5,-0.1),
+                             ncol=len(nms_in_seg)//2) 
+                plt.savefig(fig_pth)
+                del fig_pth
                 plt.show()
-                    
-
-                raise NotImplementedError("stop here.")
-                
-
-                
-                
-                
-                
-                
-                
-                #TODO: code to string together stimuli og wavs and eeg audio chnl recording
-                # pertaining to the same continuous sound segment after pruning using logical or 
-                # and both pad pause indexes immediately above this (maybe functionalize the code also?)
-                #expecing about 15 per block x 6 blocks -> ~ 90 long pauses/segments
-
-
-
-
-
-                break
-            break
-
-
-
-
-
-            
-
+                # record segmented eeg and stimuli names to a dictionary             
+                subj_output[f"{seg_nm}"]=([n for n in nms_in_seg], eeg_seg)
+                print(f"segment {seg_ii+1} of {len(segment_onsets)} done.")
+        print(f"All segments done. saving preprocessed data to: {output_dir}")
+        output_fnm=os.path.join(output_dir,f"")
+        with open(output_fnm, 'wb') as fl:
+            pickle.dump(subj_output,fl)
+        print(f"Preprocessing and alignment done for {subj_num}.")
+        #expecing about 15 per block x 6 blocks -> ~ 90 long pauses/segments
     else:
         raise NotImplementedError(f"{which_stmps} is not an option for which_stmps.")
  
