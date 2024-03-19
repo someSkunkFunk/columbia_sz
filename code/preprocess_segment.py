@@ -47,7 +47,7 @@ if "subj_num" in os.environ:
 #####################################################################################
 else:
     print("using manually inputted vars")
-    subj_num="3218"
+    subj_num="2588"
     which_stmps="evnt"
     which_xcorr="envs"
     just_stmp=False
@@ -133,6 +133,7 @@ if which_stmps=="evnt":
     # returns dict for some reason, which mat2dict doesnt like
     evnt=evnt_mat['evnt']
     evnt=utils.mat2dict(evnt)
+    print(f"evnt stamps loaded.")
 #%%
 # preprocess each block separately
     
@@ -196,7 +197,10 @@ if not just_stmp:
             print(f"onsets and offsets converted to integers: {are_integer_valued}")
         else:
             print(f"some values in start_times,end_times are not integer valued!")
-        
+        # add 5-second correction to onset of first part of each
+        correction_idx=np.where(np.char.find(evnt_nms, 'p01')!=-1)[0]
+        evnt_onsets[correction_idx]+=round(5.0*fs_eeg)
+        # raise NotImplementedError("stop here.")
         # split into blocks 
         subj_output={} # save results in a python dictionary
         for block, raw_data in subj_eeg.items():
@@ -216,9 +220,13 @@ if not just_stmp:
                 raw_eeg=raw_eeg-raw_eeg.mean(axis=1)[:,None]
             if fs_eeg / 2 <= fs_trf:
                 raise NotImplementedError("Nyquist") 
+            print("filtering and downsampling eeg for current block")
             sos=signal.butter(filt_o,filt_band_lims,btype='bandpass',
                             output='sos',fs=fs_eeg)
             filt_eeg=signal.sosfiltfilt(sos,raw_eeg,axis=0)
+            num_ds=int(np.floor((filt_eeg.shape[0]-1)*(fs_trf/fs_eeg)))
+            ds_eeg=signal.resample(filt_eeg,num_ds)
+            
             # BELOW THIS LINE, CHANGE EVNT REFERENCES TO BLOCK REFERENCES
             # prune low-confidence values,record figure for posterity:
             conf_thresh=0.0
@@ -320,7 +328,6 @@ if not just_stmp:
                 seg_nm=f"{block}_{seg_ii+1:02}"
                 print(f"getting eeg from segment {seg_ii+1} of {len(segment_onsets)}")
                 # seg_start,seg_end correspond to audio_rec samples
-                eeg_seg=filt_eeg[seg_start:seg_end]
                 rec_seg=audio_rec[seg_start:seg_end]
                 t_rec=np.arange(seg_start,seg_end)/fs_eeg
                 seg_idx=np.flatnonzero((seg_start<=onsets)&(onsets<seg_end))
@@ -374,7 +381,13 @@ if not just_stmp:
                 del fig_pth
                 # plt.show()
                 plt.close()
-                # record segmented eeg and stimuli names to a dictionary             
+
+                # get downsampled segment onsets and offsets to slice downsampled eeg
+                seg_start_ds=int((seg_start/fs_eeg)*fs_trf)
+                seg_end_ds=int((seg_end/fs_eeg)*fs_trf)
+                eeg_seg=ds_eeg[seg_start_ds:seg_end_ds]
+                
+                # record segmented eeg and stimuli names to a dictionary            
                 subj_output[f"{seg_nm}"]=([n for n in nms_in_seg], 
                                           norm_aud_rec, eeg_seg)
                 print(f"segment {seg_ii+1} of {len(segment_onsets)} done.")
