@@ -47,13 +47,24 @@ def nested_cv_wrapper(subj_num,
     #NOTE that  by leaving eeg_dir blank below it's looking 
     # in eeg_data/preproessed_xcorr by default
     subj_data=utils.load_preprocessed(subj_num,evnt=evnt,which_xcorr=which_xcorr)
-    print(f"preprocessed data loaded.")
+    if evnt:
+        print(f"Evnt preprocessed data loaded.")
+        fs_trf=100 #TODO: something about this
+        #NOTE: reduction by pauses may still be applicable here but for now
+        # just going to worry about removing evnt stims with nonsensical durations
+        
+        reduce_trials_by=None 
+        
+        #TODO: clean stimuli with nonsensical lengths here
+    else:
+        print(f"{which_xcorr} xcorr preprocessed data loaded.")
+        fs_trf=subj_data['fs'][0]
     # specify fl paths assumes running from code as pwd
     eeg_dir=os.path.join("..","eeg_data")
     # stim_fnm = "master_stim_file_schiz_studybis.mat" # note this is original fnm from box, we changed to just stim_info.mat
     stim_fl_path=os.path.join(eeg_dir,"stim_info.mat")
     stims_dict=utils.get_stims_dict(stim_fl_path)
-    fs_trf=subj_data['fs'][0] # use eeg fs, assumed eeg downsampled to desired fs
+    
     if lim_stim is not None:
         # in case we want to run to completion for testing 
         print(f'running number of stimuli limited to {lim_stim}, wont save result...\n')
@@ -72,6 +83,7 @@ def nested_cv_wrapper(subj_num,
     for clean_or_noisy in clean_nxor_noisy:
         stim_envs=get_stim_envs(stims_dict,clean_or_noisy,fs_output=fs_trf,f_lp=f_lp)
         #recorded audio mostly for debuggning and checking alignment of timestamps
+        #TODO: fix setupxy so it works with evnt stamps
         stimulus,response,stim_nms,recorded_audio=setup_xy(subj_data,stim_envs,
                                                 subj_num,reduce_trials_by,
                                                 outlier_idx,evnt=evnt,which_xcorr=which_xcorr)
@@ -135,11 +147,16 @@ if __name__=="__main__":
             raise NotImplementedError(f"which_stmps={which_stmps} is not an option")
     else:
         # running interactively probably for debugging purposes
+        #NOTE: why do I need which_stamps AND evnt??
+        #RE: seems like which_stmps used in bash script, automate in interactive more
         subj_num="3253"
-        which_stmps="xcorr"
-        which_xcorr="wavs"
-        evnt=False
-    
+        evnt=True
+        if evnt:
+            # which_stmps="evnt" #not needed
+            pass
+        else:
+            which_xcorr="wavs"
+        
     #note: return_xy is False by default but when save_results is True will store them in pkl anyway
     nested_cv_wrapper(subj_num,return_xy=False,
                       save_results=True,

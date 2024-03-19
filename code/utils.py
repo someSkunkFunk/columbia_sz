@@ -683,12 +683,10 @@ def load_preprocessed(subj_num,eeg_dir=None,evnt=False,which_xcorr=None):
     '''
     subj_cat = get_subj_cat(subj_num)
     if eeg_dir is None:
-        if evnt==False:
-            eeg_dir=os.path.join(os.getcwd(), '..', "eeg_data", "preprocessed_xcorr")
-        elif evnt:
+        if evnt:
             eeg_dir=os.path.join(os.getcwd(), '..', "eeg_data", "preprocessed_evnt")
         else:
-            raise NotImplementedError(f"evnt: {evnt} error")
+            eeg_dir=os.path.join(os.getcwd(), '..', "eeg_data", "preprocessed_xcorr")
     if which_xcorr is None and evnt:
         subj_data_fnm = "aligned_resp.pkl"
     else:

@@ -6,24 +6,23 @@
 #SBATCH -t 04:00:00
 #SBATCH --mem=60gb
 #SBATCH -n 20 ##Number of tasks
-#SBATCH -J segment_pauses
+#SBATCH -J evnt_segments
 #SBATCH --partition=standard
-#SBATCH --output=plot_segmented_audio.log
+#SBATCH --output=evnt_segments.log
 
 ##SBATCH --array=1-26 
 ##SBATCH --depend=afterany:17146968
 #SBATCH --mail-type=END
 #SBATCH --mail-user=apalaci6@ur.rochester.edu 
 
-
 ##bash vars
-echo "Added code to trim out long silences in recording to improve performance; this run is just too investigate what those segments are and if consistent across subjects/blocks"
+echo "segmenting eeg using evnt timestamps and no confidence threshold."
 do_avg_ref="true"
-which_stmps="xcorr"
+which_stmps="evnt"
 script_name="preprocess_segment"
 which_xcorr="wavs"  
 noisy_or_clean="clean"
-just_stmp="true"
+just_stmp="false"
 subjs=(
     3253  
     3316  

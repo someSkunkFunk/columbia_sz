@@ -23,7 +23,7 @@ fs_audio=stims_dict['fs'][0] # 11025 foriginally
 # fs_audio=16000 #just trying it out cuz nothing else works
 fs_eeg=2400 #trie d2kHz didn't help
 fs_trf=100 # Hz, downsampling frequency for trf analysis
-n_blocks = 6
+n_blocks=6
 # blocks=["B2"]
 blocks = [f"B{ii}" for ii in range(1, n_blocks+1)]
 print(f"check blocks: {blocks}")
@@ -54,16 +54,7 @@ else:
     do_avg_ref=False
     noisy_or_clean="noisy" #NOTE: clean is default and setting them here does nothing
 ##################################################################################
-thresh_params=('pearsonr', 0.4)
-# cutoff_ratio=10
-
-#print  correlation thresholds
-if thresh_params[0]=='xcorr_peak':
-    print(f'using xcorr peak thresholding; xcorr cutoff: {thresh_params[1]} * std(xcorr)')
-elif thresh_params[0]=='pearsonr':
-    print(f"using pearsonr thresholding; pearsonr threshold: {thresh_params[1]}")
-timestamps_bad=True #currently unsure where the problem is but could still be timestamps although they seem good
-# determine filter params applied to EEG before segmentation 
+### eeg preprocessing params
 # NOTE: different from filter lims used in timestamp detection algo (!)
 filt_band_lims=[1.0, 15] #Hz; highpass, lowpass cutoffs
 filt_o=3 # order of filter (effective order x2 of this since using zero-phase)
@@ -74,8 +65,20 @@ print(f"Fetching data for {subj_num,subj_cat}")
 subj_eeg=utils.get_full_raw_eeg(raw_dir,subj_cat,subj_num,blocks=blocks)
 #%%
 # find timestamps
+#print  correlation thresholds
+timestamps_bad=True #currently unsure where the problem is but could still be timestamps although they seem good
+# determine filter params applied to EEG before segmentation 
+
 if which_stmps=="xcorr":
     # Find timestamps using xcorr algo
+    thresh_params=('pearsonr', 0.4)
+    # cutoff_ratio=10
+    if thresh_params[0]=='xcorr_peak':
+        print(f'using xcorr peak thresholding; xcorr cutoff: {thresh_params[1]} * std(xcorr)')
+    elif thresh_params[0]=='pearsonr':
+        print(f"using pearsonr thresholding; pearsonr threshold: {thresh_params[1]}")
+
+    
     # check if save directory exists, else make one
     output_dir=os.path.join(processed_dir_path,subj_cat,subj_num)
     if not os.path.isdir(output_dir):
@@ -198,7 +201,7 @@ if not just_stmp:
         subj_output={} # save results in a python dictionary
         for block, raw_data in subj_eeg.items():
             print(f"segmenting block {block}...")
-            block_idx=[eb.replace('0','')==blocks[0] for eb in evnt_blocks]
+            block_idx=[eb.replace('0','')==block for eb in evnt_blocks]
             block_idx=np.array(block_idx,dtype=bool)
             stim_nms=evnt_nms[block_idx]
             confidence=evnt_confidence[block_idx]
@@ -219,6 +222,7 @@ if not just_stmp:
             # BELOW THIS LINE, CHANGE EVNT REFERENCES TO BLOCK REFERENCES
             # prune low-confidence values,record figure for posterity:
             conf_thresh=0.0
+            print(f"Overall confidence threshold used: {conf_thresh}.")
             import matplotlib.pyplot as plt
             plt.hist(confidence,bins=25)
             plt.title(f"{subj_num}, {block} Evnt confidence vals")
@@ -228,7 +232,7 @@ if not just_stmp:
             plt.axvline(conf_thresh,label=f'confidence threshold: {conf_thresh}')
             plt.savefig(fig_pth)
             del fig_pth
-            plt.show()
+            # plt.show()
             plt.close()
             high_confidence=np.flatnonzero(confidence>conf_thresh)
             print(f"trimming {confidence.size-high_confidence.size} low confidence stims.")
@@ -331,7 +335,9 @@ if not just_stmp:
                 # Calculate the legend size
                 fig_legend, ax_legend = plt.subplots()
                 #NOTE: I think this is where the no artists with labels found warning is originating from 
-                ax_legend.legend(loc='upper center', bbox_to_anchor=(0.5, -0.05), ncol=len(nms_in_seg))
+                # number of columns in legend, need at least 1
+                _ncol=max(len(nms_in_seg)//2, 1)
+                ax_legend.legend(loc='upper center', bbox_to_anchor=(0.5, -0.05), ncol=_ncol)
                 legend=ax_legend.get_legend()
                 legend_box = legend.get_window_extent().transformed(fig_legend.dpi_scale_trans.inverted())
                 fig_legend.clear()
@@ -340,7 +346,8 @@ if not just_stmp:
                 
                 # plot the data
                 fig,ax=plt.subplots(2,sharex=True,figsize=(fig_width,fig_height))
-                ax[0].plot(t_rec,rec_seg/np.abs(rec_seg).max(),label=f"segment {seg_ii+1}")
+                norm_aud_rec=rec_seg/np.abs(rec_seg).max()
+                ax[0].plot(t_rec,norm_aud_rec,label=f"segment {seg_ii+1}")
                 ax[0].set_title(f"{subj_num} {block} segment {seg_ii+1:02}")
                 prev_stim_end=seg_start_time
                 for stim_nm in nms_in_seg:
@@ -362,15 +369,17 @@ if not just_stmp:
                 fig.subplots_adjust(bottom=legend_box.ymin * fig_height / (fig_height - legend_box.height))
                 fig_pth=os.path.join("..","figures","evnt_info",subj_num,block,f"{subj_num}_{block}_{round(seg_ii+1):02}.png")
                 ax[1].legend(loc='upper center',bbox_to_anchor=(0.5,-0.1),
-                             ncol=len(nms_in_seg)//2) 
+                             ncol=_ncol) 
                 plt.savefig(fig_pth)
                 del fig_pth
-                plt.show()
+                # plt.show()
+                plt.close()
                 # record segmented eeg and stimuli names to a dictionary             
-                subj_output[f"{seg_nm}"]=([n for n in nms_in_seg], eeg_seg)
+                subj_output[f"{seg_nm}"]=([n for n in nms_in_seg], 
+                                          norm_aud_rec, eeg_seg)
                 print(f"segment {seg_ii+1} of {len(segment_onsets)} done.")
         print(f"All segments done. saving preprocessed data to: {output_dir}")
-        output_fnm=os.path.join(output_dir,f"")
+        output_fnm=os.path.join(output_dir,f"aligned_resp.pkl")
         with open(output_fnm, 'wb') as fl:
             pickle.dump(subj_output,fl)
         print(f"Preprocessing and alignment done for {subj_num}.")
