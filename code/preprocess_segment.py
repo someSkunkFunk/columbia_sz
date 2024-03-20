@@ -47,18 +47,20 @@ if "subj_num" in os.environ:
 #####################################################################################
 else:
     print("using manually inputted vars")
-    subj_num="2588"
+    subj_num="0194"
     which_stmps="evnt"
     which_xcorr="envs"
     just_stmp=False
     do_avg_ref=False
     noisy_or_clean="noisy" #NOTE: clean is default and setting them here does nothing
+    
 ##################################################################################
 ### eeg preprocessing params
 # NOTE: different from filter lims used in timestamp detection algo (!)
+evnt_ovrall_thresh=0.45 #NEW: make bash var?
 filt_band_lims=[1.0, 15] #Hz; highpass, lowpass cutoffs
 filt_o=3 # order of filter (effective order x2 of this since using zero-phase)
-processed_dir_path=os.path.join(eeg_dir, f"preprocessed_{which_stmps}") #directory where processed data goes
+processed_dir_path=os.path.join(eeg_dir, f"preprocessed_{which_stmps}_thresh45") #directory where processed data goes
 subj_cat=utils.get_subj_cat(subj_num) #note: checked get_subj_cat, should be fine
 raw_dir=os.path.join(eeg_dir,"raw")
 print(f"Fetching data for {subj_num,subj_cat}")
@@ -229,20 +231,24 @@ if not just_stmp:
             
             # BELOW THIS LINE, CHANGE EVNT REFERENCES TO BLOCK REFERENCES
             # prune low-confidence values,record figure for posterity:
-            conf_thresh=0.0
-            print(f"Overall confidence threshold used: {conf_thresh}.")
+            
+            print(f"Overall confidence threshold used: {evnt_ovrall_thresh}.")
             import matplotlib.pyplot as plt
             plt.hist(confidence,bins=25)
             plt.title(f"{subj_num}, {block} Evnt confidence vals")
-            fig_pth=os.path.join("..","figures","evnt_info",subj_num,block,f"{subj_num}_{block}_confidence_hist.png")
+            
             if not os.path.isdir(os.path.dirname(fig_pth)):
+                print(f"Making new figures directory: {os.path.dirname(fig_pth)}")
                 os.makedirs(os.path.dirname(fig_pth),exist_ok=True)
-            plt.axvline(conf_thresh,label=f'confidence threshold: {conf_thresh}')
-            plt.savefig(fig_pth)
-            del fig_pth
-            # plt.show()
+            plt.axvline(evnt_ovrall_thresh,label=f'confidence threshold: {evnt_ovrall_thresh}')
+            if  "subj_num" in os.environ:
+                fig_pth=os.path.join("..","figures","evnt_info",subj_num,block,f"{subj_num}_{block}_confidence_hist.png")
+                plt.savefig(fig_pth)
+                del fig_pth
+            else:
+                plt.show()
             plt.close()
-            high_confidence=np.flatnonzero(confidence>conf_thresh)
+            high_confidence=np.flatnonzero(confidence>evnt_ovrall_thresh)
             print(f"trimming {confidence.size-high_confidence.size} low confidence stims.")
             onsets=onsets[high_confidence]
             offsets=offsets[high_confidence]
@@ -374,12 +380,14 @@ if not just_stmp:
                                     box1.width,box1.height*0.8])
                 # adjust figure with legend outside of axes
                 fig.subplots_adjust(bottom=legend_box.ymin * fig_height / (fig_height - legend_box.height))
-                fig_pth=os.path.join("..","figures","evnt_info",subj_num,block,f"{subj_num}_{block}_{round(seg_ii+1):02}.png")
                 ax[1].legend(loc='upper center',bbox_to_anchor=(0.5,-0.1),
                              ncol=_ncol) 
-                plt.savefig(fig_pth)
-                del fig_pth
-                # plt.show()
+                if "subj_num" in os.environ:
+                    fig_pth=os.path.join("..","figures","evnt_info",subj_num,block,f"{subj_num}_{block}_{round(seg_ii+1):02}.png")
+                    plt.savefig(fig_pth)
+                    del fig_pth
+                else:
+                    plt.show()
                 plt.close()
 
                 # get downsampled segment onsets and offsets to slice downsampled eeg
