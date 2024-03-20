@@ -102,7 +102,17 @@ def nested_cv_wrapper(subj_num,
     for clean_or_noisy in clean_nxor_noisy:
         #TODO: pre-compute the stim envelopes before running trf analysis
         # so they can just be loaded rather than waiting for computing each
-        stim_envs=get_stim_envs(stims_dict,clean_or_noisy,fs_output=fs_trf,f_lp=f_lp)
+        print(f"clean_or_noisy: {clean_or_noisy};\nnot used here anymore since pre-computed, but this is what was used to generate stim_envs")
+        # stim_envs=get_stim_envs(stims_dict,clean_or_noisy,fs_output=fs_trf,f_lp=f_lp)
+        # save_pth=os.path.join("..","eeg_data","stim_envs.pkl")
+        # with open(save_pth,'wb') as fl:
+        #     pickle.dump(stim_envs,fl)
+        #     print(f"saved stim_envs to {save_pth}")
+        stim_envs_pth=os.path.join("..","eeg_data","stim_envs.pkl")
+        with open(stim_envs_pth, 'rb') as fl:
+            stim_envs=pickle.load(fl)
+            
+
         #recorded audio mostly for debuggning and checking alignment of timestamps
         #TODO: fix setupxy so it works with evnt stamps
         if evnt:

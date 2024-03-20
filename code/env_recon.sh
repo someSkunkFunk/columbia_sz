@@ -16,7 +16,7 @@
 #SBATCH --mail-user=apalaci6@ur.rochester.edu
 
 script_name="env_recon" ##name of python script to run
-which_stmps="xcorr"
+which_stmps="evnt"
 which_xcorr="wavs"
 subjs=(
     3253  
