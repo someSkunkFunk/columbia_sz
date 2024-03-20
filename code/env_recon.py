@@ -15,7 +15,27 @@ from mtrf.stats import crossval, nested_crossval
 
 
 #%%
-# define wrapper 
+# define wrapper,utilities
+def sensible_lengths(seg_data:tuple,stim_data):
+    '''
+    helper fnc to filter out eeg data where durations are obviously wrong
+    due to evnt timestamps
+    stim data is assumed to be dictionary with stim envelopes, keys are stim nms
+    seg_data is evnt-generated preprocessed data tuple with 
+    (list of stim nms in segment, audio recodring array for segment, eeg segment array)
+    returns True or False
+    '''
+    # NOTE: subj_data contains eeg data sampled at fs_trf
+    # and audio recording at eeg_fs
+    _fs=100
+    _max_diff=0.5 # in seconds
+    eeg_dur=(len(seg_data[-1])-1)/_fs #hard-coded fs here...
+    stim_nms=[nm.strip(".wav") for nm in seg_data[0]]
+    audio_dur=sum([stim_data[nm].size for nm in stim_nms])/_fs
+    if abs(audio_dur-eeg_dur) < _max_diff:
+        return True
+    else:
+        return False 
 
 
 def nested_cv_wrapper(subj_num,
@@ -49,13 +69,12 @@ def nested_cv_wrapper(subj_num,
     subj_data=utils.load_preprocessed(subj_num,evnt=evnt,which_xcorr=which_xcorr)
     if evnt:
         print(f"Evnt preprocessed data loaded.")
+        # evnt data has ([stim_nms],np.arr[normalized_aud],np.arr[eeg])
         fs_trf=100 #TODO: something about this
         #NOTE: reduction by pauses may still be applicable here but for now
         # just going to worry about removing evnt stims with nonsensical durations
         
-        reduce_trials_by=None 
-        
-        #TODO: clean stimuli with nonsensical lengths here
+        reduce_trials_by=None # already "reduced" by pauses
     else:
         print(f"{which_xcorr} xcorr preprocessed data loaded.")
         fs_trf=subj_data['fs'][0]
@@ -81,9 +100,16 @@ def nested_cv_wrapper(subj_num,
         outlier_idx=None
 
     for clean_or_noisy in clean_nxor_noisy:
+        #TODO: pre-compute the stim envelopes before running trf analysis
+        # so they can just be loaded rather than waiting for computing each
         stim_envs=get_stim_envs(stims_dict,clean_or_noisy,fs_output=fs_trf,f_lp=f_lp)
         #recorded audio mostly for debuggning and checking alignment of timestamps
         #TODO: fix setupxy so it works with evnt stamps
+        if evnt:
+            # clean subj_data trials where stim/response durations are too different
+            subj_data={seg_nm:seg_data for seg_nm,seg_data in subj_data.items() if sensible_lengths(seg_data,stim_envs)}
+                
+
         stimulus,response,stim_nms,recorded_audio=setup_xy(subj_data,stim_envs,
                                                 subj_num,reduce_trials_by,
                                                 outlier_idx,evnt=evnt,which_xcorr=which_xcorr)
@@ -151,9 +177,9 @@ if __name__=="__main__":
         #RE: seems like which_stmps used in bash script, automate in interactive more
         subj_num="3253"
         evnt=True
+        # subj_cat=utils.get_subj_cat(subj_num)
         if evnt:
-            # which_stmps="evnt" #not needed
-            pass
+            which_xcorr=None
         else:
             which_xcorr="wavs"
         

@@ -68,6 +68,34 @@ def setup_xy(subj_data,stim_envs,subj_num,
     prev_nm = None
     prev_block = None
     if evnt:
+        # subj_data has different structure -> just a python dictionary with segments already
+        for ii, (_,seg_data) in enumerate(subj_data.items()):
+            # assumes overly-disparate stim/response pairs (in terms of duration)
+            # are already taken out of subj_data, so can just pad pairs that are uneven here
+            audio_recorded.append(seg_data[1])
+            stim_nms.append([nm.strip('.wav') for nm in seg_data[0]])
+            s=np.concatenate([stim_envs[nm] for nm in stim_nms[ii]])
+            r=seg_data[-1]
+            size_diff=s.shape[0]-r.shape[0]
+            if size_diff==0:
+                stimulus.append(s)
+                response.append(r)
+            elif size_diff>0:
+                #stim is longer, pad response at the end
+                pd_wdth=((0,size_diff),)
+                r=np.pad(r,pd_wdth)
+                response.append(r)
+                stimulus.append(s)
+            elif size_diff<0:
+                # response is longer, pad stim at end
+                pd_wdth=((0,abs(size_diff)),)
+                s=np.pad(s,pd_wdth)
+                stimulus.append(s)
+                response.append(r)
+            assert s.shape[0]-r.shape[0] == 0 , "padding should have made these equal by now!"
+
+
+
         pass
     elif not evnt:    
         for stim_nm in subj_data.dropna()['stim_nms']:
