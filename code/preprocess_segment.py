@@ -57,10 +57,10 @@ else:
 ##################################################################################
 ### eeg preprocessing params
 # NOTE: different from filter lims used in timestamp detection algo (!)
-evnt_ovrall_thresh=0.45 #NEW: make bash var?
+evnt_ovrall_thresh=0.75 #NEW: make bash var?
 filt_band_lims=[1.0, 15] #Hz; highpass, lowpass cutoffs
 filt_o=3 # order of filter (effective order x2 of this since using zero-phase)
-processed_dir_path=os.path.join(eeg_dir, f"preprocessed_{which_stmps}_thresh45") #directory where processed data goes
+processed_dir_path=os.path.join(eeg_dir, f"preprocessed_{which_stmps}") #directory where processed data goes
 subj_cat=utils.get_subj_cat(subj_num) #note: checked get_subj_cat, should be fine
 raw_dir=os.path.join(eeg_dir,"raw")
 print(f"Fetching data for {subj_num,subj_cat}")
@@ -125,7 +125,8 @@ if which_stmps=="evnt":
     # load evnt timestamps
     #TODO: make evnt timestamps loading function a util
     # check if save directory exists, else make one
-    output_dir = os.path.join(processed_dir_path, subj_cat, subj_num)
+    thresh_dir=f"thresh_{round(evnt_ovrall_thresh*1000):03}"
+    output_dir = os.path.join(processed_dir_path,thresh_dir,subj_cat,subj_num)
     if not os.path.isdir(output_dir):
         print(f"preprocessed dir for {subj_num, subj_cat} not found, creating one.")
         os.makedirs(output_dir, exist_ok=True)
@@ -212,7 +213,7 @@ if not just_stmp:
             stim_nms=evnt_nms[block_idx]
             confidence=evnt_confidence[block_idx]
             onsets=evnt_onsets[block_idx]
-            offsets=evnt_offsets[block_idx]
+            offsets=evnt_offsets[block_idx] 
             # filter and resample
             raw_eeg=raw_data[:,:62]
             audio_rec=raw_data[:,-1] # leave unperturbed for alignment checking
@@ -236,13 +237,12 @@ if not just_stmp:
             import matplotlib.pyplot as plt
             plt.hist(confidence,bins=25)
             plt.title(f"{subj_num}, {block} Evnt confidence vals")
-            
-            if not os.path.isdir(os.path.dirname(fig_pth)):
-                print(f"Making new figures directory: {os.path.dirname(fig_pth)}")
-                os.makedirs(os.path.dirname(fig_pth),exist_ok=True)
             plt.axvline(evnt_ovrall_thresh,label=f'confidence threshold: {evnt_ovrall_thresh}')
             if  "subj_num" in os.environ:
                 fig_pth=os.path.join("..","figures","evnt_info",subj_num,block,f"{subj_num}_{block}_confidence_hist.png")
+                if not os.path.isdir(os.path.dirname(fig_pth)):
+                    print(f"Making new figures directory: {os.path.dirname(fig_pth)}")
+                    os.makedirs(os.path.dirname(fig_pth),exist_ok=True)
                 plt.savefig(fig_pth)
                 del fig_pth
             else:
@@ -383,7 +383,8 @@ if not just_stmp:
                 ax[1].legend(loc='upper center',bbox_to_anchor=(0.5,-0.1),
                              ncol=_ncol) 
                 if "subj_num" in os.environ:
-                    fig_pth=os.path.join("..","figures","evnt_info",subj_num,block,f"{subj_num}_{block}_{round(seg_ii+1):02}.png")
+                    fig_pth=os.path.join("..","figures","evnt_info",thresh_dir,
+                                         subj_num,block,f"{subj_num}_{block}_{round(seg_ii+1):02}.png")
                     plt.savefig(fig_pth)
                     del fig_pth
                 else:
