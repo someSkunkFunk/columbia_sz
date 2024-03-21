@@ -239,7 +239,10 @@ if not just_stmp:
             plt.title(f"{subj_num}, {block} Evnt confidence vals")
             plt.axvline(evnt_ovrall_thresh,label=f'confidence threshold: {evnt_ovrall_thresh}')
             if  "subj_num" in os.environ:
-                fig_pth=os.path.join("..","figures","evnt_info",subj_num,block,f"{subj_num}_{block}_confidence_hist.png")
+                #TODO: make this depend on the actual corrections
+                corrections_dir='first_onset_correction'
+                figs_dir=os.path.join("..","figures","evnt_info",thresh_dir,corrections_dir,subj_num,block)
+                fig_pth=os.path.join(figs_dir, f"{subj_num}_{block}_confidence_hist.png")
                 if not os.path.isdir(os.path.dirname(fig_pth)):
                     print(f"Making new figures directory: {os.path.dirname(fig_pth)}")
                     os.makedirs(os.path.dirname(fig_pth),exist_ok=True)
@@ -383,8 +386,7 @@ if not just_stmp:
                 ax[1].legend(loc='upper center',bbox_to_anchor=(0.5,-0.1),
                              ncol=_ncol) 
                 if "subj_num" in os.environ:
-                    fig_pth=os.path.join("..","figures","evnt_info",thresh_dir,
-                                         subj_num,block,f"{subj_num}_{block}_{round(seg_ii+1):02}.png")
+                    fig_pth=os.path.join(figs_dir,subj_num,block,f"{subj_num}_{block}_{round(seg_ii+1):02}.png")
                     plt.savefig(fig_pth)
                     del fig_pth
                 else:
