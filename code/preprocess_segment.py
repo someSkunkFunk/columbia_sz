@@ -386,7 +386,7 @@ if not just_stmp:
                 ax[1].legend(loc='upper center',bbox_to_anchor=(0.5,-0.1),
                              ncol=_ncol) 
                 if "subj_num" in os.environ:
-                    fig_pth=os.path.join(figs_dir,subj_num,block,f"{subj_num}_{block}_{round(seg_ii+1):02}.png")
+                    fig_pth=os.path.join(figs_dir,f"{subj_num}_{block}_{round(seg_ii+1):02}.png")
                     plt.savefig(fig_pth)
                     del fig_pth
                 else:
