@@ -6,9 +6,8 @@
 import pickle
 import scipy.io as spio
 import numpy as np
-
 import os
-# import sounddevice as sd # note not available via conda....? not sure I'll need anyway so ignore for now
+# import glob
 from scipy import signal
 import matplotlib.pyplot as plt
 import utils
@@ -42,6 +41,8 @@ if "subj_num" in os.environ:
     print(f"do_avg_ref: {do_avg_ref}")
     just_stmp=bool_dict[os.environ["just_stmp"].lower()]
     print(f"just_stamp translated into: {just_stmp}")
+    evnt_ovrall_thresh=float(os.environ["evnt_thresh"])
+    print(f"evnt_ovrall_thresh is {evnt_ovrall_thresh, type(evnt_ovrall_thresh)}")
 #####################################################################################
 #manual vars
 #####################################################################################
@@ -52,12 +53,13 @@ else:
     which_xcorr="envs"
     just_stmp=False
     do_avg_ref=False
+    evnt_ovrall_thresh=0.75
     noisy_or_clean="noisy" #NOTE: clean is default and setting them here does nothing
     
 ##################################################################################
 ### eeg preprocessing params
 # NOTE: different from filter lims used in timestamp detection algo (!)
-evnt_ovrall_thresh=0.75 #NEW: make bash var?
+ #NEW: make bash var?
 filt_band_lims=[1.0, 15] #Hz; highpass, lowpass cutoffs
 filt_o=3 # order of filter (effective order x2 of this since using zero-phase)
 processed_dir_path=os.path.join(eeg_dir, f"preprocessed_{which_stmps}") #directory where processed data goes
@@ -65,6 +67,20 @@ subj_cat=utils.get_subj_cat(subj_num) #note: checked get_subj_cat, should be fin
 raw_dir=os.path.join(eeg_dir,"raw")
 print(f"Fetching data for {subj_num,subj_cat}")
 subj_eeg=utils.get_full_raw_eeg(raw_dir,subj_cat,subj_num,blocks=blocks)
+# define helper to clear figures when they exist already so we don't get confused after
+#  we change the code and get new figures
+def rm_old_figs(figs_dir):
+    deleted_count=0
+    for root, dirs, files in os.walk(figs_dir):
+        for file in files:
+            if file.endswith(".png"):
+                os.remove(os.path.join(root,file))
+                deleted_count+=1
+    if deleted_count>0:
+        print(f"deleted {deleted_count} files from {figs_dir}")
+    else:
+        print("no existing figure files to delete.")
+
 #%%
 # find timestamps
 #print  correlation thresholds
@@ -242,6 +258,8 @@ if not just_stmp:
                 #TODO: make this depend on the actual corrections
                 corrections_dir='first_onset_correction'
                 figs_dir=os.path.join("..","figures","evnt_info",thresh_dir,corrections_dir,subj_num,block)
+                # delete old figures so new figures don't get confused with the old:
+                rm_old_figs(figs_dir)
                 fig_pth=os.path.join(figs_dir, f"{subj_num}_{block}_confidence_hist.png")
                 if not os.path.isdir(os.path.dirname(fig_pth)):
                     print(f"Making new figures directory: {os.path.dirname(fig_pth)}")
@@ -256,6 +274,7 @@ if not just_stmp:
             onsets=onsets[high_confidence]
             offsets=offsets[high_confidence]
             confidence=confidence[high_confidence]
+            stim_nms=stim_nms[high_confidence]
             #TODO: account for start times being relative to different blocks!!!
             # check pause times make sense
             pauses=onsets[1:]-offsets[:-1]
@@ -310,6 +329,7 @@ if not just_stmp:
 
                 onsets=onsets[mask]
                 offsets=offsets[mask]
+                stim_nms=stim_nms[mask]
                 
                 pauses=onsets[1:]-offsets[:-1]
                 if np.any(pauses<-pause_tol):
@@ -357,6 +377,7 @@ if not just_stmp:
                 legend=ax_legend.get_legend()
                 legend_box = legend.get_window_extent().transformed(fig_legend.dpi_scale_trans.inverted())
                 fig_legend.clear()
+                plt.close()
                 fig_width=8
                 fig_height=6
                 

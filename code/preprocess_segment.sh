@@ -8,7 +8,7 @@
 #SBATCH -n 20 ##Number of tasks
 #SBATCH -J evnt_segments
 #SBATCH --partition=standard
-#SBATCH --output=evnt_segments_thresh75.log
+#SBATCH --output=evnt_segments_thresh75_fixed.log
 
 ##SBATCH --array=1-26 
 ##SBATCH --depend=afterany:17146968
@@ -23,6 +23,7 @@ script_name="preprocess_segment"
 which_xcorr="wavs"  
 noisy_or_clean="clean"
 just_stmp="false"
+evnt_thresh=0.75
 subjs=(
     3253  
     3316  
@@ -57,6 +58,7 @@ do
     export noisy_or_clean
     export just_stmp
     export do_avg_ref
+    export evnt_thresh
     echo "running subject $subj_num"
     python /scratch/apalaci6/columbia_sz/code/$script_name.py
 done
