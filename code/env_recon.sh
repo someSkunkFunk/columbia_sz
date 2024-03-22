@@ -3,21 +3,22 @@
 
 
 ## bash script for segmenting and preprocessing eeg data
-#SBATCH -t 2-12:00:00
+#SBATCH -t 12:00:00
 #SBATCH --mem=60gb
 #SBATCH -n 20 ##Number of tasks
 #SBATCH -J env_recon
 #SBATCH --partition=standard
-#SBATCH --output=bkwd_trf_evnt.log
+#SBATCH --output=bkwd_trf_evnt_750.log
 
 ##SBATCH --array=1-26 
 ##SBATCH --depend=afterany:17146968
 #SBATCH --mail-type=END
 #SBATCH --mail-user=apalaci6@ur.rochester.edu
-
+echo "reconstructing envelopes using evnt timestamps filtered at 75% confidence"
 script_name="env_recon" ##name of python script to run
 which_stmps="evnt"
 which_xcorr="wavs"
+evnt_thresh="750"
 subjs=(
     3253  
     3316  
@@ -56,6 +57,7 @@ do
     export subj_num
     export which_stmps
     export which_xcorr ## only accessed if which_stmps==xcorr
+    export evnt_thresh
     python /scratch/apalaci6/columbia_sz/code/$script_name.py
     echo "$subj_num trf complete"
 done

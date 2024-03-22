@@ -50,7 +50,8 @@ def nested_cv_wrapper(subj_num,
                       regs=np.logspace(-1, 8, 10),
                       reduce_trials_by="pauses",
                       return_xy=False, 
-                      evnt=False,which_xcorr=None
+                      evnt=False,which_xcorr=None,
+                      evnt_thresh=None
                       ):
     '''
     NOTE: if using evnt timestamps, reduce_trials_by="pauses" will NOT work
@@ -64,9 +65,22 @@ def nested_cv_wrapper(subj_num,
     '''
     f_lp=49 #Hz, lowpass filter freq for get_stim_envs
     subj_cat=utils.get_subj_cat(subj_num)
+    # specify fl paths assumes running from code as pwd
+    eeg_dir=os.path.join("..","eeg_data")
+    if evnt:
+        thresh_dir=f"thresh_{evnt_thresh}" # should be three digit number representing decimals to third place
+        prep_data_dir=os.path.join(eeg_dir,'preprocessed_evnt',thresh_dir)
+        subj_data=utils.load_preprocessed(subj_num,eeg_dir=prep_data_dir,
+                                          evnt=evnt,which_xcorr=which_xcorr)
+    else:
+        # subj_data=utils.load_preprocessed(subj_num,evnt=evnt,which_xcorr=which_xcorr) 
+        raise NotImplementedError("Loading preprocessed xcorr generated data needs different directory, although I think the default commented above will work?")
+    # stim_fnm = "master_stim_file_schiz_studybis.mat" # note this is original fnm from box, we changed to just stim_info.mat
+    # stim_fl_path=os.path.join(eeg_dir,"stim_info.mat")
+    # stims_dict=utils.get_stims_dict(stim_fl_path)
     #NOTE that  by leaving eeg_dir blank below it's looking 
     # in eeg_data/preproessed_xcorr by default
-    subj_data=utils.load_preprocessed(subj_num,evnt=evnt,which_xcorr=which_xcorr)
+    
     if evnt:
         print(f"Evnt preprocessed data loaded.")
         # evnt data has ([stim_nms],np.arr[normalized_aud],np.arr[eeg])
@@ -78,11 +92,7 @@ def nested_cv_wrapper(subj_num,
     else:
         print(f"{which_xcorr} xcorr preprocessed data loaded.")
         fs_trf=subj_data['fs'][0]
-    # specify fl paths assumes running from code as pwd
-    eeg_dir=os.path.join("..","eeg_data")
-    # stim_fnm = "master_stim_file_schiz_studybis.mat" # note this is original fnm from box, we changed to just stim_info.mat
-    stim_fl_path=os.path.join(eeg_dir,"stim_info.mat")
-    stims_dict=utils.get_stims_dict(stim_fl_path)
+    
     
     if lim_stim is not None:
         # in case we want to run to completion for testing 
@@ -117,19 +127,23 @@ def nested_cv_wrapper(subj_num,
         #TODO: fix setupxy so it works with evnt stamps
         if evnt:
             # clean subj_data trials where stim/response durations are too different
+            num_trials_pre=len(subj_data)
             subj_data={seg_nm:seg_data for seg_nm,seg_data in subj_data.items() if sensible_lengths(seg_data,stim_envs)}
+            num_trials_post=len(subj_data)
+            print(f"removed {(num_trials_pre-num_trials_post)} trials due to inconsistent stim,resp lengths.")
                 
 
         stimulus,response,stim_nms,recorded_audio=setup_xy(subj_data,stim_envs,
                                                 subj_num,reduce_trials_by,
                                                 outlier_idx,evnt=evnt,which_xcorr=which_xcorr)
-        # model params      
+        total_sound_time=sum([len(s)/fs_trf for s in stimulus])
+        total_response_time=sum([len(r)/fs_trf for r in response])
+        print(f"using k={k} folds for nested cross validations")
+        print(f"total stim time: {total_sound_time}\ntotal response time: {total_response_time}")
+        # model params
         trf = TRF(direction=direction)  # use bkwd model
-        
-
-
         r_ncv, best_lam=nested_crossval(trf, stimulus[:lim_stim], response[:lim_stim], fs_trf, tmin, tmax, regs, k=k)
-        print(f"r-values: {r_ncv}, mean: {r_ncv.mean()}")
+        print(f"r-values: {r_ncv}, mean: {r_ncv.mean()}, best_lam:{best_lam}")
 
 
         if lim_stim is None and save_results:
@@ -171,6 +185,8 @@ if __name__=="__main__":
     if "which_stmps" in os.environ and "subj_num" in os.environ:
         subj_num=os.environ["subj_num"] 
         which_stmps=os.environ["which_stmps"]
+        evnt_thresh=os.environ["evnt_thresh"]
+        print(f"evnt_thresh selected: {evnt_thresh}")
         
         if which_stmps.lower()=="xcorr":
             evnt=False
@@ -187,6 +203,8 @@ if __name__=="__main__":
         #RE: seems like which_stmps used in bash script, automate in interactive more
         subj_num="3253"
         evnt=True
+        evnt_thresh="750"
+        print(f"evnt_thresh selected: {evnt_thresh}")
         # subj_cat=utils.get_subj_cat(subj_num)
         if evnt:
             which_xcorr=None
@@ -194,9 +212,9 @@ if __name__=="__main__":
             which_xcorr="wavs"
         
     #note: return_xy is False by default but when save_results is True will store them in pkl anyway
-    nested_cv_wrapper(subj_num,return_xy=False,
-                      save_results=True,
-                      evnt=evnt,which_xcorr=which_xcorr)
+    nested_cv_wrapper(subj_num,save_results=True,
+                      evnt=evnt, evnt_thresh=evnt_thresh,
+                      which_xcorr=which_xcorr)
 
                      
 

@@ -684,6 +684,7 @@ def load_preprocessed(subj_num,eeg_dir=None,evnt=False,which_xcorr=None):
     subj_cat = get_subj_cat(subj_num)
     if eeg_dir is None:
         if evnt:
+            raise NotImplementedError(f"need to specify which thresh used to load evnt in eeg_dir")
             eeg_dir=os.path.join(os.getcwd(), '..', "eeg_data", "preprocessed_evnt")
         else:
             eeg_dir=os.path.join(os.getcwd(), '..', "eeg_data", "preprocessed_xcorr")
