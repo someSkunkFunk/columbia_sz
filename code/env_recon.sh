@@ -3,18 +3,18 @@
 
 
 ## bash script for segmenting and preprocessing eeg data
-#SBATCH -t 12:00:00
+#SBATCH -t 2-12:00:00
 #SBATCH --mem=60gb
 #SBATCH -n 20 ##Number of tasks
-#SBATCH -J env_recon
+#SBATCH -J env_recon_loo
 #SBATCH --partition=standard
-#SBATCH --output=bkwd_trf_evnt_750.log
+#SBATCH --output=bkwd_trf_evnt_750_loo.log
 
 ##SBATCH --array=1-26 
 ##SBATCH --depend=afterany:17146968
 #SBATCH --mail-type=END
 #SBATCH --mail-user=apalaci6@ur.rochester.edu
-echo "reconstructing envelopes using evnt timestamps filtered at 75% confidence"
+echo "reconstructing envelopes using evnt timestamps filtered at 75% confidence but using LOO nested cv"
 script_name="env_recon" ##name of python script to run
 which_stmps="evnt"
 which_xcorr="wavs"

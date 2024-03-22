@@ -270,7 +270,7 @@ if not just_stmp:
                 plt.show()
             plt.close()
             high_confidence=np.flatnonzero(confidence>evnt_ovrall_thresh)
-            print(f"trimming {confidence.size-high_confidence.size} low confidence stims.")
+            print(f"trimming {confidence.size-high_confidence.size} low confidence stims out of {confidence.size}.")
             onsets=onsets[high_confidence]
             offsets=offsets[high_confidence]
             confidence=confidence[high_confidence]

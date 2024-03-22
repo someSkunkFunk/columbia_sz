@@ -6,9 +6,9 @@
 #SBATCH -t 02:00:00
 #SBATCH --mem=60gb
 #SBATCH -n 20 ##Number of tasks
-#SBATCH -J evnt_segments
+#SBATCH -J evnt_segments_800
 #SBATCH --partition=standard
-#SBATCH --output=evnt_segments_thresh75_fixed.log
+#SBATCH --output=evnt_segments_thresh80.log
 
 ##SBATCH --array=1-26 
 ##SBATCH --depend=afterany:17146968
@@ -16,14 +16,14 @@
 #SBATCH --mail-user=apalaci6@ur.rochester.edu 
 
 ##bash vars
-echo "segmenting eeg using evnt timestamps and overall confidence threshold at 0.75."
+echo "segmenting eeg using evnt timestamps and overall confidence threshold at 0.80."
 do_avg_ref="true"
 which_stmps="evnt"
 script_name="preprocess_segment"
 which_xcorr="wavs"  
 noisy_or_clean="clean"
 just_stmp="false"
-evnt_thresh=0.75
+evnt_thresh=0.80
 subjs=(
     3253  
     3316  

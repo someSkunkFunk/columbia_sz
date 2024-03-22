@@ -42,7 +42,7 @@ def nested_cv_wrapper(subj_num,
                       direction=-1,
                       tmin=0,
                       tmax=0.4,
-                      k=5,
+                      k=-1,
                       lim_stim=None,
                       save_results=False,
                       drop_bad_electrodes=False,
@@ -63,7 +63,7 @@ def nested_cv_wrapper(subj_num,
     reduce_trials_by: str specifying  by grouping stories wihtin a block ("stim_nm")
     # or grouping by pauses within a block ("pauses")
     '''
-    f_lp=49 #Hz, lowpass filter freq for get_stim_envs
+    # f_lp=49 #Hz, lowpass filter freq for get_stim_envs
     subj_cat=utils.get_subj_cat(subj_num)
     # specify fl paths assumes running from code as pwd
     eeg_dir=os.path.join("..","eeg_data")
@@ -152,11 +152,13 @@ def nested_cv_wrapper(subj_num,
             results_file = "bkwd_trf.pkl"
             if evnt:
                 timestamps_generated_by="evnt"
+                results_dir=os.path.join("..","results","evnt",thresh_dir,subj_cat,subj_num)
                 # results_dir = os.path.join("..","evnt_results", subj_cat, subj_num)
             else:
                 timestamps_generated_by=f"xcorr{which_xcorr}"
-                # results_dir = os.path.join("..",f"{which_xcorr}_results", subj_cat, subj_num)
-            results_dir=os.path.join("..","results",subj_cat,subj_num)
+                xcorr_subdir=f"xcorr_{which_xcorr}"
+                results_dir = os.path.join("..","results",xcorr_subdir,subj_cat,subj_num)
+            
             
             if reduce_trials_by is not None:
                 trial_reduction=reduce_trials_by
