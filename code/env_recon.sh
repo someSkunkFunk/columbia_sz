@@ -6,19 +6,20 @@
 #SBATCH -t 2-12:00:00
 #SBATCH --mem=60gb
 #SBATCH -n 20 ##Number of tasks
-#SBATCH -J env_recon_loo
+#SBATCH -J env_recon_10fold
 #SBATCH --partition=standard
-#SBATCH --output=bkwd_trf_evnt_750_loo.log
+#SBATCH --output=bkwd_trf_evnt_750_10fold.log
 
 ##SBATCH --array=1-26 
 ##SBATCH --depend=afterany:17146968
 #SBATCH --mail-type=END
 #SBATCH --mail-user=apalaci6@ur.rochester.edu
-echo "reconstructing envelopes using evnt timestamps filtered at 75% confidence but using LOO nested cv"
+echo "reconstructing envelopes using evnt timestamps filtered at 75% confidence but using 10fold nested cv"
 script_name="env_recon" ##name of python script to run
 which_stmps="evnt"
 which_xcorr="wavs"
 evnt_thresh="750"
+k_folds="10"
 subjs=(
     3253  
     3316  
@@ -58,6 +59,7 @@ do
     export which_stmps
     export which_xcorr ## only accessed if which_stmps==xcorr
     export evnt_thresh
+    export k_folds
     python /scratch/apalaci6/columbia_sz/code/$script_name.py
     echo "$subj_num trf complete"
 done

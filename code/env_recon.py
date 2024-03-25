@@ -40,7 +40,7 @@ def sensible_lengths(seg_data:tuple,stim_data):
 
 def nested_cv_wrapper(subj_num,
                       direction=-1,
-                      tmin=0,
+                      tmin=-0.1,
                       tmax=0.4,
                       k=-1,
                       lim_stim=None,
@@ -152,7 +152,12 @@ def nested_cv_wrapper(subj_num,
             results_file = "bkwd_trf.pkl"
             if evnt:
                 timestamps_generated_by="evnt"
-                results_dir=os.path.join("..","results","evnt",thresh_dir,subj_cat,subj_num)
+                if k!=-1:
+                    thresh_folds_dir=thresh_dir+f"_{k}fold"
+                elif k==-1:
+                    thresh_folds_dir=thresh_dir+"_loo"
+                results_dir=os.path.join("..","results","evnt",
+                                         thresh_folds_dir,subj_cat,subj_num)
                 # results_dir = os.path.join("..","evnt_results", subj_cat, subj_num)
             else:
                 timestamps_generated_by=f"xcorr{which_xcorr}"
@@ -187,13 +192,14 @@ if __name__=="__main__":
     if "which_stmps" in os.environ and "subj_num" in os.environ:
         subj_num=os.environ["subj_num"] 
         which_stmps=os.environ["which_stmps"]
-        evnt_thresh=os.environ["evnt_thresh"]
-        print(f"evnt_thresh selected: {evnt_thresh}")
+        k=int(os.environ["k_folds"])
         
         if which_stmps.lower()=="xcorr":
             evnt=False
             which_xcorr=os.environ["which_xcorr"]
         elif which_stmps.lower()=="evnt":
+            evnt_thresh=os.environ["evnt_thresh"]
+            print(f"evnt_thresh selected: {evnt_thresh}")
             evnt=True #IF TRUE USE EVNT-SEGMENTED DATA
             which_xcorr=None #TODO: this is already default in load_preprocessed but I'm specifying it like 6 different places, how can I avoid this?
         # code is getting really messy because of this stupidass variable, it is now in setup_xy, env_recon, get_pause_times, and anywhere timestamps are used
@@ -216,7 +222,7 @@ if __name__=="__main__":
     #note: return_xy is False by default but when save_results is True will store them in pkl anyway
     nested_cv_wrapper(subj_num,save_results=True,
                       evnt=evnt, evnt_thresh=evnt_thresh,
-                      which_xcorr=which_xcorr)
+                      which_xcorr=which_xcorr,k=k)
 
                      
 
