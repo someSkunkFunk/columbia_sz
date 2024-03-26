@@ -1,3 +1,10 @@
+import os
+import pickle
+def load_stim_envs():
+    stim_envs_pth=os.path.join("..","eeg_data","stim_envs.pkl")
+    with open(stim_envs_pth, 'rb') as fl:
+        stim_envs=pickle.load(fl)
+    return stim_envs
 import numpy as np
 def find_bad_electrodes(subj_data, criteria="4std"):
     # NOTE: this will implicitly drop missing trials as well

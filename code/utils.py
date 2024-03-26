@@ -1,3 +1,13 @@
+# define custom montage position array
+from mne.channels import read_custom_montage
+from mne.viz import plot_topomap
+def get_gtec_pos():
+    locs_fl_pth = os.path.join('..',"eeg_data", "raw", 'gtec62.locs')
+    montage = read_custom_montage(locs_fl_pth)
+    pos = montage.get_positions()
+    posarr=np.asarray([xyz[:2] for _y, xyz in pos['ch_pos'].items()])
+    return posarr
+
 def check_distinct_vals(x,y):
     '''
     works w numpy arrays, lists, and idk what else
@@ -515,6 +525,7 @@ def get_timestamps(subj_eeg,eeg_dir,subj_num,subj_cat,stims_dict,blocks,
     and confidence are stored in timestamps directory (keys are blocks) as thruples
     if not above threshold, start and end are None but still returns confidence for max sync point found...
     '''
+    raise NotImplementedError('need to update output directory structure for segment figures and uncomment part of code related to match_waves')
     plot_failures=False
     fs_audio=stims_dict['fs'][0] # 11025 foriginally #TODO: UNHARDCODE
     fs_eeg=2400 #TODO: UNHARDCODE

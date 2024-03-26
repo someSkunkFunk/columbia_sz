@@ -11,15 +11,15 @@ from mtrf.model import TRF
 import matplotlib.pyplot as plt
 
 
-# define custom montage position array
-from mne.channels import read_custom_montage
-from mne.viz import plot_topomap
-def get_gtec_pos():
-    locs_fl_pth = os.path.join('..',"eeg_data", "raw", 'gtec62.locs')
-    montage = read_custom_montage(locs_fl_pth)
-    pos = montage.get_positions()
-    posarr=np.asarray([xyz[:2] for _y, xyz in pos['ch_pos'].items()])
-    return posarr
+# # define custom montage position array
+# from mne.channels import read_custom_montage
+# from mne.viz import plot_topomap
+# def get_gtec_pos():
+#     locs_fl_pth = os.path.join('..',"eeg_data", "raw", 'gtec62.locs')
+#     montage = read_custom_montage(locs_fl_pth)
+#     pos = montage.get_positions()
+#     posarr=np.asarray([xyz[:2] for _y, xyz in pos['ch_pos'].items()])
+#     return posarr
 
 # stupid helper function 
 def get_subj_results_fnm(results_dir,subj_num=None,all_same=True):
@@ -55,7 +55,7 @@ if __name__=='__main__':
     fs=100#TODO: un-hardcode
     n_elec=62
     n_lags=41
-    posarr=get_gtec_pos()
+    posarr=utils.get_gtec_pos()
         
     if not grand_avg:
         # do one subject's topomaps

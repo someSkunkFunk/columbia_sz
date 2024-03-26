@@ -2,7 +2,7 @@
 ##SCRIPT NOTES:
 
 
-## bash script for segmenting and preprocessing eeg data
+## bash script for backwards trf using nested cv
 #SBATCH -t 2-12:00:00
 #SBATCH --mem=60gb
 #SBATCH -n 20 ##Number of tasks

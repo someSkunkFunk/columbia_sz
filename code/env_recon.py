@@ -9,7 +9,7 @@ import numpy as np
 import os
 
 import utils
-from trf_helpers import find_bad_electrodes, get_stim_envs, setup_xy
+from trf_helpers import find_bad_electrodes, load_stim_envs, setup_xy
 from mtrf.model import TRF
 from mtrf.stats import crossval, nested_crossval
 
@@ -118,9 +118,7 @@ def nested_cv_wrapper(subj_num,
         # with open(save_pth,'wb') as fl:
         #     pickle.dump(stim_envs,fl)
         #     print(f"saved stim_envs to {save_pth}")
-        stim_envs_pth=os.path.join("..","eeg_data","stim_envs.pkl")
-        with open(stim_envs_pth, 'rb') as fl:
-            stim_envs=pickle.load(fl)
+        stim_envs=load_stim_envs()
             
 
         #recorded audio mostly for debuggning and checking alignment of timestamps
