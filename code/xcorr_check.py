@@ -31,7 +31,8 @@ clean_or_noisy='clean'
 # plot xcorrs for each subj, stimulus, electrode
 blocks=[f"B0{ii}" for ii in range(1,7)]
 # store trial durations in dict organized by blocks
-corrs_dict={sbj: () for sbj in all_subjs}
+#NOTE: forgot why we wanted this but maybe still useful?
+# corrs_dict={sbj: () for sbj in all_subjs}
 fs_trf=100
 stim_envs=load_stim_envs()
 for subj_num in all_subjs:
@@ -53,49 +54,45 @@ for subj_num in all_subjs:
     # pad stim and response to same length for aveeraging purposes
     max_len=max([len(s) for s in stimulus])
     padded_stimulus=[np.pad(s, (0,max_len-len(s))) for s in stimulus]
-    padded_response=[np.pad(rs, (0,max_len-len(rs.squeeze()))) for rs in response]
-    subj_xcorrs=np.zeros((max_len,len(stimulus),response[0].shape[1]))#time x stims x electrodes
+    padded_response=[np.pad(rs, ((0,max_len-len(rs.squeeze())), (0,0)) ) for rs in response]
+    subj_xcorrs=np.zeros((max_len*2-1,len(stimulus),response[0].shape[1]))#time x stims x electrodes
     # -> time x electrodes after averaging over stims
     for ii, (s,rs) in enumerate(zip(padded_stimulus,padded_response)):
         # subj_xcorrs.append([])
         print(f'xcorring stim {ii+1} of {len(stimulus)} ...')
-        # lags should be the same for all electrodes
-        lags=signal.correlation_lags(s.size,len(rs),mode='full')
+        # lags should be the same for all electrodes AND stimuli (since padded)
+        if ii==0:
+            lags=signal.correlation_lags(s.size,len(rs),mode='full')
         for jj, r in enumerate(rs.T):
             subj_xcorrs[:,ii,jj]=signal.correlate(r,s,mode='full')
     # average out stimuli
     subj_xcorrs=subj_xcorrs.mean(axis=1).squeeze()
-    raise NotImplementedError('stop here.')
-    # plot the shit
-    fig,ax=plt.subplots()
-    ax.plot(lags/fs_trf,r_xcorr)
-    #TODO: get electrode name from gtec.pos
-    ax.set_title(f'electrode {elec_num} xcorr for stim/subj {elec_num, subj_num}')
-    ax.set_xlabel('lag (s)')
-    # ax.set_xlim([-.200,.400]) #TODO: where to expect trf??
-    save_dir=os.path.join("..","figures",
-                            "evnt_info",thresh_dir,"xcorr_align_check",
-                            subj_cat,subj_num)
-    if not evnt:
-        raise NotImplementedError("need to update output figures folder structure for xcorr-derived timestamp results")
-    if not os.path.isdir(save_dir):
-        os.makedirs(save_dir,exist_ok=True)
-    fig_nm=f"xcorr_chn_{jj:0{2}}"
-    save_pth=os.path.join(save_dir,fig_nm)
-    plt.savefig(save_pth)
-    # plt.show()
-del lags,r_xcorr,s,r,fig,ax
-    del subj_data,stimulus,response
+    for electrode in range(subj_xcorrs.shape[-1]):
+        print(f"plottin electrode: {electrode} of 62...")
+        avg_xcorr=subj_xcorrs[:,electrode]
+        # plot the shit
+        fig,ax=plt.subplots()
+        ax.plot(lags/fs_trf,avg_xcorr)
+        #TODO: get electrode name from gtec.pos
+        ax.set_title(f'(electrode,subj): {electrode, subj_num}')
+        ax.set_xlabel('lag (s)')
+        
+        save_dir=os.path.join("..","figures",
+                                "evnt_info",thresh_dir,"xcorr_align_check",
+                                subj_cat,subj_num)
+        if not evnt:
+            raise NotImplementedError("need to update output figures folder structure for xcorr-derived timestamp results")
+        if not os.path.isdir(save_dir):
+            os.makedirs(save_dir,exist_ok=True)
+        fig_nm=f"xcorr_chn_{electrode:0{2}}"
+        save_pth=os.path.join(save_dir,fig_nm)
+        plt.savefig(save_pth)
+        # zoom in and save zoomed version for readability
+        ax.set_xlim([-.200,.400]) #TODO: where to expect trf??
+        plt.savefig(save_pth+"_zoomed")
+        plt.close()
+        # plt.show()
+    #     del avg_xcorr,s,r,fig,ax
+    # del subj_data,stimulus,response,lags,padded_stimulus,padded_response
 
             
-    # corrs_dict[subj_num]=(lags,subj_xcorrs) # {subj_num: [[stims x channels]]}
-#%%
-# plotting 
-subj_num="3253"
-subj_cat=utils.get_subj_cat(subj_num)
-stim_ii=0 # choose some stimm to plot
-lags,subj_xcorrs=corrs_dict[subj_num]
-for chnl in range(62):
-    
-
-    
