@@ -1,3 +1,17 @@
+# define helper to clear figures when they exist already so we don't get confused after
+#  we change the code and get new figures
+import os
+def rm_old_figs(figs_dir):
+    deleted_count=0
+    for root, dirs, files in os.walk(figs_dir):
+        for file in files:
+            if file.endswith(".png"):
+                os.remove(os.path.join(root,file))
+                deleted_count+=1
+    if deleted_count>0:
+        print(f"deleted {deleted_count} files from {figs_dir}")
+    else:
+        print("no existing figure files to delete.")
 # define custom montage position array
 from mne.channels import read_custom_montage
 from mne.viz import plot_topomap

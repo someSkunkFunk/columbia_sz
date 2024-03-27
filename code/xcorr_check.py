@@ -35,6 +35,9 @@ blocks=[f"B0{ii}" for ii in range(1,7)]
 # corrs_dict={sbj: () for sbj in all_subjs}
 fs_trf=100
 stim_envs=load_stim_envs()
+# list of values to use as plt.set_xlim for zoomed views on figs
+zoom_lvls=[[-0.2,.5],[-.400,.200], [-.500,.500], [-1.0,0.6], [-5,5]]
+
 for subj_num in all_subjs:
     print(f"aggregating subj {subj_num} data....")
     subj_cat=utils.get_subj_cat(subj_num)
@@ -67,6 +70,11 @@ for subj_num in all_subjs:
             subj_xcorrs[:,ii,jj]=signal.correlate(r,s,mode='full')
     # average out stimuli
     subj_xcorrs=subj_xcorrs.mean(axis=1).squeeze()
+    figs_dir=os.path.join("..","figures",
+                            "evnt_info",thresh_dir,"xcorr_align_check",
+                            subj_cat,subj_num)
+    utils.rm_old_figs(figs_dir)#NOTE: CAREFUL NOT TO SPECIFY PARENT DIRECTORY CAUSING UNRELATED FIGURES
+    # TO BE DELETED SINCE THIS FUNCTION REMOVES FILES IN SUB-DIRECTORIES ALSO
     for electrode in range(subj_xcorrs.shape[-1]):
         print(f"plottin electrode: {electrode} of 62...")
         avg_xcorr=subj_xcorrs[:,electrode]
@@ -77,19 +85,17 @@ for subj_num in all_subjs:
         ax.set_title(f'(electrode,subj): {electrode, subj_num}')
         ax.set_xlabel('lag (s)')
         
-        save_dir=os.path.join("..","figures",
-                                "evnt_info",thresh_dir,"xcorr_align_check",
-                                subj_cat,subj_num)
         if not evnt:
             raise NotImplementedError("need to update output figures folder structure for xcorr-derived timestamp results")
-        if not os.path.isdir(save_dir):
-            os.makedirs(save_dir,exist_ok=True)
+        if not os.path.isdir(figs_dir):
+            os.makedirs(figs_dir,exist_ok=True)
         fig_nm=f"xcorr_chn_{electrode:0{2}}"
-        save_pth=os.path.join(save_dir,fig_nm)
+        save_pth=os.path.join(figs_dir,fig_nm)
         plt.savefig(save_pth)
         # zoom in and save zoomed version for readability
-        ax.set_xlim([-.200,.400]) #TODO: where to expect trf??
-        plt.savefig(save_pth+"_zoomed")
+        for ii,lvl in enumerate(zoom_lvls):
+            ax.set_xlim(lvl) #TODO: where to expect trf??
+            plt.savefig(save_pth+f"_zoomed_{ii}")
         plt.close()
         # plt.show()
     #     del avg_xcorr,s,r,fig,ax

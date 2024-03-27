@@ -3,23 +3,23 @@
 
 
 ## bash script for backwards trf using nested cv
-#SBATCH -t 2-12:00:00
+#SBATCH -t 10:00:00
 #SBATCH --mem=60gb
 #SBATCH -n 20 ##Number of tasks
-#SBATCH -J env_recon_10fold
+#SBATCH -J env_recon_shuffled
 #SBATCH --partition=standard
-#SBATCH --output=bkwd_trf_evnt_750_10fold.log
+#SBATCH --output=bkwd_trf_evnt_750_5fold_shuffled.log
 
 ##SBATCH --array=1-26 
 ##SBATCH --depend=afterany:17146968
 #SBATCH --mail-type=END
 #SBATCH --mail-user=apalaci6@ur.rochester.edu
-echo "reconstructing envelopes using evnt timestamps filtered at 75% confidence but using 10fold nested cv"
+echo "reconstructing envelopes using evnt timestamps filtered at 75% confidence with shuffled stimuli"
 script_name="env_recon" ##name of python script to run
 which_stmps="evnt"
 which_xcorr="wavs"
 evnt_thresh="750"
-k_folds="10"
+k_folds="5"
 subjs=(
     3253  
     3316  

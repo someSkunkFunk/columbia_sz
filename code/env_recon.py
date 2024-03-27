@@ -151,9 +151,9 @@ def nested_cv_wrapper(subj_num,
             if evnt:
                 timestamps_generated_by="evnt"
                 if k!=-1:
-                    thresh_folds_dir=thresh_dir+f"_{k}fold"
+                    thresh_folds_dir=thresh_dir+f"_{k}fold"+"_shuffled"
                 elif k==-1:
-                    thresh_folds_dir=thresh_dir+"_loo"
+                    thresh_folds_dir=thresh_dir+"_loo"+"_shuffled"
                 results_dir=os.path.join("..","results","evnt",
                                          thresh_folds_dir,subj_cat,subj_num)
                 # results_dir = os.path.join("..","evnt_results", subj_cat, subj_num)
@@ -210,6 +210,7 @@ if __name__=="__main__":
         subj_num="3253"
         evnt=True
         evnt_thresh="750"
+        k=5
         print(f"evnt_thresh selected: {evnt_thresh}")
         # subj_cat=utils.get_subj_cat(subj_num)
         if evnt:

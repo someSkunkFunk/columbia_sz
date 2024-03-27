@@ -67,19 +67,7 @@ subj_cat=utils.get_subj_cat(subj_num) #note: checked get_subj_cat, should be fin
 raw_dir=os.path.join(eeg_dir,"raw")
 print(f"Fetching data for {subj_num,subj_cat}")
 subj_eeg=utils.get_full_raw_eeg(raw_dir,subj_cat,subj_num,blocks=blocks)
-# define helper to clear figures when they exist already so we don't get confused after
-#  we change the code and get new figures
-def rm_old_figs(figs_dir):
-    deleted_count=0
-    for root, dirs, files in os.walk(figs_dir):
-        for file in files:
-            if file.endswith(".png"):
-                os.remove(os.path.join(root,file))
-                deleted_count+=1
-    if deleted_count>0:
-        print(f"deleted {deleted_count} files from {figs_dir}")
-    else:
-        print("no existing figure files to delete.")
+
 
 #%%
 # find timestamps
@@ -259,7 +247,8 @@ if not just_stmp:
                 corrections_dir='first_onset_correction'
                 figs_dir=os.path.join("..","figures","evnt_info",thresh_dir,corrections_dir,subj_num,block)
                 # delete old figures so new figures don't get confused with the old:
-                rm_old_figs(figs_dir)
+                #NOTE: CAREFUL W FOLLOWING FUNCTION SINCE DELETES FILES IN SUBDIRECTORIES OF FIGS_DIR
+                utils.rm_old_figs(figs_dir)
                 fig_pth=os.path.join(figs_dir, f"{subj_num}_{block}_confidence_hist.png")
                 if not os.path.isdir(os.path.dirname(fig_pth)):
                     print(f"Making new figures directory: {os.path.dirname(fig_pth)}")

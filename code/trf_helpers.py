@@ -49,9 +49,10 @@ import os
 import pickle
 import numpy as np
 from utils import get_pause_times
+import random
 def setup_xy(subj_data,stim_envs,subj_num,
               reduce_trials_by=None,outlier_idx=None,
-              evnt=False,which_xcorr=None):
+              evnt=False,which_xcorr=None,shuffle_trials=True):
     '''
     NOTE SINCE SEPARATED AUDIO CHANNEL, 
     THIS FUNCTION WILL PROBABLY BREAK WHEN REDUCE_TRIALS_BY is NOT PAUSES
@@ -187,5 +188,13 @@ def setup_xy(subj_data,stim_envs,subj_num,
                 stimulus.append(s)
                 response.append(r)
                 stim_nms.append([stim_nm])
-                
+    if shuffle_trials:
+        #NOTE: I don't think it's necessary to return shuffle idx since stim_nms can be used to put thme back in order
+        shuffle_idx=np.arange(len(stimulus))
+        random.shuffle(shuffle_idx)
+        stimulus=[stimulus[ii] for ii in shuffle_idx]
+        response=[response[ii] for ii in shuffle_idx]
+        stim_nms=[stim_nms[ii] for ii in shuffle_idx]
+        audio_recorded=[audio_recorded[ii] for ii in shuffle_idx]
+                  
     return stimulus, response, stim_nms, audio_recorded
