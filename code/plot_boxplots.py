@@ -12,12 +12,27 @@ import matplotlib.pyplot as plt
 # boxplotting script
 
 if __name__=='__main__':
-    # set colorbar upper and lower bounds
-    
+    evnt=True
+    shuffled=False
+    if shuffled:
+        thresh_dir="thresh_750_5fold_shuffled"
+    else:
+        thresh_dir="thresh_750_5fold"
+
+    if evnt:
+        results_dir=os.path.join("..","results","evnt",thresh_dir)
+        save_dir=os.path.join("..","figures","boxplots",f"all_{thresh_dir}")
+        utils.rm_old_figs(save_dir)
+    else:
+        raise NotImplementedError('gotta fix this')
+        # results_dir=os.path.join("..","results",???)
+        # save_dir=os.path.join("..","figures","boxplots","all")
+
+
     fs=100#TODO: un-hardcode
     n_elec=62
     n_lags=41
-    results_dir=os.path.join("..","results")
+    
     # get all subjects and plot grand average trf weights
     avg_weights=np.zeros((n_elec,n_lags))
     hc_subjs=utils.get_all_subj_nums(single_cat="hc")
@@ -47,17 +62,17 @@ if __name__=='__main__':
     ax.boxplot((hc_rs,sp_rs), labels=("hc", "sp"))
     ax.set_title('5fold-cv mean recontruction accuracies')
     ax.set_ylabel('mean r')
-    plt.show()
-    save_dir=os.path.join("..","figures","boxplots","all")
+    
+
     save_fnm=f"bkwd_trf_mean_ncvrs"
-    save_pth=os.path.join(save_dir, save_fnm)
+    save_pth=os.path.join(save_dir,save_fnm)
     if os.path.isdir(save_dir):
         plt.savefig(save_pth)
     else:
         os.makedirs(save_dir,exist_ok=True)
         plt.savefig(save_pth)
 
-
+    plt.show()
 
 
 
