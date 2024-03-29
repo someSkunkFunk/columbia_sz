@@ -51,7 +51,8 @@ def nested_cv_wrapper(subj_num,
                       reduce_trials_by="pauses",
                       return_xy=False, 
                       evnt=False,which_xcorr=None,
-                      evnt_thresh=None
+                      evnt_thresh=None,
+                      shuffle_trials=True
                       ):
     '''
     NOTE: if using evnt timestamps, reduce_trials_by="pauses" will NOT work
@@ -80,7 +81,10 @@ def nested_cv_wrapper(subj_num,
     # stims_dict=utils.get_stims_dict(stim_fl_path)
     #NOTE that  by leaving eeg_dir blank below it's looking 
     # in eeg_data/preproessed_xcorr by default
-    
+    if shuffle_trials:
+        shuffled="shuffled"
+    else:
+        shuffled="shuffless"
     if evnt:
         print(f"Evnt preprocessed data loaded.")
         # evnt data has ([stim_nms],np.arr[normalized_aud],np.arr[eeg])
@@ -133,7 +137,8 @@ def nested_cv_wrapper(subj_num,
 
         stimulus,response,stim_nms,recorded_audio=setup_xy(subj_data,stim_envs,
                                                 subj_num,reduce_trials_by,
-                                                outlier_idx,evnt=evnt,which_xcorr=which_xcorr)
+                                                outlier_idx,evnt=evnt,which_xcorr=which_xcorr,
+                                                shuffle_trials=shuffle_trials)
         total_sound_time=sum([len(s)/fs_trf for s in stimulus])
         total_response_time=sum([len(r)/fs_trf for r in response])
         print(f"using k={k} folds for nested cross validations")
@@ -151,9 +156,9 @@ def nested_cv_wrapper(subj_num,
             if evnt:
                 timestamps_generated_by="evnt"
                 if k!=-1:
-                    thresh_folds_dir=thresh_dir+f"_{k}fold"+"_shuffled"
+                    thresh_folds_dir=thresh_dir+f"_{k}fold"+f"_{shuffled}"
                 elif k==-1:
-                    thresh_folds_dir=thresh_dir+"_loo"+"_shuffled"
+                    thresh_folds_dir=thresh_dir+"_loo"+f"_{shuffled}"
                 results_dir=os.path.join("..","results","evnt",
                                          thresh_folds_dir,subj_cat,subj_num)
                 # results_dir = os.path.join("..","evnt_results", subj_cat, subj_num)
@@ -191,6 +196,8 @@ if __name__=="__main__":
         subj_num=os.environ["subj_num"] 
         which_stmps=os.environ["which_stmps"]
         k=int(os.environ["k_folds"])
+        bool_dict={'true':True,'false':False}
+        shuffle_trials=bool_dict[os.environ["shuffle_trials"].lower()]
         
         if which_stmps.lower()=="xcorr":
             evnt=False
@@ -221,7 +228,7 @@ if __name__=="__main__":
     #note: return_xy is False by default but when save_results is True will store them in pkl anyway
     nested_cv_wrapper(subj_num,save_results=True,
                       evnt=evnt, evnt_thresh=evnt_thresh,
-                      which_xcorr=which_xcorr,k=k)
+                      which_xcorr=which_xcorr,k=k,shuffle_trials=shuffle_trials)
 
                      
 
