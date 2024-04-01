@@ -192,8 +192,8 @@ def nested_cv_wrapper(subj_num,
 #%%
 if __name__=="__main__":
     
-    if "which_stmps" in os.environ and "subj_num" in os.environ:
-        subj_num=os.environ["subj_num"] 
+    if "which_stmps" in os.environ:
+        subj_num=utils.assign_subj(os.environ["SLURM_ARRAY_TASK_ID"]) 
         which_stmps=os.environ["which_stmps"]
         k=int(os.environ["k_folds"])
         bool_dict={'true':True,'false':False}
@@ -226,9 +226,11 @@ if __name__=="__main__":
             which_xcorr="wavs"
         
     #note: return_xy is False by default but when save_results is True will store them in pkl anyway
+    print(f"running subject {subj_num}...")
     nested_cv_wrapper(subj_num,save_results=True,
                       evnt=evnt, evnt_thresh=evnt_thresh,
                       which_xcorr=which_xcorr,k=k,shuffle_trials=shuffle_trials)
+    print(f"{subj_num} TRF complete.")
 
                      
 

@@ -1,3 +1,14 @@
+def assign_subj(slurm_task_id):
+    if not isinstance(slurm_task_id,int):
+        slurm_task_id=int(slurm_task_id)
+    subj_idx=slurm_task_id-1
+    subjs_list=read_subjs_list()
+    return subjs_list[subj_idx]
+import numpy as np
+def read_subjs_list(which='all'):
+    return np.loadtxt("subjs_list.txt",delimiter=",",dtype=str,usecols=0)
+
+
 # define helper to clear figures when they exist already so we don't get confused after
 #  we change the code and get new figures
 import os
