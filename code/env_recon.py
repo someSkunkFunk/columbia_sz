@@ -37,7 +37,13 @@ def sensible_lengths(seg_data:tuple,stim_data):
     else:
         return False 
 
-
+def filter_blocks_idx(blocks_to_keep,stim_nms):
+    btk_set=set(blocks_to_keep)
+    blocks_idx=[idx for idx,nms in enumerate(stim_nms) if nms[0][:3] in btk_set]
+    return blocks_idx 
+def filter_lists_with_indices(lists_to_filter, filtered_indices):
+    filtered_lists = [[inner[idx] for idx in filtered_indices] for inner in lists_to_filter]
+    return filtered_lists
 def nested_cv_wrapper(subj_num,
                       direction=-1,
                       tmin=-0.1,
@@ -52,7 +58,8 @@ def nested_cv_wrapper(subj_num,
                       return_xy=False, 
                       evnt=False,which_xcorr=None,
                       evnt_thresh=None,
-                      shuffle_trials=True
+                      shuffle_trials=True,
+                      blocks='all'
                       ):
     '''
     NOTE: if using evnt timestamps, reduce_trials_by="pauses" will NOT work
@@ -64,6 +71,7 @@ def nested_cv_wrapper(subj_num,
     reduce_trials_by: str specifying  by grouping stories wihtin a block ("stim_nm")
     # or grouping by pauses within a block ("pauses")
     '''
+    print(f"running blocks: {blocks}")
     # f_lp=49 #Hz, lowpass filter freq for get_stim_envs
     subj_cat=utils.get_subj_cat(subj_num)
     # specify fl paths assumes running from code as pwd
@@ -135,10 +143,17 @@ def nested_cv_wrapper(subj_num,
             print(f"removed {(num_trials_pre-num_trials_post)} trials due to inconsistent stim,resp lengths.")
                 
 
-        stimulus,response,stim_nms,recorded_audio=setup_xy(subj_data,stim_envs,
+        stimulus,response,stim_nms,_=setup_xy(subj_data,stim_envs,
                                                 subj_num,reduce_trials_by,
                                                 outlier_idx,evnt=evnt,which_xcorr=which_xcorr,
                                                 shuffle_trials=shuffle_trials)
+        if blocks!='all':
+            #filter blocks 
+            # add strings to match stim_nms
+            blocks_to_keep=['b0'+b.strip() for b in blocks.split(",")]
+            blocks_to_keep_idx=filter_blocks_idx(blocks_to_keep,stim_nms)
+            [stimulus,response,stim_nms]=filter_lists_with_indices([stimulus,response,stim_nms],blocks_to_keep_idx)
+            
         total_sound_time=sum([len(s)/fs_trf for s in stimulus])
         total_response_time=sum([len(r)/fs_trf for r in response])
         print(f"using k={k} folds for nested cross validations")
@@ -159,12 +174,17 @@ def nested_cv_wrapper(subj_num,
                     thresh_folds_dir=thresh_dir+f"_{k}fold"+f"_{shuffled}"
                 elif k==-1:
                     thresh_folds_dir=thresh_dir+"_loo"+f"_{shuffled}"
+                if blocks!="all":
+                    print("note: need to change this in xcorr case")
+                    blocks_str="".join(blocks_to_keep)
+                    thresh_folds_dir=thresh_folds_dir+"_"+blocks_str
                 results_dir=os.path.join("..","results","evnt",
                                          thresh_folds_dir,subj_cat,subj_num)
                 # results_dir = os.path.join("..","evnt_results", subj_cat, subj_num)
             else:
                 timestamps_generated_by=f"xcorr{which_xcorr}"
                 xcorr_subdir=f"xcorr_{which_xcorr}"
+                
                 results_dir = os.path.join("..","results",xcorr_subdir,subj_cat,subj_num)
             
             
@@ -198,6 +218,8 @@ if __name__=="__main__":
         k=int(os.environ["k_folds"])
         bool_dict={'true':True,'false':False}
         shuffle_trials=bool_dict[os.environ["shuffle_trials"].lower()]
+        blocks=os.environ("blocks")
+
         
         if which_stmps.lower()=="xcorr":
             evnt=False
@@ -218,18 +240,25 @@ if __name__=="__main__":
         evnt=True
         evnt_thresh="750"
         k=5
+        shuffle_trials=True
+        blocks='4,5'
         print(f"evnt_thresh selected: {evnt_thresh}")
+
         # subj_cat=utils.get_subj_cat(subj_num)
         if evnt:
             which_xcorr=None
         else:
             which_xcorr="wavs"
         
+        
     #note: return_xy is False by default but when save_results is True will store them in pkl anyway
     print(f"running subject {subj_num}...")
     nested_cv_wrapper(subj_num,save_results=True,
-                      evnt=evnt, evnt_thresh=evnt_thresh,
-                      which_xcorr=which_xcorr,k=k,shuffle_trials=shuffle_trials)
+                      evnt=evnt,
+                      evnt_thresh=evnt_thresh,
+                      which_xcorr=which_xcorr,
+                      k=k,shuffle_trials=shuffle_trials,
+                      blocks=blocks)
     print(f"{subj_num} TRF complete.")
 
                      

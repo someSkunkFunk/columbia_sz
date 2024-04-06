@@ -14,15 +14,17 @@ import matplotlib.pyplot as plt
 if __name__=='__main__':
     evnt=True
     shuffled=False
+    rm_old_figs=False
     if shuffled:
         thresh_dir="thresh_750_5fold_shuffled"
     else:
-        thresh_dir="thresh_750_5fold"
+        thresh_dir="thresh_750_5fold_shuffless"
 
     if evnt:
         results_dir=os.path.join("..","results","evnt",thresh_dir)
         save_dir=os.path.join("..","figures","boxplots",f"all_{thresh_dir}")
-        utils.rm_old_figs(save_dir)
+        if rm_old_figs:
+            utils.rm_old_figs(save_dir)
     else:
         raise NotImplementedError('gotta fix this')
         # results_dir=os.path.join("..","results",???)
@@ -60,10 +62,12 @@ if __name__=='__main__':
 
     fig,ax=plt.subplots()
     ax.boxplot((hc_rs,sp_rs), labels=("hc", "sp"))
-    ax.set_title('5fold-cv mean recontruction accuracies')
+    if shuffled:
+        ax.set_title('5fold-cv mean recontruction accuracies (with shuffling)')
+    else:
+        ax.set_title('5fold-cv mean recontruction accuracies (without shuffling)')
     ax.set_ylabel('mean r')
     
-
     save_fnm=f"bkwd_trf_mean_ncvrs"
     save_pth=os.path.join(save_dir,save_fnm)
     if os.path.isdir(save_dir):
