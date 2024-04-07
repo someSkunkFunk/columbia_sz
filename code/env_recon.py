@@ -218,7 +218,7 @@ if __name__=="__main__":
         k=int(os.environ["k_folds"])
         bool_dict={'true':True,'false':False}
         shuffle_trials=bool_dict[os.environ["shuffle_trials"].lower()]
-        blocks=os.environ("blocks")
+        blocks=os.environ["blocks"]
 
         
         if which_stmps.lower()=="xcorr":

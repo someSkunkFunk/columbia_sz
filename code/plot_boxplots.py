@@ -13,7 +13,7 @@ import matplotlib.pyplot as plt
 
 if __name__=='__main__':
     evnt=True
-    shuffled=False
+    shuffled=True
     rm_old_figs=False
     if shuffled:
         thresh_dir="thresh_750_5fold_shuffled"
