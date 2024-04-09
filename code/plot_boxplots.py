@@ -13,16 +13,42 @@ import matplotlib.pyplot as plt
 
 if __name__=='__main__':
     evnt=True
-    shuffled=True
-    rm_old_figs=False
-    if shuffled:
-        thresh_dir="thresh_750_5fold_shuffled"
+    shuffled_trials=True
+    rm_old_figs=True
+    blocks='1,2,3,4,5' # all or list of numbers as a string
+    evnt_thresh='750'
+    k=5 #number of cv folds
+
+    ylims=[-0.015, 0.055] # vertical axis limits
+    if shuffled_trials:
+        shuffled="shuffled"
     else:
-        thresh_dir="thresh_750_5fold_shuffless"
+        shuffled="shuffless"
+
+    if evnt:
+        timestamps_generated_by="evnt"
+        thresh_dir=f"thresh_{evnt_thresh}"
+        if k!=-1:
+            thresh_folds_dir=thresh_dir+f"_{k}fold"+f"_{shuffled}"
+        elif k==-1:
+            thresh_folds_dir=thresh_dir+"_loo"+f"_{shuffled}"
+        if blocks!="all":
+            blocks_to_keep=['b0'+b.strip() for b in blocks.split(",")]
+            print("note: need to change this in xcorr case")
+            blocks_str="".join(blocks_to_keep)
+            thresh_folds_dir=thresh_folds_dir+"_"+blocks_str
+            blocks_title_str=f" - {blocks_str} only"
+        else:
+            # for plot title
+            blocks_title_str=""
+
+
+        
+        
 
     if evnt:
         results_dir=os.path.join("..","results","evnt",thresh_dir)
-        save_dir=os.path.join("..","figures","boxplots",f"all_{thresh_dir}")
+        save_dir=os.path.join("..","figures","boxplots",thresh_folds_dir)
         if rm_old_figs:
             utils.rm_old_figs(save_dir)
     else:
@@ -51,7 +77,9 @@ if __name__=='__main__':
         
         results_fnm='bkwd_trf.pkl'
         
-        subj_trf_pth=os.path.join(results_dir,subj_cat,subj_num,results_fnm)
+        results_dir=os.path.join("..","results","evnt",
+                                    thresh_folds_dir,subj_cat,subj_num)
+        subj_trf_pth=os.path.join(results_dir,results_fnm)
         with open(subj_trf_pth, 'rb') as f:
             trf_results=pickle.load(f)
         # set first zero-valued element in arrya to mean of current subject, depending on category
@@ -62,11 +90,13 @@ if __name__=='__main__':
 
     fig,ax=plt.subplots()
     ax.boxplot((hc_rs,sp_rs), labels=("hc", "sp"))
-    if shuffled:
-        ax.set_title('5fold-cv mean recontruction accuracies (with shuffling)')
+   
+    if shuffled_trials:
+        ax.set_title('5fold-cv mean recontruction accuracies (with shuffling)'+blocks_title_str)
     else:
-        ax.set_title('5fold-cv mean recontruction accuracies (without shuffling)')
+        ax.set_title('5fold-cv mean recontruction accuracies (without shuffling)'+blocks_title_str)
     ax.set_ylabel('mean r')
+    ax.set_ylim(ylims[0], ylims[1])
     
     save_fnm=f"bkwd_trf_mean_ncvrs"
     save_pth=os.path.join(save_dir,save_fnm)

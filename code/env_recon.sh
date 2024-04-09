@@ -25,15 +25,15 @@ date
 hostname
 
 
-echo "75% confidence shuffled stimuli block 6 only (test)"
+echo "75% confidence shuffled stimuli excluding block 6"
 
 export which_stmps="evnt"
 export which_xcorr="wavs"
 export evnt_thresh="750"
 export k_folds="5"
 export shuffle_trials="true"
-export blocks="6"
-## export blocks="1,2,3,4,5" 
+## export blocks="6"
+export blocks="1,2,3,4,5" 
 
 source /scratch/apalaci6/miniconda3/bin/activate lalor0
 
