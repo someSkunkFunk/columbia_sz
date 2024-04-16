@@ -1,4 +1,7 @@
 def assign_subj(slurm_task_id):
+    '''
+    i think slurm_task_id is just an integer value...
+    '''
     if not isinstance(slurm_task_id,int):
         slurm_task_id=int(slurm_task_id)
     subj_idx=slurm_task_id-1
