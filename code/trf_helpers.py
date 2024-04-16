@@ -1,7 +1,13 @@
 import os
 import pickle
-def load_stim_envs():
-    stim_envs_pth=os.path.join("..","eeg_data","stim_envs.pkl")
+def load_stim_envs(lowpass_f='49',clean_or_noisy='clean'):
+    '''
+    load precomputed stim envelopes
+    must specify what cutoff frequency in hz as string
+    (and must be precomputed)
+    '''
+
+    stim_envs_pth=os.path.join("..","eeg_data",f"stim_envs_{lowpass_f}hz_{clean_or_noisy}.pkl")
     with open(stim_envs_pth, 'rb') as fl:
         stim_envs=pickle.load(fl)
     return stim_envs
@@ -31,7 +37,7 @@ def get_stim_envs(stims_dict, clean_or_noisy, fs_output, f_lp=49, filt_o=1):
     '''
     print(f"""Getting stim envelopes using low pass butter of order {filt_o} and cutoff at {f_lp} Hz""")
     if f_lp >= fs_output/2:
-        raise NotImplementedError('low-pass is not below nyquist')
+        raise NotImplementedError('low-pass needs to be below nyquist frequency.')
     fs_stim=stims_dict['fs'][0]
     sos = signal.butter(filt_o,f_lp,output='sos',fs=fs_stim)
     # get envelopes first, then resample
