@@ -1,3 +1,38 @@
+import numpy as np
+def extract_evnt_data(evnt,fs_eeg):
+    print("extracting evnt data...")
+    evnt_nms=np.array([nm for arr_nm in evnt['name'][0] for nm in arr_nm])
+    evnt_blocks=[nm[:3].capitalize() for nm in evnt_nms]
+    evnt_confidence=np.array([float(s[0,0]) for s in evnt['confidence'][0]])
+    evnt_onsets=fs_eeg*np.array([float(s[0,0]) for s in evnt['startTime'][0]])
+    evnt_offsets=fs_eeg*np.array([float(s[0,0]) for s in evnt['stopTime'][0]])
+    are_integer_valued=np.allclose(np.concatenate([evnt_onsets,evnt_offsets]), np.round(np.concatenate([evnt_onsets,evnt_offsets])))
+    if are_integer_valued:
+        evnt_onsets=evnt_onsets.astype(int)
+        evnt_offsets=evnt_offsets.astype(int)
+        print(f"onsets and offsets converted to integers: {are_integer_valued}")
+    else:
+        print(f"some values in start_times,end_times are not integer valued!")
+        print("will use rounding to approximate sample indices.")
+        evnt_onsets=evnt_onsets.round().astype(int)
+        evnt_offsets=evnt_offsets.round().astype(int)  
+
+    # add 5-second correction to onset of first part of each
+    correction_idx=np.where(np.char.find(evnt_nms, 'p01')!=-1)[0]
+    evnt_onsets[correction_idx]+=round(5.0*fs_eeg)
+    return evnt_nms,evnt_blocks,evnt_confidence,evnt_onsets,evnt_offsets
+        
+import os
+import scipy.io as spio
+def load_evnt(subj_num):
+    timestamps_path=os.path.join("..","eeg_data","timestamps",f"evnt_{subj_num}.mat")
+    evnt_mat=spio.loadmat(timestamps_path)
+    # returns dict for some reason, which mat2dict doesnt like
+    evnt=evnt_mat['evnt']
+    evnt=mat2dict(evnt)
+    print(f"evnt stamps loaded.")
+    return evnt
+
 def assign_subj(slurm_task_id):
     '''
     i think slurm_task_id is just an integer value...
