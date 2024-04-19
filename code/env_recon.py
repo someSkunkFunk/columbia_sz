@@ -52,7 +52,7 @@ def nested_cv_wrapper(subj_num,
                       lim_stim=None,
                       save_results=False,
                       drop_bad_electrodes=False,
-                      clean_nxor_noisy=['clean'], 
+                      clean_nxor_noisy=['noisy'], 
                       regs=np.logspace(-1, 8, 10),
                       reduce_trials_by="pauses",
                       return_xy=False, 
@@ -124,14 +124,15 @@ def nested_cv_wrapper(subj_num,
     for clean_or_noisy in clean_nxor_noisy:
         #TODO: pre-compute the stim envelopes before running trf analysis
         # so they can just be loaded rather than waiting for computing each
-        print(f"clean_or_noisy: {clean_or_noisy};\nnot used here anymore since pre-computed, but this is what was used to generate stim_envs")
+        _stim_lowpass_f='49'
+        print(f"loading pre-computed envelopes for {clean_or_noisy} stims lowpassed at {_stim_lowpass_f};")
         # stim_envs=get_stim_envs(stims_dict,clean_or_noisy,fs_output=fs_trf,f_lp=f_lp)
         # save_pth=os.path.join("..","eeg_data","stim_envs.pkl")
         # with open(save_pth,'wb') as fl:
         #     pickle.dump(stim_envs,fl)
         #     print(f"saved stim_envs to {save_pth}")
-        stim_envs=load_stim_envs()
-            
+        stim_envs=load_stim_envs(lowpass_f=_stim_lowpass_f,clean_or_noisy=clean_or_noisy)
+        
 
         #recorded audio mostly for debuggning and checking alignment of timestamps
         #TODO: fix setupxy so it works with evnt stamps
@@ -166,8 +167,10 @@ def nested_cv_wrapper(subj_num,
 
         if lim_stim is None and save_results:
             # save results
-
-            results_file = "bkwd_trf.pkl"
+        
+            results_file= f"bkwd_trf_{clean_or_noisy}_stims.pkl"
+            # note the clean ones didn't specify in file name since added string formatting after
+            # but whatever
             if evnt:
                 timestamps_generated_by="evnt"
                 if k!=-1:

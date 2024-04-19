@@ -12,16 +12,18 @@ import utils
 import numpy as np
 
 #%%
+# DEFINE LOCAL FUNCTIONS
 # STEP ONE: LOAD ALL SUBJECT DATA & EVNT info
 def load_all_subj_data(evnt_thresh='000'):
-    _limit_subjs=True
+    _limit_subjs=False
     thresh_dir=f"thresh_{evnt_thresh}" # should be three digit number representing decimals to third place
     prep_data_dir=os.path.join("..","eeg_data","preprocessed_evnt",thresh_dir)
     if _limit_subjs:
         _amt_subjs=2
         print(f"only loading a {_amt_subjs} subject(s). set _limit_subjs to False to load all subjects")     
     else:
-        amt_subjs=20 #number of subjs
+        print(f"loading all subject data.")
+        _amt_subjs=20 #number of subjs
     subj_ints=[ii for ii in range(_amt_subjs)]
     all_subj_data={}
     for subj_int in subj_ints:
@@ -29,12 +31,14 @@ def load_all_subj_data(evnt_thresh='000'):
         all_subj_data[subj_num]=utils.load_preprocessed(subj_num,eeg_dir=prep_data_dir,
                                                 evnt=True,which_xcorr=None)
     return all_subj_data
-
-#%%
+def trim_lengths_to_match(all_subjs_eeg_same_stim):
+    min_length=min([resp.shape[0] for resp in all_subjs_eeg_same_stim])
+    trimmed_eeg=[resp[:min_length,:] for resp in all_subjs_eeg_same_stim]
+    return trimmed_eeg
 # STEP TWO: use evnt info to slice preprocessed eeg 
 # by matching names
 
-#%%
+
 # STEP 3: GROUP TIMESTAMPS INTO TRIALS BASED ON PAUSES
 # then recalculate onsets/offsets relative to start of trial?
 def split_eeg_trials_to_wavs(all_subj_data,fs):
@@ -50,7 +54,7 @@ def split_eeg_trials_to_wavs(all_subj_data,fs):
     for subj, subj_data in all_subj_data.items():
         print(f"loading timestamps for subject {subj}")
         evnt=utils.load_evnt(subj)
-        evnt_nms,evnt_blocks,evnt_confidence,evnt_onsets,evnt_offsets=utils.extract_evnt_data(evnt,fs_trf)
+        evnt_nms,_,_,evnt_onsets,evnt_offsets=utils.extract_evnt_data(evnt,fs_trf)
         for trial_num, (_, data) in enumerate(subj_data.items()):
             print(f"starting trial {trial_num+1} of {len(subj_data)}.")
             nms_in_trial=data[0]
@@ -79,16 +83,23 @@ def split_half_corr(eeg_by_wavs):
     pvals_by_wavs={}
     n_electrodes=62
     for stim_nm, all_subjs_eeg in eeg_by_wavs.items():
-        n_subjs=len(all_subjs_eeg)
         
-        first_split=np.asarray(all_subjs_eeg[:n_subjs//2])
+        n_subjs=len(all_subjs_eeg)
+        if n_subjs<=1:
+            # drop stim since no correlation to compute
+            continue
+        all_subjs_trimmed_eeg=trim_lengths_to_match(all_subjs_eeg)
+        first_split=np.asarray(all_subjs_trimmed_eeg[:n_subjs//2])
         first_split_mean=first_split.mean(axis=0)
-        second_split=np.asarray(all_subjs_eeg[n_subjs//2:])
+        second_split=np.asarray(all_subjs_trimmed_eeg[n_subjs//2:])
         second_split_mean=second_split.mean(axis=0)
         corrs_by_wavs[stim_nm]=np.zeros(n_electrodes)
         pvals_by_wavs[stim_nm]=np.zeros(n_electrodes)
         for ielec in range(n_electrodes):
-            corr,pval=pearsonr(first_split_mean[:,ielec],second_split_mean[:,ielec])
+            try:
+                corr,pval=pearsonr(first_split_mean[:,ielec],second_split_mean[:,ielec])
+            except:
+                pass
             corrs_by_wavs[stim_nm][ielec]=corr
             pvals_by_wavs[stim_nm][ielec]=pval
 

@@ -6,7 +6,7 @@
 #SBATCH -t 05:00:00
 #SBATCH --mem=60gb
 # #SBATCH -n 20 ##Number of tasks
-#SBATCH -J env_recon_750_b6_only
+#SBATCH -J env_recon_750_noisy
 #SBATCH --partition=standard
 
 
@@ -25,7 +25,7 @@ date
 hostname
 
 
-echo "75% confidence shuffled stimuli excluding block 6"
+echo "re-evaluating bkwd trfs using noisy stim envelopes (with shuffling, and 75% confididence filter)"
 
 export which_stmps="evnt"
 export which_xcorr="wavs"
@@ -33,7 +33,7 @@ export evnt_thresh="750"
 export k_folds="5"
 export shuffle_trials="true"
 ## export blocks="6"
-export blocks="1,2,3,4,5" 
+export blocks="1,2,3,4,5,6" 
 
 source /scratch/apalaci6/miniconda3/bin/activate lalor0
 
