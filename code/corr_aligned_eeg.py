@@ -51,10 +51,12 @@ def split_eeg_trials_to_wavs(all_subj_data,fs):
     eeg_by_wavs=dict('stim_wav_nm': [eeg for each subject that has response])
     '''
     eeg_by_wavs={}
+    subj_order_by_wavs={}
+    all_subjs_ordered=[]
     for subj, subj_data in all_subj_data.items():
         print(f"loading timestamps for subject {subj}")
         evnt=utils.load_evnt(subj)
-        evnt_nms,_,_,evnt_onsets,evnt_offsets=utils.extract_evnt_data(evnt,fs_trf)
+        evnt_nms,_,_,evnt_onsets,evnt_offsets=utils.extract_evnt_data(evnt,fs)
         for trial_num, (_, data) in enumerate(subj_data.items()):
             print(f"starting trial {trial_num+1} of {len(subj_data)}.")
             nms_in_trial=data[0]
@@ -62,23 +64,28 @@ def split_eeg_trials_to_wavs(all_subj_data,fs):
             trial_start=evnt_onsets[evnt_nms==nms_in_trial[0]]
             for nm in nms_in_trial:
                 # get onset/offset relative to trial start
-                try:
-                    stim_trial_onset=(evnt_onsets[evnt_nms==nm]-trial_start)[0]
-                    stim_trial_offset=(evnt_offsets[evnt_nms==nm]-trial_start)[0]
-                except:
-                    pass
+                stim_trial_onset=(evnt_onsets[evnt_nms==nm]-trial_start)[0]
+                stim_trial_offset=(evnt_offsets[evnt_nms==nm]-trial_start)[0]
+            
                 # note: indexing to get int instead of array 
                 if nm in eeg_by_wavs:
+                    # stim already in dict from previous subject, add to existing list
                     eeg_by_wavs[nm].append(eeg[stim_trial_onset:stim_trial_offset])
+                    subj_order_by_wavs[nm].append(subj)
                 else:
+                    # create new list for this stim
                     eeg_by_wavs[nm]=[eeg[stim_trial_onset:stim_trial_offset]]
+                    subj_order_by_wavs[nm]=[subj]
             
-
-    return eeg_by_wavs
+        all_subjs_ordered.append(subj)
+    return eeg_by_wavs,subj_order_by_wavs,all_subjs_ordered
 
 # STEP 4: CALCULATE SPLIT-HALF CORRELATION
 from scipy.stats import pearsonr
-def split_half_corr(eeg_by_wavs):
+def split_half_corr_wavs_separate(eeg_by_wavs):
+    '''
+    calculates split half correlation for each individual wav, ignoring subjects without corresponding response and ignoring missing wavs
+    '''
     corrs_by_wavs={}
     pvals_by_wavs={}
     n_electrodes=62
@@ -103,19 +110,65 @@ def split_half_corr(eeg_by_wavs):
             corrs_by_wavs[stim_nm][ielec]=corr
             pvals_by_wavs[stim_nm][ielec]=pval
 
-
-
     return corrs_by_wavs,pvals_by_wavs
 
+def concat_all_responses(eeg_by_wavs,subj_order_by_wavs,all_subjs_ordered):
+    '''
+    very inefficient way of organzing all subject responses to the same array with zeros where missing stims
+    '''
+    all_subj_data_concat={subj:[] for subj in all_subjs_ordered}
+    _n_electrodes=62
+    for stim_nm,all_subjs_eeg in eeg_by_wavs.items():
+        subjs_with_stim=subj_order_by_wavs[stim_nm]
+        # force to be same duration
+        all_subjs_eeg_trimmed=trim_lengths_to_match(all_subjs_eeg_same_stim=all_subjs_eeg)
+        resp_len=all_subjs_eeg_trimmed[0].shape[0]
+        for subj in all_subjs_ordered:
+            if subj in subjs_with_stim:
+                # add subject's re
+                # seems kinda stupid to do a list comprehension for a single index but idk what else to do here
+                subj_idx=[idx for idx,n in enumerate(subjs_with_stim) if n==subj][0]
+                subj_stim_resp=all_subjs_eeg_trimmed[subj_idx]
+                all_subj_data_concat[subj].append(subj_stim_resp)
+            else:
+                all_subj_data_concat[subj].append(np.zeros((resp_len,_n_electrodes)))
+    # once all responses organized in same place, turn lists to np arrays to concat
+    for subj,eeg_lists in all_subj_data_concat:
+        all_subj_data_concat[subj]=np.concatenate(eeg_lists)
+    return all_subj_data_concat
+from scipy.stats import pearsonr
+def split_half_corr_concat(all_subj_data_concat):
+    '''
+    returns
+    corrs_by_electrodes: np.array [electrodes x 2] where second dimension corresponds to p values
+    '''
+    _n_electrodes=62
+    corrs_by_electrodes=np.zeros((_n_electrodes,2))
+    subjs=[k for k in all_subj_data_concat]
+    first_split_subjs=subjs[:len(subjs)//2]
+    second_split_subjs=subjs[len(subjs)//2:]
+    first_split_eeg=np.asarray([all_subj_data_concat[s] for s in first_split_subjs])
+    second_split_eeg=np.asarray([all_subj_data_concat[s] for s in second_split_subjs])
+    first_split_mean=first_split_eeg.mean(axis=0)
+    second_split_mean=second_split_eeg.mean(axis=0)
+    for ielec in range(_n_electrodes):
+        corrs_by_electrodes[ielec]=pearsonr(first_split_mean[ielec],second_split_mean[ielec])
+    return corrs_by_electrodes
+        
 
+
+    
 #%% full script
 if __name__=='__main__':
 
     all_subj_data=load_all_subj_data()
     fs_trf=100 # evnt times in seconds; use trf sampling rate for preprocessed data
     sample_subjs=[k for k in all_subj_data.keys()]
-    eeg_by_wavs=split_eeg_trials_to_wavs(all_subj_data,fs=fs_trf)
-    corrs_by_wavs,pvals_by_wavs=split_half_corr(eeg_by_wavs)
+    eeg_by_wavs,subj_order_by_wavs,all_subjs_ordered=split_eeg_trials_to_wavs(all_subj_data,fs=fs_trf)
+    # corrs_by_wavs,pvals_by_wavs=split_half_corr_wavs_separate(eeg_by_wavs)
+    del all_subj_data
+    all_subj_data_concat=concat_all_responses(eeg_by_wavs,subj_order_by_wavs,all_subjs_ordered)
+    corrs_by_electrodes=split_half_corr_concat(all_subj_data_concat)
     
 
  

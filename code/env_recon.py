@@ -148,7 +148,7 @@ def nested_cv_wrapper(subj_num,
                                                 subj_num,reduce_trials_by,
                                                 outlier_idx,evnt=evnt,which_xcorr=which_xcorr,
                                                 shuffle_trials=shuffle_trials)
-        if blocks!='all':
+        if blocks!='all' or blocks!='1,2,3,4,5,6':
             #filter blocks 
             # add strings to match stim_nms
             blocks_to_keep=['b0'+b.strip() for b in blocks.split(",")]
@@ -177,7 +177,7 @@ def nested_cv_wrapper(subj_num,
                     thresh_folds_dir=thresh_dir+f"_{k}fold"+f"_{shuffled}"
                 elif k==-1:
                     thresh_folds_dir=thresh_dir+"_loo"+f"_{shuffled}"
-                if blocks!="all":
+                if blocks!="all" or blocks!='1,2,3,4,5,6':
                     print("note: need to change this in xcorr case")
                     blocks_str="".join(blocks_to_keep)
                     thresh_folds_dir=thresh_folds_dir+"_"+blocks_str
