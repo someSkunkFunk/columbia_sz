@@ -33,24 +33,36 @@ def load_evnt(subj_num):
     print(f"evnt stamps loaded.")
     return evnt
 
-def assign_subj(slurm_task_id):
+def assign_subj(slurm_task_id,which_cat='all'):
     '''
     i think slurm_task_id is just an integer value...
     '''
     if not isinstance(slurm_task_id,int):
         slurm_task_id=int(slurm_task_id)
     subj_idx=slurm_task_id-1
-    subjs_list=read_subjs_list()
+    subjs_list=read_subjs_list(which_cat)
     return subjs_list[subj_idx]
 import numpy as np
-def read_subjs_list(which='all'):
-    return np.loadtxt("subjs_list.txt",delimiter=",",dtype=str,usecols=0)
+def read_subjs_list(which_cat='all'):
+    full_list=np.loadtxt("subjs_list.txt",delimiter=",",dtype=str,usecols=0)
+    if which_cat=='all':
+        return full_list
+    elif which_cat=='hc':
+        hc_list=[subj for subj in full_list if get_subj_cat(subj)=='hc']
+        return hc_list
+    elif which_cat=='sp':
+        sp_list=[subj for subj in full_list if get_subj_cat(subj)=='sp']
+        return sp_list
 
 
 # define helper to clear figures when they exist already so we don't get confused after
 #  we change the code and get new figures
 import os
 def rm_old_figs(figs_dir):
+    '''
+    removed all png files within figs_dir or any of it's subdirectories
+    use with CAUTION
+    '''
     deleted_count=0
     for root, dirs, files in os.walk(figs_dir):
         for file in files:

@@ -177,7 +177,7 @@ def nested_cv_wrapper(subj_num,
                     thresh_folds_dir=thresh_dir+f"_{k}fold"+f"_{shuffled}"
                 elif k==-1:
                     thresh_folds_dir=thresh_dir+"_loo"+f"_{shuffled}"
-                if blocks!="all" or blocks!='1,2,3,4,5,6':
+                if blocks!="all" and blocks!="1,2,3,4,5,6":
                     print("note: need to change this in xcorr case")
                     blocks_str="".join(blocks_to_keep)
                     thresh_folds_dir=thresh_folds_dir+"_"+blocks_str

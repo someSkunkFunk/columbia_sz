@@ -195,7 +195,8 @@ def setup_xy(subj_data,stim_envs,subj_num,
                 response.append(r)
                 stim_nms.append([stim_nm])
     if shuffle_trials:
-        #NOTE: I don't think it's necessary to return shuffle idx since stim_nms can be used to put thme back in order
+        random.seed(10) #for comparing results
+        #NOTE: I don't think it's necessary to return shuffle idx since stim_nms can be used to put back in order
         shuffle_idx=np.arange(len(stimulus))
         random.shuffle(shuffle_idx)
         stimulus=[stimulus[ii] for ii in shuffle_idx]

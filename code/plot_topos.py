@@ -9,11 +9,11 @@ from scipy import signal
 import utils
 from mtrf.model import TRF
 import matplotlib.pyplot as plt
-
+from mne.viz import plot_topomap
 
 # # define custom montage position array
 # from mne.channels import read_custom_montage
-# from mne.viz import plot_topomap
+
 # def get_gtec_pos():
 #     locs_fl_pth = os.path.join('..',"eeg_data", "raw", 'gtec62.locs')
 #     montage = read_custom_montage(locs_fl_pth)

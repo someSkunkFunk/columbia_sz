@@ -14,22 +14,28 @@ import numpy as np
 #%%
 # DEFINE LOCAL FUNCTIONS
 # STEP ONE: LOAD ALL SUBJECT DATA & EVNT info
-def load_all_subj_data(evnt_thresh='000'):
-    _limit_subjs=False
+def load_all_subj_data(evnt_thresh='000',subj_cat='all'):
+    _limit_subjs=False # for debugging
     thresh_dir=f"thresh_{evnt_thresh}" # should be three digit number representing decimals to third place
     prep_data_dir=os.path.join("..","eeg_data","preprocessed_evnt",thresh_dir)
+    all_subj_data={}
     if _limit_subjs:
         _amt_subjs=2
         print(f"only loading a {_amt_subjs} subject(s). set _limit_subjs to False to load all subjects")     
-    else:
+    elif not _limit_subjs and subj_cat=='all':
         print(f"loading all subject data.")
         _amt_subjs=20 #number of subjs
-    subj_ints=[ii for ii in range(_amt_subjs)]
-    all_subj_data={}
-    for subj_int in subj_ints:
-        subj_num=utils.assign_subj(subj_int)
-        all_subj_data[subj_num]=utils.load_preprocessed(subj_num,eeg_dir=prep_data_dir,
-                                                evnt=True,which_xcorr=None)
+        subj_ints=[ii for ii in range(_amt_subjs)]
+        
+        for subj_int in subj_ints:
+            subj_num=utils.assign_subj(subj_int)
+            all_subj_data[subj_num]=utils.load_preprocessed(subj_num,eeg_dir=prep_data_dir,
+                                                    evnt=True,which_xcorr=None)
+    elif not _limit_subjs and subj_cat in {"hc", "sp"}:
+        subjs_list=utils.read_subjs_list(which_cat=subj_cat)
+        for subj_num in subjs_list:
+            all_subj_data[subj_num]=utils.load_preprocessed(subj_num,eeg_dir=prep_data_dir,
+                                                    evnt=True,which_xcorr=None)
     return all_subj_data
 def trim_lengths_to_match(all_subjs_eeg_same_stim):
     min_length=min([resp.shape[0] for resp in all_subjs_eeg_same_stim])
@@ -133,7 +139,7 @@ def concat_all_responses(eeg_by_wavs,subj_order_by_wavs,all_subjs_ordered):
             else:
                 all_subj_data_concat[subj].append(np.zeros((resp_len,_n_electrodes)))
     # once all responses organized in same place, turn lists to np arrays to concat
-    for subj,eeg_lists in all_subj_data_concat:
+    for subj,eeg_lists in all_subj_data_concat.items():
         all_subj_data_concat[subj]=np.concatenate(eeg_lists)
     return all_subj_data_concat
 from scipy.stats import pearsonr
@@ -155,13 +161,27 @@ def split_half_corr_concat(all_subj_data_concat):
         corrs_by_electrodes[ielec]=pearsonr(first_split_mean[ielec],second_split_mean[ielec])
     return corrs_by_electrodes
         
-
-
+from mne.viz import plot_topomap
+import matplotlib.pyplot as plt
+def rvals_topo(pearsonr_vals,subj_cat):
+    gtec_pos=utils.get_gtec_pos()
+    fig,ax=plt.subplots()
+    im,_=plot_topomap(pearsonr_vals[:,0],gtec_pos,axes=ax,show=False)
+    fig.colorbar(im,ax=ax)
+    ax.set_title(f"Split Half Correlation ({subj_cat} subjs)")
+    figs_dir=os.path.join("..","figures","splthlf_corr_topos")
+    if not os.path.isdir(figs_dir):
+        os.makedirs(figs_dir,exist_ok=True)    
+    utils.rm_old_figs(figs_dir)
+    fig_pth=os.path.join(figs_dir,f"{subj_cat}_split_half_corr")
+    
+    plt.savefig(fig_pth)
+    plt.show()
     
 #%% full script
 if __name__=='__main__':
-
-    all_subj_data=load_all_subj_data()
+    subj_cat="all"
+    all_subj_data=load_all_subj_data(subj_cat=subj_cat)
     fs_trf=100 # evnt times in seconds; use trf sampling rate for preprocessed data
     sample_subjs=[k for k in all_subj_data.keys()]
     eeg_by_wavs,subj_order_by_wavs,all_subjs_ordered=split_eeg_trials_to_wavs(all_subj_data,fs=fs_trf)
@@ -169,6 +189,7 @@ if __name__=='__main__':
     del all_subj_data
     all_subj_data_concat=concat_all_responses(eeg_by_wavs,subj_order_by_wavs,all_subjs_ordered)
     corrs_by_electrodes=split_half_corr_concat(all_subj_data_concat)
+    rvals_topo(corrs_by_electrodes,subj_cat)
     
 
  
