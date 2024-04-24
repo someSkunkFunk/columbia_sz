@@ -6,7 +6,7 @@
 
 #SBATCH -t 0-01:00:00
 ##SBATCH --mem=60gb
-#SBATCH -n 20 ##Number of tasks
+##SBATCH -n 20 ##Number of tasks
 #SBATCH -J dum
 #SBATCH --partition=debug
 #SBATCH --array=1-20

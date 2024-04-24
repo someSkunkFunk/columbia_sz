@@ -172,7 +172,7 @@ def rvals_topo(pearsonr_vals,subj_cat):
     figs_dir=os.path.join("..","figures","splthlf_corr_topos")
     if not os.path.isdir(figs_dir):
         os.makedirs(figs_dir,exist_ok=True)    
-    utils.rm_old_figs(figs_dir)
+    # utils.rm_old_figs(figs_dir) #muted because realized if we only want one topo will delete the other categories as well
     fig_pth=os.path.join(figs_dir,f"{subj_cat}_split_half_corr")
     
     plt.savefig(fig_pth)
@@ -180,8 +180,9 @@ def rvals_topo(pearsonr_vals,subj_cat):
     
 #%% full script
 if __name__=='__main__':
-    subj_cat="all"
+    subj_cat="hc"
     all_subj_data=load_all_subj_data(subj_cat=subj_cat)
+
     fs_trf=100 # evnt times in seconds; use trf sampling rate for preprocessed data
     sample_subjs=[k for k in all_subj_data.keys()]
     eeg_by_wavs,subj_order_by_wavs,all_subjs_ordered=split_eeg_trials_to_wavs(all_subj_data,fs=fs_trf)
