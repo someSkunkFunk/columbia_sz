@@ -24,7 +24,7 @@ date
 
 hostname
 
-echo "re-evaluating bkwd trfs using random seeded clean stim envelopes WITHOUT shuffling (and 75% confididence filter)"
+echo "re-evaluating bkwd trfs using random seeded noisy stim envelopes WITHOUT shuffling (and 75% confididence filter)"
 
 export which_stmps="evnt"
 export which_xcorr="wavs"

@@ -1,8 +1,7 @@
-# script for mtrf analysis on columbia sz dataset using bluehive
-# most up-to-date as of 9/26/23
+# script for bkwd mtrf analysis 
 
 #%%
-# import packages
+# INIT
 import pickle
 import scipy.io as spio
 import numpy as np
@@ -13,8 +12,6 @@ from trf_helpers import find_bad_electrodes, load_stim_envs, setup_xy
 from mtrf.model import TRF
 from mtrf.stats import crossval, nested_crossval
 
-
-#%%
 # define wrapper,utilities
 def sensible_lengths(seg_data:tuple,stim_data):
     '''
@@ -148,7 +145,7 @@ def nested_cv_wrapper(subj_num,
                                                 subj_num,reduce_trials_by,
                                                 outlier_idx,evnt=evnt,which_xcorr=which_xcorr,
                                                 shuffle_trials=shuffle_trials)
-        if blocks!='all' or blocks!='1,2,3,4,5,6':
+        if blocks!='all' and blocks!='1,2,3,4,5,6':
             #filter blocks 
             # add strings to match stim_nms
             blocks_to_keep=['b0'+b.strip() for b in blocks.split(",")]
@@ -212,7 +209,7 @@ def nested_cv_wrapper(subj_num,
         return trf, r_ncv, best_lam, (stimulus, response, stim_nms)
     else:
         return trf, r_ncv, best_lam
-#%%
+#%% MAIN SCRIPT
 if __name__=="__main__":
     
     if "which_stmps" in os.environ:
@@ -243,8 +240,8 @@ if __name__=="__main__":
         evnt=True
         evnt_thresh="750"
         k=5
-        shuffle_trials=True
-        blocks='4,5'
+        shuffle_trials=False
+        blocks='all'
         print(f"evnt_thresh selected: {evnt_thresh}")
 
         # subj_cat=utils.get_subj_cat(subj_num)

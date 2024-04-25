@@ -1,5 +1,5 @@
 #%%
-# import packages
+# INIT
 import pickle
 import numpy as np
 import os
@@ -9,17 +9,20 @@ from mtrf.model import TRF
 import matplotlib.pyplot as plt
 
 #%%
-# boxplotting script
+# MAIN BOXPLOT SCRIPT
 
 if __name__=='__main__':
+    #specify results to load
     evnt=True
     shuffled_trials=True
     rm_old_figs=True
     blocks='1,2,3,4,5' # all or list of numbers as a string
     evnt_thresh='750'
     k=5 #number of cv folds
+    clean_or_noisy='noisy'
 
-    ylims=[-0.015, 0.055] # vertical axis limits
+
+    ylims=[-0.05, 0.15] # vertical axis limits
     if shuffled_trials:
         shuffled="shuffled"
     else:
@@ -32,7 +35,7 @@ if __name__=='__main__':
             thresh_folds_dir=thresh_dir+f"_{k}fold"+f"_{shuffled}"
         elif k==-1:
             thresh_folds_dir=thresh_dir+"_loo"+f"_{shuffled}"
-        if blocks!="all":
+        if blocks!="all" and blocks!="1,2,3,4,5,6":
             blocks_to_keep=['b0'+b.strip() for b in blocks.split(",")]
             print("note: need to change this in xcorr case")
             blocks_str="".join(blocks_to_keep)
@@ -40,14 +43,14 @@ if __name__=='__main__':
             blocks_title_str=f" - {blocks_str} only"
         else:
             # for plot title
-            blocks_title_str=""
+            blocks_title_str=" - all blocks"
 
 
         
         
 
     if evnt:
-        results_dir=os.path.join("..","results","evnt",thresh_dir)
+        # results_dir=os.path.join("..","results","evnt",thresh_dir)
         save_dir=os.path.join("..","figures","boxplots",thresh_folds_dir)
         if rm_old_figs:
             utils.rm_old_figs(save_dir)
@@ -75,11 +78,11 @@ if __name__=='__main__':
         # load each subject's trfs, compute average weights
         subj_cat=utils.get_subj_cat(subj_num)
         
-        results_fnm='bkwd_trf.pkl'
+        results_fnm=f'bkwd_trf_{clean_or_noisy}_stims.pkl'
         
-        results_dir=os.path.join("..","results","evnt",
+        subj_results_dir=os.path.join("..","results","evnt",
                                     thresh_folds_dir,subj_cat,subj_num)
-        subj_trf_pth=os.path.join(results_dir,results_fnm)
+        subj_trf_pth=os.path.join(subj_results_dir,results_fnm)
         with open(subj_trf_pth, 'rb') as f:
             trf_results=pickle.load(f)
         # set first zero-valued element in arrya to mean of current subject, depending on category
@@ -92,13 +95,15 @@ if __name__=='__main__':
     ax.boxplot((hc_rs,sp_rs), labels=("hc", "sp"))
    
     if shuffled_trials:
-        ax.set_title('5fold-cv mean recontruction accuracies (with shuffling)'+blocks_title_str)
+        shuff_str="shuffled"
     else:
-        ax.set_title('5fold-cv mean recontruction accuracies (without shuffling)'+blocks_title_str)
+        shuff_str="not shuffled"
+    ax.set_title(f'{k}fold mean recontruction accuracies using {clean_or_noisy} stims ({shuff_str})'+blocks_title_str)
+   
     ax.set_ylabel('mean r')
     ax.set_ylim(ylims[0], ylims[1])
     
-    save_fnm=f"bkwd_trf_mean_ncvrs"
+    save_fnm=f"bkwd_trf_recons_{clean_or_noisy}_stims"
     save_pth=os.path.join(save_dir,save_fnm)
     if os.path.isdir(save_dir):
         plt.savefig(save_pth)
