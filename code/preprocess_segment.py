@@ -222,7 +222,7 @@ if not just_stmp:
             plt.hist(confidence,bins=25)
             plt.title(f"{subj_num}, {block} Evnt confidence vals")
             plt.axvline(evnt_ovrall_thresh,label=f'confidence threshold: {evnt_ovrall_thresh}')
-            if  "subj_num" in os.environ:
+            if "subj_num" in os.environ:
                 #TODO: make this depend on the actual corrections
                 corrections_dir='first_onset_correction'
                 figs_dir=os.path.join("..","figures","evnt_info",thresh_dir,corrections_dir,subj_num,block)

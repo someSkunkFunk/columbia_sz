@@ -108,9 +108,6 @@ def setup_xy(subj_data,stim_envs,subj_num,
                 response.append(r)
             assert s.shape[0]-r.shape[0] == 0 , "padding should have made these equal by now!"
 
-
-
-        pass
     elif not evnt:    
         for stim_nm in subj_data.dropna()['stim_nms']:
             s=np.squeeze(stim_envs[stim_nm[:-4]])

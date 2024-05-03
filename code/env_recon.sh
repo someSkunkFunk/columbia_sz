@@ -6,7 +6,7 @@
 #SBATCH -t 05:00:00
 #SBATCH --mem=60gb
 #SBATCH -n 20 ##Number of tasks
-#SBATCH -J shuffless_750_allstim
+#SBATCH -J no_regu_750_shuff
 #SBATCH --partition=standard
 
 
@@ -30,7 +30,7 @@ export which_stmps="evnt"
 export which_xcorr="wavs"
 export evnt_thresh="750"
 export k_folds="5"
-export shuffle_trials="false"
+export shuffle_trials="true"
 ## export blocks="6"
 ## export blocks="1,2,3,4,5"
 export blocks="all"

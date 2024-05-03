@@ -779,7 +779,9 @@ def load_preprocessed(subj_num,eeg_dir=None,evnt=False,which_xcorr=None):
     else:
         # only xcorr-aligned data has which_xcorr prefix 
         subj_data_fnm = f"{which_xcorr}_aligned_resp.pkl"
-    with open(os.path.join(eeg_dir, subj_cat, subj_num, subj_data_fnm), 'rb') as file:
+    load_pth=os.path.join(eeg_dir, subj_cat, subj_num, subj_data_fnm)
+    print(f"loading data from {load_pth}")
+    with open(load_pth, 'rb') as file:
         subj_data = pickle.load(file)
     return subj_data
 

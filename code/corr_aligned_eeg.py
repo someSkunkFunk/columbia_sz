@@ -6,12 +6,12 @@
 
 #NOTE: realizing may be easier to deal with variable trial lengths by re-preprocessing the eeg 
 # and comparing at the individual wav file level
-#%%
+#%% INIT
 import os
 import utils
 import numpy as np
 
-#%%
+
 # DEFINE LOCAL FUNCTIONS
 # STEP ONE: LOAD ALL SUBJECT DATA & EVNT info
 def load_all_subj_data(evnt_thresh='000',subj_cat='all'):
@@ -166,7 +166,7 @@ import matplotlib.pyplot as plt
 def rvals_topo(pearsonr_vals,subj_cat):
     gtec_pos=utils.get_gtec_pos()
     fig,ax=plt.subplots()
-    im,_=plot_topomap(pearsonr_vals[:,0],gtec_pos,axes=ax,show=False)
+    im,_=plot_topomap(pearsonr_vals,gtec_pos,axes=ax,show=False)
     fig.colorbar(im,ax=ax)
     ax.set_title(f"Split Half Correlation ({subj_cat} subjs)")
     figs_dir=os.path.join("..","figures","splthlf_corr_topos")
@@ -180,17 +180,19 @@ def rvals_topo(pearsonr_vals,subj_cat):
     
 #%% full script
 if __name__=='__main__':
-    subj_cat="hc"
+    subj_cat="sp"
     all_subj_data=load_all_subj_data(subj_cat=subj_cat)
 
     fs_trf=100 # evnt times in seconds; use trf sampling rate for preprocessed data
     sample_subjs=[k for k in all_subj_data.keys()]
     eeg_by_wavs,subj_order_by_wavs,all_subjs_ordered=split_eeg_trials_to_wavs(all_subj_data,fs=fs_trf)
-    # corrs_by_wavs,pvals_by_wavs=split_half_corr_wavs_separate(eeg_by_wavs)
     del all_subj_data
-    all_subj_data_concat=concat_all_responses(eeg_by_wavs,subj_order_by_wavs,all_subjs_ordered)
-    corrs_by_electrodes=split_half_corr_concat(all_subj_data_concat)
-    rvals_topo(corrs_by_electrodes,subj_cat)
+    corrs_by_wavs,pvals_by_wavs=split_half_corr_wavs_separate(eeg_by_wavs)
+    avg_corrs=np.mean([corr for _,corr in corrs_by_wavs.items()],axis=0)
+    rvals_topo(avg_corrs,subj_cat)
+    # all_subj_data_concat=concat_all_responses(eeg_by_wavs,subj_order_by_wavs,all_subjs_ordered)
+    # corrs_by_electrodes=split_half_corr_concat(all_subj_data_concat)
+    # rvals_topo(corrs_by_electrodes,subj_cat)
     
 
  

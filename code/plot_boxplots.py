@@ -14,15 +14,15 @@ import matplotlib.pyplot as plt
 if __name__=='__main__':
     #specify results to load
     evnt=True
-    shuffled_trials=True
+    shuffled_trials=False
     rm_old_figs=True
-    blocks='1,2,3,4,5' # all or list of numbers as a string
+    blocks='1,2,3,4,5,6' # all or list of numbers as a string
     evnt_thresh='750'
     k=5 #number of cv folds
     clean_or_noisy='noisy'
 
 
-    ylims=[-0.05, 0.15] # vertical axis limits
+    ylims=[-0.02, 0.055] # vertical axis limits
     if shuffled_trials:
         shuffled="shuffled"
     else:
