@@ -42,8 +42,8 @@ def filter_lists_with_indices(lists_to_filter, filtered_indices):
     filtered_lists = [[inner[idx] for idx in filtered_indices] for inner in lists_to_filter]
     return filtered_lists
 
-def make_debug_plots(eeg_dir,stim_nms,stimulus,recorded_audio,
-                     fs_trf,subj_num,subj_cat,thresh_dir):
+def make_debug_plots(eeg_dir,stim_nms,stimulus,clean_stimulus,
+                     recorded_audio,fs_trf,subj_num,subj_cat,thresh_dir):
     import matplotlib.pyplot as plt
     
     stim_fl_path=os.path.join(eeg_dir, "stim_info.mat")
@@ -52,7 +52,7 @@ def make_debug_plots(eeg_dir,stim_nms,stimulus,recorded_audio,
     fs_audio=stims_dict['fs'][0]
     fs_rec=2400
 
-    for stim_ii, (stim_input, recording, nms) in enumerate(zip(stimulus,recorded_audio,stim_nms)):
+    for stim_ii, (stim_input,clean_stim_input,recording,nms) in enumerate(zip(stimulus,clean_stimulus,recorded_audio,stim_nms)):
         print(f"plotting stim {stim_ii} of {len(stimulus)}")
         noisy_stim_wav=np.concatenate([utils.get_stim_wav(stims_dict,stim_nm,'noisy') for stim_nm in nms])
         clean_stim_wav=np.concatenate([utils.get_stim_wav(stims_dict,stim_nm,'clean') for stim_nm in nms])
@@ -62,7 +62,7 @@ def make_debug_plots(eeg_dir,stim_nms,stimulus,recorded_audio,
         t_rec=np.arange(recording.size)/fs_rec
         t_stim=np.arange(noisy_stim_wav.size)/fs_audio
         t_trf_input=np.arange(stim_input.size)/fs_trf
-        fig,ax=plt.subplots(3,1)
+        fig,ax=plt.subplots(4,1)
         ax[0].plot(t_rec,recording,label="eeg audio")
         ax[0].plot(t_stim,noisy_stim_wav,label="noisy stim")
         ax[0].legend()
@@ -78,8 +78,13 @@ def make_debug_plots(eeg_dir,stim_nms,stimulus,recorded_audio,
         ax[2].plot(t_stim,noisy_stim_wav,label="noisy stim")
         ax[2].plot(t_trf_input,stim_input,label="trf input")
         ax[2].legend()
-        ax[2].set_title(f'noisy {nms} wav and trf input envelope')
+        ax[2].set_title(f'noisy {nms} wav and noisy trf input envelope')
         # plt.show()
+        ax[3].plot(t_stim,clean_stim_wav,label="noisy stim")
+        ax[3].plot(t_trf_input,clean_stim_input,label="trf input")
+        ax[3].legend()
+        ax[3].set_title(f'clean {nms} wav and clean trf input envelope')
+
         stim_num=f'{stim_ii:03}'
         fig_dir=os.path.join("..","figures","trf_input_align_check",
                              thresh_dir,subj_cat,subj_num)
@@ -87,6 +92,7 @@ def make_debug_plots(eeg_dir,stim_nms,stimulus,recorded_audio,
             os.makedirs(fig_dir,exist_ok=True)
         fig_pth=os.path.join(fig_dir,stim_num)
         plt.savefig(fig_pth)
+        del fig, ax
 def nested_cv_wrapper(subj_num,
                       direction=-1,
                       tmin=-0.1,
@@ -195,13 +201,19 @@ def nested_cv_wrapper(subj_num,
                                                 shuffle_trials=shuffle_trials)
         # should disable plotting when running actual slurm job
         if "which_stmps" in os.environ:
+            
             _debug_alignment=False
         else:
             print("DEBUG ALIGNMENT AUTOMATICALLY SET TO TRUE HERE")
             _debug_alignment=True
         if _debug_alignment:
             print(f"DEBUG ALIGN ENABLED, NOT DOING TRF")
-            make_debug_plots(eeg_dir,stim_nms,stimulus,recorded_audio,fs_trf,subj_num,subj_cat,thresh_dir)
+            clean_envs=load_stim_envs(lowpass_f=_stim_lowpass_f,clean_or_noisy='clean')
+            clean_stimulus,_,_,_=setup_xy(subj_data,clean_envs,
+                                                subj_num,reduce_trials_by,
+                                                outlier_idx,evnt=evnt,which_xcorr=which_xcorr,
+                                                shuffle_trials=shuffle_trials)
+            make_debug_plots(eeg_dir,stim_nms,stimulus,clean_stimulus,recorded_audio,fs_trf,subj_num,subj_cat,thresh_dir)
             print("done plotting")
         else:
             if blocks!='all' and blocks!='1,2,3,4,5,6':
@@ -312,7 +324,10 @@ if __name__=="__main__":
         # running interactively probably for debugging purposes
         #NOTE: why do I need which_stamps AND evnt??
         #RE: seems like which_stmps used in bash script, automate in interactive more
-        subj_num="3253"
+        # subj_num="3253"
+        subjs_list=["3253","3316","3317","3318","3322","3323","3325","3326","0194","2588","2621",
+                    "2782","3133","3146","3218","3287","3314","3315","3324","3328"]
+
         evnt=True
         evnt_thresh="750"
         k=5
@@ -329,14 +344,15 @@ if __name__=="__main__":
         
         
     #note: return_xy is False by default but when save_results is True will store them in pkl anyway
-    print(f"running subject {subj_num}...")
-    nested_cv_wrapper(subj_num,save_results=True,
-                      evnt=evnt,
-                      evnt_thresh=evnt_thresh,
-                      which_xcorr=which_xcorr,
-                      k=k,shuffle_trials=shuffle_trials,
-                      blocks=blocks)
-    print(f"{subj_num} TRF complete.")
+    for subj_num in subjs_list:
+        print(f"running subject {subj_num}...")
+        nested_cv_wrapper(subj_num,save_results=True,
+                        evnt=evnt,
+                        evnt_thresh=evnt_thresh,
+                        which_xcorr=which_xcorr,
+                        k=k,shuffle_trials=shuffle_trials,
+                        blocks=blocks)
+        print(f"{subj_num} TRF complete.")
 
                      
 
