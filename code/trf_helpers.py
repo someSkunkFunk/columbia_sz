@@ -27,7 +27,7 @@ def find_bad_electrodes(subj_data, criteria="4std"):
 
 from scipy import signal
 import numpy as np
-def get_stim_envs(stims_dict, clean_or_noisy, fs_output, f_lp=49, filt_o=1):
+def get_stim_envs(stims_dict, clean_or_noisy, fs_output, f_lp=49, filt_o=1,norm=True):
     ''''
     stims_dict: classic stims dict with both dirty and clean stims from stim file
     clean_or_noisy: choose which stims to downsample and extract envelopes from "clean" or "noisy"
@@ -49,6 +49,9 @@ def get_stim_envs(stims_dict, clean_or_noisy, fs_output, f_lp=49, filt_o=1):
                 for stim_nm, stim_wav in stim_envs.items()}
     # rectify envelopes
     ds_envs = {stim_nm: np.maximum(s, 0) for stim_nm, s in ds_envs.items()}
+    # normalize between 0-1
+    if norm:
+        ds_envs={stim_nm: s-s.min()/(s.max()-s.min()) for stim_nm, s in ds_envs.items()}
     
     return ds_envs
 import os

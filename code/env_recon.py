@@ -62,7 +62,7 @@ def make_debug_plots(eeg_dir,stim_nms,stimulus,clean_stimulus,
         t_rec=np.arange(recording.size)/fs_rec
         t_stim=np.arange(noisy_stim_wav.size)/fs_audio
         t_trf_input=np.arange(stim_input.size)/fs_trf
-        fig,ax=plt.subplots(4,1)
+        fig,ax=plt.subplots(4,1,figsize=[12,10])
         ax[0].plot(t_rec,recording,label="eeg audio")
         ax[0].plot(t_stim,noisy_stim_wav,label="noisy stim")
         ax[0].legend()
@@ -76,22 +76,26 @@ def make_debug_plots(eeg_dir,stim_nms,stimulus,clean_stimulus,
         # plt.show()
 
         ax[2].plot(t_stim,noisy_stim_wav,label="noisy stim")
-        ax[2].plot(t_trf_input,stim_input,label="trf input")
+        ax[2].plot(t_trf_input,stim_input,label="noisy trf input")
         ax[2].legend()
         ax[2].set_title(f'noisy {nms} wav and noisy trf input envelope')
         # plt.show()
-        ax[3].plot(t_stim,clean_stim_wav,label="noisy stim")
-        ax[3].plot(t_trf_input,clean_stim_input,label="trf input")
+        ax[3].plot(t_stim,clean_stim_wav,label="clean stim")
+        ax[3].plot(t_trf_input,clean_stim_input,label="clean trf input")
         ax[3].legend()
         ax[3].set_title(f'clean {nms} wav and clean trf input envelope')
+        # plt.show()
 
+        # raise NotImplementedError('temporary pause here')
         stim_num=f'{stim_ii:03}'
+
         fig_dir=os.path.join("..","figures","trf_input_align_check",
                              thresh_dir,subj_cat,subj_num)
         if not os.path.isdir(fig_dir):
             os.makedirs(fig_dir,exist_ok=True)
         fig_pth=os.path.join(fig_dir,stim_num)
         plt.savefig(fig_pth)
+        plt.close()
         del fig, ax
 def nested_cv_wrapper(subj_num,
                       direction=-1,
@@ -325,9 +329,11 @@ if __name__=="__main__":
         #NOTE: why do I need which_stamps AND evnt??
         #RE: seems like which_stmps used in bash script, automate in interactive more
         # subj_num="3253"
-        subjs_list=["3253","3316","3317","3318","3322","3323","3325","3326","0194","2588","2621",
+        # subjs_list=["3253","3316","3317","3318","3322","3323","3325","3326","0194","2588","2621",
+                    # "2782","3133","3146","3218","3287","3314","3315","3324","3328"]
+        #NOTE KERNEL DIED SO RESTARTING WHERE IT LEFT OFF
+        subjs_list=["2588","2621",
                     "2782","3133","3146","3218","3287","3314","3315","3324","3328"]
-
         evnt=True
         evnt_thresh="750"
         k=5
