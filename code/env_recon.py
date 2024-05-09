@@ -4,6 +4,7 @@
 # INIT
 import pickle
 import scipy.io as spio
+
 import numpy as np
 import os
 
@@ -212,7 +213,7 @@ def nested_cv_wrapper(subj_num,
             _debug_alignment=True
         if _debug_alignment:
             print(f"DEBUG ALIGN ENABLED, NOT DOING TRF")
-            clean_envs=load_stim_envs(lowpass_f=_stim_lowpass_f,clean_or_noisy='clean')
+            clean_envs=load_stim_envs(lowpass_f=_stim_lowpass_f,clean_or_noisy='clean',norm=True)
             clean_stimulus,_,_,_=setup_xy(subj_data,clean_envs,
                                                 subj_num,reduce_trials_by,
                                                 outlier_idx,evnt=evnt,which_xcorr=which_xcorr,
@@ -231,7 +232,7 @@ def nested_cv_wrapper(subj_num,
             total_response_time=sum([len(r)/fs_trf for r in response])
             print(f"total stim time: {total_sound_time}\ntotal response time: {total_response_time}")
             # init bkwd model
-            trf = TRF(direction=direction)
+            trf = TRF(direction=direction)  
 
             if cv_method.lower()=='nested':
                 print(f"using k={k} folds for nested cross validations")
@@ -328,12 +329,10 @@ if __name__=="__main__":
         # running interactively probably for debugging purposes
         #NOTE: why do I need which_stamps AND evnt??
         #RE: seems like which_stmps used in bash script, automate in interactive more
-        # subj_num="3253"
+        
         # subjs_list=["3253","3316","3317","3318","3322","3323","3325","3326","0194","2588","2621",
-                    # "2782","3133","3146","3218","3287","3314","3315","3324","3328"]
-        #NOTE KERNEL DIED SO RESTARTING WHERE IT LEFT OFF
-        subjs_list=["2588","2621",
-                    "2782","3133","3146","3218","3287","3314","3315","3324","3328"]
+        #             "2782","3133","3146","3218","3287","3314","3315","3324","3328"]
+        subjs_list=["3133","3146","3218","3287","3314","3315","3324","3328"]
         evnt=True
         evnt_thresh="750"
         k=5
@@ -361,4 +360,5 @@ if __name__=="__main__":
         print(f"{subj_num} TRF complete.")
 
                      
+
 

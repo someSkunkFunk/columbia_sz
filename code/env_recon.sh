@@ -6,7 +6,7 @@
 #SBATCH -t 05:00:00
 #SBATCH --mem=60gb
 #SBATCH -n 20 ##Number of tasks
-#SBATCH -J no_regu_750_shuff
+#SBATCH -J norm_envs_750_shuff
 #SBATCH --partition=standard
 
 
@@ -16,7 +16,7 @@
 #SBATCH --mail-user=apalaci6@ur.rochester.edu
 ##set up output logs 
 #SBATCH --output=/dev/null
-script_name="env_recon" ##name of python script to run
+script_name="og_env_recon" ##name of python script to run
 output_dir="LOGS/$script_name"
 mkdir -p $output_dir
 exec > "$output_dir/${SLURM_JOB_ID}_${SLURM_ARRAY_TASK_ID}.log" 2>&1
@@ -24,7 +24,7 @@ date
 
 hostname
 
-echo "re-evaluating bkwd trfs using random seeded noisy stim envelopes WITHOUT shuffling (and 75% confididence filter)"
+echo "re-running env reconstructions rms stim envelopes from matlab toolbox"
 
 export which_stmps="evnt"
 export which_xcorr="wavs"
@@ -34,6 +34,8 @@ export shuffle_trials="true"
 ## export blocks="6"
 ## export blocks="1,2,3,4,5"
 export blocks="all"
+export cv_method='nested'
+export which_envs="rms"
 
 source /scratch/apalaci6/miniconda3/bin/activate lalor0
 

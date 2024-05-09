@@ -1,13 +1,16 @@
 import os
 import pickle
-def load_stim_envs(lowpass_f='49',clean_or_noisy='clean'):
+def load_stim_envs(lowpass_f='49',clean_or_noisy='clean',norm=False):
     '''
     load precomputed stim envelopes
     must specify what cutoff frequency in hz as string
     (and must be precomputed)
     '''
-
-    stim_envs_pth=os.path.join("..","eeg_data",f"stim_envs_{lowpass_f}hz_{clean_or_noisy}.pkl")
+    if norm:
+        norm_str="_normalized"
+    else:
+        norm_str=""
+    stim_envs_pth=os.path.join("..","eeg_data",f"stim_envs_{lowpass_f}hz_{clean_or_noisy}{norm_str}.pkl")
     with open(stim_envs_pth, 'rb') as fl:
         stim_envs=pickle.load(fl)
     return stim_envs

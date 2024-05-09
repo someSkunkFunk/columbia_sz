@@ -1,3 +1,11 @@
+import os
+import scipy.io as spio
+import numpy as np
+def load_matlab_envs():
+    envs_path=os.path.join("..","eeg_data","rms_envelopes.mat")
+    envs_mat=spio.loadmat(envs_path)
+    envs=envs_mat['rms_envelopes'].T.squeeze()
+    return envs
 import numpy as np
 def extract_evnt_data(evnt,fs_eeg):
     print("extracting evnt data...")
