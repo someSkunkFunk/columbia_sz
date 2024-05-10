@@ -102,16 +102,19 @@ def setup_xy(subj_data,stim_envs,subj_num,
                 response.append(r)
             elif size_diff>0:
                 #stim is longer, pad response at the end
-                pd_wdth=((0,size_diff),)
+                pd_wdth=((0,size_diff),(0,0))
                 r=np.pad(r,pd_wdth)
                 response.append(r)
                 stimulus.append(s)
             elif size_diff<0:
                 # response is longer, pad stim at end
-                pd_wdth=((0,abs(size_diff)),)
+                pd_wdth=(0,abs(size_diff))
                 s=np.pad(s,pd_wdth)
                 stimulus.append(s)
                 response.append(r)
+            if r.shape[-1]!=62:
+                raise NotImplementedError(f"this was previouslly an error introduced by padding but should no longer occur; check response stim {ii} shapes: {r.shape}")
+
             assert s.shape[0]-r.shape[0] == 0 , "padding should have made these equal by now!"
 
     elif not evnt:    

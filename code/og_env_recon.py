@@ -1,5 +1,4 @@
 # script for bkwd mtrf analysis 
-
 #%%
 # INIT
 import pickle
@@ -190,7 +189,7 @@ def nested_cv_wrapper(subj_num,
         #     print(f"saved stim_envs to {save_pth}")
         if which_envs=='rms':
             which_envs_str="_rms_"
-            stim_envs=utils.load_matlab_envs()
+            stim_envs=utils.load_matlab_envs(clean_or_noisy)
         else:
             which_envs_str=""
             stim_envs=load_stim_envs(lowpass_f=_stim_lowpass_f,clean_or_noisy=clean_or_noisy)
@@ -216,7 +215,7 @@ def nested_cv_wrapper(subj_num,
             _debug_alignment=False
         else:
             print("DEBUG ALIGNMENT AUTOMATICALLY SET TO TRUE HERE")
-            _debug_alignment=True
+            _debug_alignment=False  
         if _debug_alignment:
             print(f"DEBUG ALIGN ENABLED, NOT DOING TRF")
             clean_envs=load_stim_envs(lowpass_f=_stim_lowpass_f,clean_or_noisy='clean',norm=True)
@@ -368,5 +367,6 @@ if __name__=="__main__":
     print(f"{subj_num} TRF complete.")
 
                      
-
+#%%
+import mtrf.matrices
 
