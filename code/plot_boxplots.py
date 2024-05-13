@@ -14,15 +14,18 @@ import matplotlib.pyplot as plt
 if __name__=='__main__':
     #specify results to load
     evnt=True
-    shuffled_trials=False
+    shuffled_trials=True
     rm_old_figs=True
     blocks='1,2,3,4,5,6' # all or list of numbers as a string
     evnt_thresh='750'
     k=5 #number of cv folds
     clean_or_noisy='noisy'
+    rms_str='_rms_' # '_rms_' or ''
+    cv_method_str='_nested' #"_nested" or "_crossval"
+    
 
 
-    ylims=[-0.02, 0.055] # vertical axis limits
+    ylims=[-0.02, 0.08] # vertical axis limits
     if shuffled_trials:
         shuffled="shuffled"
     else:
@@ -78,7 +81,7 @@ if __name__=='__main__':
         # load each subject's trfs, compute average weights
         subj_cat=utils.get_subj_cat(subj_num)
         
-        results_fnm=f'bkwd_trf_{clean_or_noisy}_stims.pkl'
+        results_fnm=f'bkwd_trf_{clean_or_noisy}{rms_str}stims{cv_method_str}.pkl'
         
         subj_results_dir=os.path.join("..","results","evnt",
                                     thresh_folds_dir,subj_cat,subj_num)

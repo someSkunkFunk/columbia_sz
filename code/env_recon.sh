@@ -32,8 +32,8 @@ export evnt_thresh="750"
 export k_folds="5"
 export shuffle_trials="true"
 ## export blocks="6"
-## export blocks="1,2,3,4,5"
-export blocks="all"
+export blocks="1,2,3,4,5"
+## export blocks="all"
 export cv_method='nested'
 export which_envs="rms"
 
