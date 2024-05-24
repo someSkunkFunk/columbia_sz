@@ -6,8 +6,9 @@ import pickle
 import os
 #%%
 # EXEC
-envs=utils.load_matlab_envs('clean')
-save_path=os.path.join("..","eeg_data","rms_envelopes.pkl")
+noisy_or_clean="clean"
+envs=utils.load_matlab_envs(noisy_or_clean)
+save_path=os.path.join("..","eeg_data",f"{noisy_or_clean}_rms_envelopes.pkl")
 
 with open(save_path,'wb') as file:
     pickle.dump(envs,file)

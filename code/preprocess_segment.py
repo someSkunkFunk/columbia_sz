@@ -154,15 +154,23 @@ if not just_stmp:
                 raw_eeg=raw_eeg-raw_eeg.mean(axis=1)[:,None]
             if fs_eeg / 2 <= fs_trf:
                 raise NotImplementedError("Nyquist") 
-            sos=signal.butter(filt_o,filt_band_lims,btype='bandpass',
-                            output='sos',fs=fs_eeg)
-            filt_eeg=signal.sosfiltfilt(sos,raw_eeg,axis=0)
+            # sos=signal.butter(filt_o,filt_band_lims,btype='bandpass',
+            #                 output='sos',fs=fs_eeg)
+            # filt_eeg=signal.sosfiltfilt(sos,raw_eeg,axis=0)
             audio_rec=raw_data[:,-1] # leave unperturbed for alignment checking
             # get number of samples in downsampled waveform
-            num_ds=int(np.floor((filt_eeg.shape[0]-1)*(fs_trf/fs_eeg)))
+            # num_ds=int(np.floor((filt_eeg.shape[0]-1)*(fs_trf/fs_eeg)))
             # downsample eeg
             # NOTE: audio_rec not downsampled
-            subj_eeg[block]=(signal.resample(filt_eeg,num_ds,axis=0),audio_rec)
+            # subj_eeg[block]=(signal.resample(filt_eeg,num_ds,axis=0),audio_rec)
+            b,a=signal.butter(filt_o,filt_band_lims,btype='bandpass',
+                              output='ba',fs=fs_eeg)
+            ftype=signal.dlti(b,a)
+            #NOTE: scipy docs recommends calling decimate multiple times when downsampling factor is higher than 13
+            #TODO: fix that ^
+            down_factor=int(fs_eeg/fs_trf) # note that conveniently already integer valued in this case
+            decimated_eeg=signal.decimate(raw_eeg,down_factor,ftype=ftype,axis=0)
+            subj_eeg[block]=(decimated_eeg,audio_rec)
             # downsample timestamps
             for stim_nm, (start, end) in timestamps[block].items():
                 if all([start,end]):
