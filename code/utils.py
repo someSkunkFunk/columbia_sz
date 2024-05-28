@@ -410,18 +410,29 @@ def get_full_raw_eeg(raw_dir, subj_cat:str, subj_num:str, blocks=None):
     #NOTE: below assumes data for all six blocks present in original folder
     #NOTE: also assumes that block names in order.. for subj 3244 B1 was not present but eeg_fnms_dict assigned keys w block names
     # that were off by one because of it...
-    eeg_fnms_dict = {block_num: fnm for block_num, fnm in zip(blocks, eeg_fnms)}
+    # eeg_fnms_dict = {block_num: fnm for block_num, fnm in zip(blocks, eeg_fnms)}
+    
     subj_eeg = {}
     # get raw eeg data
 
     for block_num in blocks:
-
-        # get eeg 
-        eeg_fnm = os.path.join(raw_dir, subj_cat, subj_num, "original",
-                            eeg_fnms_dict[block_num])
-        block_file = h5py.File(eeg_fnm) #returns a file; read mode is default
-        subj_eeg[block_num] =  np.asarray(block_file['RawData']['Samples'])
-        del block_file
+        # match block to correct data
+        #note assumes block is capitalized and at start of hdf5 files
+        eeg_fl=list(filter(lambda x: x.startswith(block_num),eeg_fnms))        
+        # check that at least one data file is found
+        if any(eeg_fl):
+            # check only one file contained:
+            if len(eeg_fl)!=1:
+                raise NotImplementedError('there may be too many matching files here')
+            eeg_fnm=eeg_fl[0]
+            eeg_pth = os.path.join(raw_dir, subj_cat, subj_num, "original",
+                                eeg_fnm)
+            # get eeg 
+            block_file = h5py.File(eeg_pth) #returns a file; read mode is default
+            subj_eeg[block_num] =  np.asarray(block_file['RawData']['Samples'])
+            del block_file
+        else:
+            print(f"{block_num} EEG data not found!")
     return subj_eeg
 
 from scipy import signal

@@ -2,7 +2,7 @@
 # we just preprocess and segment
 # for subjects without timestamps, first get the timestamps, then preprocess and segment
 #%%
-# imports, etc.
+# INIT
 import pickle
 import scipy.io as spio
 import numpy as np
@@ -48,7 +48,7 @@ if "subj_num" in os.environ:
 #####################################################################################
 else:
     print("using manually inputted vars")
-    subj_num="0194"
+    subj_num="3283"
     which_stmps="evnt"
     which_xcorr="envs"
     just_stmp=False
@@ -62,7 +62,9 @@ else:
  #NEW: make bash var?
 filt_band_lims=[1.0, 15] #Hz; highpass, lowpass cutoffs
 filt_o=3 # order of filter (effective order x2 of this since using zero-phase)
-processed_dir_path=os.path.join(eeg_dir, f"preprocessed_{which_stmps}") #directory where processed data goes
+#directory where processed data goes; 
+# NOTE: we changed from specifying which stamps before
+processed_dir_path=os.path.join(eeg_dir, "preprocessed_decimate") 
 subj_cat=utils.get_subj_cat(subj_num) #note: checked get_subj_cat, should be fine
 raw_dir=os.path.join(eeg_dir,"raw")
 print(f"Fetching data for {subj_num,subj_cat}")
@@ -163,6 +165,7 @@ if not just_stmp:
             # downsample eeg
             # NOTE: audio_rec not downsampled
             # subj_eeg[block]=(signal.resample(filt_eeg,num_ds,axis=0),audio_rec)
+            # design decimate filter (bandpass in this case)
             b,a=signal.butter(filt_o,filt_band_lims,btype='bandpass',
                               output='ba',fs=fs_eeg)
             ftype=signal.dlti(b,a)
