@@ -2,6 +2,7 @@
 # we just preprocess and segment
 # for subjects without timestamps, first get the timestamps, then preprocess and segment
 #%%
+
 # INIT
 import pickle
 import scipy.io as spio
@@ -26,7 +27,36 @@ n_blocks=6
 # blocks=["B2"]
 blocks = [f"B{ii}" for ii in range(1, n_blocks+1)]
 print(f"check blocks: {blocks}")
-#%%
+def my_downsample(raw_eeg,filt_params,fs_in,fs_out):
+    '''
+    does anti-alias filter then downsamples using scipy's decimate
+    ASSUMES BANDPASS
+    ASSUMES TOTAL DOWNSAMPLING FACTOR OF 24
+    RETURNS
+    DECIMATED EEG
+    '''
+    filt_o=filt_params['order']
+    filt_band_lims=filt_params['band_lims']
+    down_factor1=6 # note that conveniently already integer valued in this case
+    down_factor2=4
+    fs_intermediate=int(fs_in/down_factor1)
+    if down_factor1*down_factor2 != int(fs_in/fs_out):
+        raise NotImplementedError(f"total downsampling ratio assumed to be 24, but here was: {int(fs_in/fs_out)}.")
+    #NOTE: scipy docs recommends calling decimate multiple times when downsampling factor is higher than 13
+    # I don't see why filtering would be required at decimations but not entirely sure how to bypass or make a unity filter
+    
+    b,a=signal.butter(filt_o,filt_band_lims,btype='bandpass',
+                              output='ba',fs=fs_in)
+    ftype=signal.dlti(b,a)
+    decimated_eeg1=signal.decimate(raw_eeg,down_factor1,ftype=ftype,axis=0)
+    del b,a,ftype
+    # make new filter for second decimation at intermediate fs
+    b,a=signal.butter(filt_o,filt_band_lims,btype='bandpass',
+                              output='ba',fs=fs_intermediate)
+    ftype=signal.dlti(b,a)
+    decimated_eeg_out=signal.decimate(decimated_eeg1,down_factor2,ftype=ftype,axis=0)
+    return decimated_eeg_out
+#
 # setup
 # bash script vars
 # 
@@ -60,8 +90,10 @@ else:
 ### eeg preprocessing params
 # NOTE: different from filter lims used in timestamp detection algo (!)
  #NEW: make bash var?
-filt_band_lims=[1.0, 15] #Hz; highpass, lowpass cutoffs
-filt_o=3 # order of filter (effective order x2 of this since using zero-phase)
+filt_params={
+    "band_lims":[1.0, 15],
+    "order":1
+ } # order of filter (effective order x4 of this since using zero-phase and calling it twice)
 #directory where processed data goes; 
 # NOTE: we changed from specifying which stamps before
 processed_dir_path=os.path.join(eeg_dir, "preprocessed_decimate") 
@@ -72,7 +104,8 @@ subj_eeg=utils.get_full_raw_eeg(raw_dir,subj_cat,subj_num,blocks=blocks)
 
 
 #%%
-# find timestamps
+
+# EXEC FIND TIMESTAMPS
 #print  correlation thresholds
 timestamps_bad=True #currently unsure where the problem is but could still be timestamps although they seem good
 # determine filter params applied to EEG before segmentation 
@@ -166,13 +199,15 @@ if not just_stmp:
             # NOTE: audio_rec not downsampled
             # subj_eeg[block]=(signal.resample(filt_eeg,num_ds,axis=0),audio_rec)
             # design decimate filter (bandpass in this case)
-            b,a=signal.butter(filt_o,filt_band_lims,btype='bandpass',
-                              output='ba',fs=fs_eeg)
-            ftype=signal.dlti(b,a)
-            #NOTE: scipy docs recommends calling decimate multiple times when downsampling factor is higher than 13
-            #TODO: fix that ^
-            down_factor=int(fs_eeg/fs_trf) # note that conveniently already integer valued in this case
-            decimated_eeg=signal.decimate(raw_eeg,down_factor,ftype=ftype,axis=0)
+
+            # b,a=signal.butter(filt_o,filt_band_lims,btype='bandpass',
+            #                   output='ba',fs=fs_eeg)
+            # ftype=signal.dlti(b,a)
+            # #NOTE: scipy docs recommends calling decimate multiple times when downsampling factor is higher than 13
+            # #TODO: fix that ^
+            # down_factor=int(fs_eeg/fs_trf) # note that conveniently already integer valued in this case
+            # decimated_eeg=signal.decimate(raw_eeg,down_factor,ftype=ftype,axis=0)
+            decimated_eeg=my_downsample(raw_eeg,filt_params,fs_in=fs_eeg,fs_out=fs_trf)
             subj_eeg[block]=(decimated_eeg,audio_rec)
             # downsample timestamps
             for stim_nm, (start, end) in timestamps[block].items():
