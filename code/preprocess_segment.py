@@ -289,152 +289,154 @@ if not just_stmp:
             offsets=offsets[high_confidence]
             confidence=confidence[high_confidence]
             stim_nms=stim_nms[high_confidence]
-            #TODO: account for start times being relative to different blocks!!!
-            # check pause times make sense
-            pauses=onsets[1:]-offsets[:-1]
-            pause_tol=2 # pauses longer than this considered part of same segment
-            #NOTE: maybe better to have separate parameter for pause tolerance and negative pause tolerance?
-            if np.any(pauses<-pause_tol):
-                print(f'there are {np.sum(pauses<-pause_tol)} bad pauses...')
-                print('pruning stimuli around negative pauses based on relative confidence.')
-                
-                # gives array of indices corresponding to pauses
-                # want to compare relative confidence values to decide if 
-                # endpoints for stim before or after is kept 
-                # -> compute relative confidence differential
-                confidence_diff=np.diff(confidence)
-                conf_diff_tol=0.1 # if differential is lower than this, throw away both stimuli before and after pause
-                # if pause is bad AND confidence_diff +
-                #  -> stim AFTER pause is more trustworthy
-                # -> remove stim onset/offset BEFORE pause if bad and +
-                bad_prepause_indx=np.flatnonzero(((pauses<-pause_tol)&(confidence_diff>0)|
-                                                  ((pauses<-pause_tol)&(np.abs(confidence_diff)<conf_diff_tol))))
-                # if pause is bad and confidence_diff - 
-                # -> stim BEFORE pause is more trustworthy
-                # -> remove stim on/off AFTER pause if bad and -
-                bad_pstpause_indx=np.flatnonzero(((pauses<-pause_tol)&(confidence_diff<0)|
-                                                  ((pauses<-pause_tol)&(np.abs(confidence_diff)<conf_diff_tol))))
-
-
-                #check for distinct index values
-                #NOTE COMMENTING OUT BC now that relative confidence is a factor, pre/post won't necessarily be unique if low differential
-                # if utils.check_distinct_vals(bad_prepause_indx,bad_pstpause_indx):
-                #     pass
-                # else:
-                #     raise NotImplementedError(f'indices should be different in bad_(pre,pst)_pause_indx arrays')
-                # # make sure no confidence ties (very unlikely)
-                # if len(np.flatnonzero((pauses<-pause_tol)&(confidence_diff==0)))>0:
-                #     raise NotImplementedError( f"there are {len(np.flatnonzero((pauses<-pause_tol)&(confidence_diff==0)))} bad pauses with confidence ties.")
-                # add one to post_pause, pretty sure this has to be done after uniqueness check, but resuling masks
-                # should still index unique onsets/offsets
-                bad_pstpause_indx+=1
-                #NOTE: putting this code after adding one to post-pauses because for case where
-                # confidence differential is low, decided to throw away both bordering stimuli
-                
-                # check for uniqueness as each index should be unique to individual stimuli
-                if not utils.check_distinct_vals(bad_prepause_indx,bad_pstpause_indx):
-                    raise NotImplementedError(f'Indices were unique bad_(pre,pst)_pause_indx arrays before adding one to pst, but now theyre not. and thats bad.')                 
-                # prune the bad pauses as advertised, then re-evaluate pauses for segmenting
-                mask=np.ones(onsets.shape).astype(bool)
-                mask[np.concatenate([bad_prepause_indx,bad_pstpause_indx])]=False
-                print(f"trimming {(~mask).sum()} stimuli with bad pause times.")
-
-                onsets=onsets[mask]
-                offsets=offsets[mask]
-                stim_nms=stim_nms[mask]
-                
+            if any(onsets):
+                # check pause times make sense
                 pauses=onsets[1:]-offsets[:-1]
+                pause_tol=2 # pauses longer than this considered part of same segment
+                #NOTE: maybe better to have separate parameter for pause tolerance and negative pause tolerance?
                 if np.any(pauses<-pause_tol):
-                    raise NotImplementedError("we got a problem here.")
+                    print(f'there are {np.sum(pauses<-pause_tol)} bad pauses...')
+                    print('pruning stimuli around negative pauses based on relative confidence.')
+                    
+                    # gives array of indices corresponding to pauses
+                    # want to compare relative confidence values to decide if 
+                    # endpoints for stim before or after is kept 
+                    # -> compute relative confidence differential
+                    confidence_diff=np.diff(confidence)
+                    conf_diff_tol=0.1 # if differential is lower than this, throw away both stimuli before and after pause
+                    # if pause is bad AND confidence_diff +
+                    #  -> stim AFTER pause is more trustworthy
+                    # -> remove stim onset/offset BEFORE pause if bad and +
+                    bad_prepause_indx=np.flatnonzero(((pauses<-pause_tol)&(confidence_diff>0)|
+                                                    ((pauses<-pause_tol)&(np.abs(confidence_diff)<conf_diff_tol))))
+                    # if pause is bad and confidence_diff - 
+                    # -> stim BEFORE pause is more trustworthy
+                    # -> remove stim on/off AFTER pause if bad and -
+                    bad_pstpause_indx=np.flatnonzero(((pauses<-pause_tol)&(confidence_diff<0)|
+                                                    ((pauses<-pause_tol)&(np.abs(confidence_diff)<conf_diff_tol))))
+
+
+                    #check for distinct index values
+                    #NOTE COMMENTING OUT BC now that relative confidence is a factor, pre/post won't necessarily be unique if low differential
+                    # if utils.check_distinct_vals(bad_prepause_indx,bad_pstpause_indx):
+                    #     pass
+                    # else:
+                    #     raise NotImplementedError(f'indices should be different in bad_(pre,pst)_pause_indx arrays')
+                    # # make sure no confidence ties (very unlikely)
+                    # if len(np.flatnonzero((pauses<-pause_tol)&(confidence_diff==0)))>0:
+                    #     raise NotImplementedError( f"there are {len(np.flatnonzero((pauses<-pause_tol)&(confidence_diff==0)))} bad pauses with confidence ties.")
+                    # add one to post_pause, pretty sure this has to be done after uniqueness check, but resuling masks
+                    # should still index unique onsets/offsets
+                    bad_pstpause_indx+=1
+                    #NOTE: putting this code after adding one to post-pauses because for case where
+                    # confidence differential is low, decided to throw away both bordering stimuli
+                    
+                    # check for uniqueness as each index should be unique to individual stimuli
+                    if not utils.check_distinct_vals(bad_prepause_indx,bad_pstpause_indx):
+                        raise NotImplementedError(f'Indices were unique bad_(pre,pst)_pause_indx arrays before adding one to pst, but now theyre not. and thats bad.')                 
+                    # prune the bad pauses as advertised, then re-evaluate pauses for segmenting
+                    mask=np.ones(onsets.shape).astype(bool)
+                    mask[np.concatenate([bad_prepause_indx,bad_pstpause_indx])]=False
+                    print(f"trimming {(~mask).sum()} stimuli with bad pause times.")
+
+                    onsets=onsets[mask]
+                    offsets=offsets[mask]
+                    stim_nms=stim_nms[mask]
+                    
+                    pauses=onsets[1:]-offsets[:-1]
+                    if np.any(pauses<-pause_tol):
+                        raise NotImplementedError("we got a problem here.")
+                    else:
+                        print('negative pauses removed.')
+                    del mask
                 else:
-                    print('negative pauses removed.')
-                del mask
+                    print("no negative pauses to remove.")
+
+
+                print("begin segmenting based on pauses.")
+                long_pauses=np.flatnonzero(pauses>pause_tol)
+                segment_offsets=offsets[long_pauses]
+                segment_onsets=onsets[long_pauses+1]
+                # correct for missing first onset, last offset
+                segment_offsets=np.concatenate([segment_offsets,offsets[-1][None]])
+                segment_onsets=np.concatenate([onsets[0][None],segment_onsets])
+
+
+                #group stimuli by segments
+                prev_stim_end=0
+                for seg_ii, (seg_start,seg_end) in enumerate(zip(segment_onsets,segment_offsets)):
+                    
+                    seg_nm=f"{block}_{seg_ii+1:02}"
+                    print(f"getting eeg from segment {seg_ii+1} of {len(segment_onsets)}")
+                    # seg_start,seg_end correspond to audio_rec samples
+                    rec_seg=audio_rec[seg_start:seg_end]
+                    t_rec=np.arange(seg_start,seg_end)/fs_eeg
+                    seg_idx=np.flatnonzero((seg_start<=onsets)&(onsets<seg_end))
+                    nms_in_seg=stim_nms[seg_idx]
+
+                    
+                    seg_start_time=seg_start/fs_eeg
+
+                    #plotting
+
+                    
+                    # Calculate the legend size
+                    fig_legend, ax_legend = plt.subplots()
+                    #NOTE: I think this is where the no artists with labels found warning is originating from 
+                    # number of columns in legend, need at least 1
+                    _ncol=max(len(nms_in_seg)//2, 1)
+                    ax_legend.legend(loc='upper center', bbox_to_anchor=(0.5, -0.05), ncol=_ncol)
+                    legend=ax_legend.get_legend()
+                    legend_box = legend.get_window_extent().transformed(fig_legend.dpi_scale_trans.inverted())
+                    fig_legend.clear()
+                    plt.close()
+                    fig_width=8
+                    fig_height=6
+                    
+                    # plot the data
+                    fig,ax=plt.subplots(2,sharex=True,figsize=(fig_width,fig_height))
+                    norm_aud_rec=rec_seg/np.abs(rec_seg).max()
+                    ax[0].plot(t_rec,norm_aud_rec,label=f"segment {seg_ii+1}")
+                    ax[0].set_title(f"{subj_num} {block} segment {seg_ii+1:02}")
+                    prev_stim_end=seg_start_time
+                    for stim_nm in nms_in_seg:
+                        #note grabs clean by default
+                        stim_wav=utils.get_stim_wav(stims_dict,stim_nm)
+                        # stims_in_seg.append(stim_nm)
+                        t_stim=np.arange(stim_wav.size)/fs_audio
+                        t_stim+=prev_stim_end
+                        ax[1].plot(t_stim,stim_wav,label=f'{stim_nm[:-4]}')
+                        prev_stim_end=t_stim[-1]
+                    ax[0].set_xlabel('time, s, relative to block start')
+                    box0=ax[0].get_position()
+                    ax[0].set_position([box0.x0,box0.y0+box0.height*0.2,
+                                        box0.width,box0.height*0.8])
+                    box1=ax[1].get_position()
+                    ax[1].set_position([box1.x0,box1.y0+box1.height*0.2,
+                                        box1.width,box1.height*0.8])
+                    # adjust figure with legend outside of axes
+                    fig.subplots_adjust(bottom=legend_box.ymin * fig_height / (fig_height - legend_box.height))
+                    ax[1].legend(loc='upper center',bbox_to_anchor=(0.5,-0.1),
+                                ncol=_ncol) 
+                    if "subj_num" in os.environ:
+                        fig_pth=os.path.join(figs_dir,f"{subj_num}_{block}_{round(seg_ii+1):02}.png")
+                        plt.savefig(fig_pth)
+                        del fig_pth
+                    else:
+                        plt.show()
+                    plt.close()
+
+                    # get downsampled segment onsets and offsets to slice downsampled eeg
+                    seg_start_ds=int((seg_start/fs_eeg)*fs_trf)
+                    seg_end_ds=int((seg_end/fs_eeg)*fs_trf)
+                    eeg_seg=ds_eeg[seg_start_ds:seg_end_ds]
+                    
+                    # record segmented eeg and stimuli names to a dictionary            
+                    subj_output[f"{seg_nm}"]=([n for n in nms_in_seg], 
+                                            norm_aud_rec, eeg_seg)
+                    print(f"segment {seg_ii+1} of {len(segment_onsets)} done.")
             else:
-                print("no negative pauses to remove.")
-
-
-            print("begin segmenting based on pauses.")
-            long_pauses=np.flatnonzero(pauses>pause_tol)
-            segment_offsets=offsets[long_pauses]
-            segment_onsets=onsets[long_pauses+1]
-            # correct for missing first onset, last offset
-            segment_offsets=np.concatenate([segment_offsets,offsets[-1][None]])
-            segment_onsets=np.concatenate([onsets[0][None],segment_onsets])
-
-
-            #group stimuli by segments
-            prev_stim_end=0
-            for seg_ii, (seg_start,seg_end) in enumerate(zip(segment_onsets,segment_offsets)):
-                
-                seg_nm=f"{block}_{seg_ii+1:02}"
-                print(f"getting eeg from segment {seg_ii+1} of {len(segment_onsets)}")
-                # seg_start,seg_end correspond to audio_rec samples
-                rec_seg=audio_rec[seg_start:seg_end]
-                t_rec=np.arange(seg_start,seg_end)/fs_eeg
-                seg_idx=np.flatnonzero((seg_start<=onsets)&(onsets<seg_end))
-                nms_in_seg=stim_nms[seg_idx]
-
-                
-                seg_start_time=seg_start/fs_eeg
-
-                #plotting
-
-                
-                # Calculate the legend size
-                fig_legend, ax_legend = plt.subplots()
-                #NOTE: I think this is where the no artists with labels found warning is originating from 
-                # number of columns in legend, need at least 1
-                _ncol=max(len(nms_in_seg)//2, 1)
-                ax_legend.legend(loc='upper center', bbox_to_anchor=(0.5, -0.05), ncol=_ncol)
-                legend=ax_legend.get_legend()
-                legend_box = legend.get_window_extent().transformed(fig_legend.dpi_scale_trans.inverted())
-                fig_legend.clear()
-                plt.close()
-                fig_width=8
-                fig_height=6
-                
-                # plot the data
-                fig,ax=plt.subplots(2,sharex=True,figsize=(fig_width,fig_height))
-                norm_aud_rec=rec_seg/np.abs(rec_seg).max()
-                ax[0].plot(t_rec,norm_aud_rec,label=f"segment {seg_ii+1}")
-                ax[0].set_title(f"{subj_num} {block} segment {seg_ii+1:02}")
-                prev_stim_end=seg_start_time
-                for stim_nm in nms_in_seg:
-                    #note grabs clean by default
-                    stim_wav=utils.get_stim_wav(stims_dict,stim_nm)
-                    # stims_in_seg.append(stim_nm)
-                    t_stim=np.arange(stim_wav.size)/fs_audio
-                    t_stim+=prev_stim_end
-                    ax[1].plot(t_stim,stim_wav,label=f'{stim_nm[:-4]}')
-                    prev_stim_end=t_stim[-1]
-                ax[0].set_xlabel('time, s, relative to block start')
-                box0=ax[0].get_position()
-                ax[0].set_position([box0.x0,box0.y0+box0.height*0.2,
-                                    box0.width,box0.height*0.8])
-                box1=ax[1].get_position()
-                ax[1].set_position([box1.x0,box1.y0+box1.height*0.2,
-                                    box1.width,box1.height*0.8])
-                # adjust figure with legend outside of axes
-                fig.subplots_adjust(bottom=legend_box.ymin * fig_height / (fig_height - legend_box.height))
-                ax[1].legend(loc='upper center',bbox_to_anchor=(0.5,-0.1),
-                             ncol=_ncol) 
-                if "subj_num" in os.environ:
-                    fig_pth=os.path.join(figs_dir,f"{subj_num}_{block}_{round(seg_ii+1):02}.png")
-                    plt.savefig(fig_pth)
-                    del fig_pth
-                else:
-                    plt.show()
-                plt.close()
-
-                # get downsampled segment onsets and offsets to slice downsampled eeg
-                seg_start_ds=int((seg_start/fs_eeg)*fs_trf)
-                seg_end_ds=int((seg_end/fs_eeg)*fs_trf)
-                eeg_seg=ds_eeg[seg_start_ds:seg_end_ds]
-                
-                # record segmented eeg and stimuli names to a dictionary            
-                subj_output[f"{seg_nm}"]=([n for n in nms_in_seg], 
-                                          norm_aud_rec, eeg_seg)
-                print(f"segment {seg_ii+1} of {len(segment_onsets)} done.")
+                print(f"Skipped segmenting for block {block} due to no stimuli remaining after confidence-pruning...")
         print(f"All segments done. saving preprocessed data to: {output_dir}")
         output_fnm=os.path.join(output_dir,f"aligned_resp.pkl")
         with open(output_fnm, 'wb') as fl:
@@ -443,6 +445,3 @@ if not just_stmp:
         #expecing about 15 per block x 6 blocks -> ~ 90 long pauses/segments
     else:
         raise NotImplementedError(f"{which_stmps} is not an option for which_stmps.")
- 
-  
-# %%

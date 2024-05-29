@@ -1,5 +1,5 @@
 #%%
-# import packages
+# INIT
 import pickle
 import scipy.io as spio
 import numpy as np

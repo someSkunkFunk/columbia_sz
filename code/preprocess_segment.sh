@@ -16,14 +16,14 @@
 #SBATCH --mail-user=apalaci6@ur.rochester.edu 
 
 ##bash vars
-echo "segmenting eeg using evnt timestamps and overall confidence threshold at 0.80."
+echo "segmenting eeg using evnt timestamps and overall confidence threshold at 0.75. Updated downsapling w scipy decimate instead of resample."
 do_avg_ref="true"
 which_stmps="evnt"
 script_name="preprocess_segment"
 which_xcorr="wavs"  
 noisy_or_clean="clean"
 just_stmp="false"
-evnt_thresh=0.80
+evnt_thresh=0.75
 subjs=(
     3253  
     3316  
@@ -32,8 +32,7 @@ subjs=(
     3322  
     3323  
     3325  
-    3326
-    0194  
+    3326  
     2588  
     2621
     2782
@@ -46,6 +45,7 @@ subjs=(
     3324  
     3328
 )
+##NOTE 0194, 3244, 3283 all done manually during interactive session while debugging script so not included here
 source /scratch/apalaci6/miniconda3/bin/activate lalor0
 date
 echo "segmenting using $which_stmps and $noisy_or_clean $which_xcorr"
