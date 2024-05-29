@@ -37,6 +37,17 @@ def get_subj_results_fnm(results_dir,subj_num=None,all_same=True):
         #  (honestly should just delete these)
         results_fnm=subj_num+"_clean_pauses_env_recon_results.pkl"
     return results_fnm
+
+def get_subj_trf_pth(subj_num,thresh_folds_dir,clean_or_noisy,rms_str,cv_method_str):
+    
+    subj_cat=utils.get_subj_cat(subj_num)
+            
+    results_fnm=f'bkwd_trf_{clean_or_noisy}{rms_str}stims{cv_method_str}.pkl'
+
+    subj_results_dir=os.path.join("..","results","evnt",
+                                thresh_folds_dir,subj_cat,subj_num)
+    subj_trf_pth=os.path.join(subj_results_dir,results_fnm)
+    return subj_trf_pth
 #%%
 # topoplotting script
 
@@ -56,16 +67,19 @@ if __name__=='__main__':
     n_elec=62
     n_lags=41
     posarr=utils.get_gtec_pos()
+    exclude_list=[ "3283","3244"] # list of subjects to exclude due to no results file available
         
     if not grand_avg:
         # do one subject's topomaps
         subj_num="3328"
 
         subj_cat=utils.get_subj_cat(subj_num)
-        results_fnm=get_subj_results_fnm(results_dir,subj_num)
+        # results_fnm=get_subj_results_fnm(results_dir,subj_num)
         
     
-        subj_trf_pth=os.path.join(results_dir,subj_cat,subj_num,results_fnm)
+        subj_trf_pth=get_subj_trf_pth(subj_num,thresh_folds_dir="thresh_750_5fold_shuffled",
+                                           clean_or_noisy="noisy",
+                                           rms_str='_rms_',cv_method_str="_nested")
         with open(subj_trf_pth, 'rb') as f:
             trf_results=pickle.load(f)
         weights=trf_results['trf_fitted'].weights.squeeze()
@@ -92,13 +106,19 @@ if __name__=='__main__':
         # get all subjects and plot grand average trf weights
         avg_weights=np.zeros((n_elec,n_lags))
         all_subjs=utils.get_all_subj_nums(single_cat=single_cat)
+        #ignore subjects with no results file available
+        all_subjs=list(filter(lambda s: s not in exclude_list, all_subjs))
         for subj_num in all_subjs:
             # load each subject's trfs, compute average weights
             subj_cat=utils.get_subj_cat(subj_num)
-            subj_fnm=get_subj_results_fnm(results_dir,subj_num)
-            subj_trf_pth=os.path.join(results_dir,subj_cat,subj_num,subj_fnm)
+            # subj_fnm=get_subj_results_fnm(results_dir,subj_num)
+            # subj_trf_pth=os.path.join(results_dir,subj_cat,subj_num,subj_fnm)
+            subj_trf_pth=get_subj_trf_pth(subj_num,thresh_folds_dir="thresh_750_5fold_shuffled",
+                                           clean_or_noisy="noisy",
+                                           rms_str='_rms_',cv_method_str="_nested")
             with open(subj_trf_pth, 'rb') as f:
                 trf_results=pickle.load(f)
+                
             avg_weights+=trf_results['trf_fitted'].weights.squeeze()
             
         avg_weights/=len(all_subjs)
@@ -127,3 +147,5 @@ if __name__=='__main__':
 
 
 
+
+# %%

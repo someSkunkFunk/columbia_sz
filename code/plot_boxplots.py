@@ -8,6 +8,15 @@ import utils
 from mtrf.model import TRF
 import matplotlib.pyplot as plt
 
+def get_subj_trf_pth(subj_num,thresh_folds_dir,clean_or_noisy,rms_str,cv_method_str):
+    subj_cat=utils.get_subj_cat(subj_num)
+            
+    results_fnm=f'bkwd_trf_{clean_or_noisy}{rms_str}stims{cv_method_str}.pkl'
+
+    subj_results_dir=os.path.join("..","results","evnt",
+                                thresh_folds_dir,subj_cat,subj_num)
+    subj_trf_pth=os.path.join(subj_results_dir,results_fnm)
+    return subj_trf_pth
 #%%
 # MAIN BOXPLOT SCRIPT
 
@@ -80,12 +89,7 @@ if __name__=='__main__':
     for subj_num in all_subjs:
         # load each subject's trfs, compute average weights
         subj_cat=utils.get_subj_cat(subj_num)
-        
-        results_fnm=f'bkwd_trf_{clean_or_noisy}{rms_str}stims{cv_method_str}.pkl'
-        
-        subj_results_dir=os.path.join("..","results","evnt",
-                                    thresh_folds_dir,subj_cat,subj_num)
-        subj_trf_pth=os.path.join(subj_results_dir,results_fnm)
+        subj_trf_pth=get_subj_trf_pth(subj_num,thresh_folds_dir,clean_or_noisy,rms_str,cv_method_str)
         with open(subj_trf_pth, 'rb') as f:
             trf_results=pickle.load(f)
         # set first zero-valued element in arrya to mean of current subject, depending on category
