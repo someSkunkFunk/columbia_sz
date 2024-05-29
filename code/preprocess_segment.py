@@ -104,8 +104,7 @@ subj_eeg=utils.get_full_raw_eeg(raw_dir,subj_cat,subj_num,blocks=blocks)
 
 
 #%%
-
-# EXEC FIND TIMESTAMPS
+# EXEC FIND TIMESTAMPS AND PREPROCESS
 #print  correlation thresholds
 timestamps_bad=True #currently unsure where the problem is but could still be timestamps although they seem good
 # determine filter params applied to EEG before segmentation 
@@ -171,7 +170,6 @@ if which_stmps=="evnt":
         os.makedirs(output_dir, exist_ok=True)
     # find evnt timestamps
     evnt=utils.load_evnt(subj_num)
-#%%
 # preprocess each block separately
     
 if not just_stmp:
@@ -254,11 +252,12 @@ if not just_stmp:
             if fs_eeg / 2 <= fs_trf:
                 raise NotImplementedError("Nyquist") 
             print("filtering and downsampling eeg for current block")
-            sos=signal.butter(filt_o,filt_band_lims,btype='bandpass',
-                            output='sos',fs=fs_eeg)
-            filt_eeg=signal.sosfiltfilt(sos,raw_eeg,axis=0)
-            num_ds=int(np.floor((filt_eeg.shape[0]-1)*(fs_trf/fs_eeg)))
-            ds_eeg=signal.resample(filt_eeg,num_ds)
+            # sos=signal.butter(filt_o,filt_band_lims,btype='bandpass',
+            #                 output='sos',fs=fs_eeg)
+            # filt_eeg=signal.sosfiltfilt(sos,raw_eeg,axis=0)
+            # num_ds=int(np.floor((filt_eeg.shape[0]-1)*(fs_trf/fs_eeg)))
+            # ds_eeg=signal.resample(filt_eeg,num_ds)
+            ds_eeg=my_downsample(raw_eeg,filt_params,fs_in=fs_eeg,fs_out=fs_trf)
             
             # BELOW THIS LINE, CHANGE EVNT REFERENCES TO BLOCK REFERENCES
             # prune low-confidence values,record figure for posterity:
@@ -333,9 +332,7 @@ if not just_stmp:
                 # confidence differential is low, decided to throw away both bordering stimuli
                 
                 # check for uniqueness as each index should be unique to individual stimuli
-                if utils.check_distinct_vals(bad_prepause_indx,bad_pstpause_indx):
-                    pass
-                else:
+                if not utils.check_distinct_vals(bad_prepause_indx,bad_pstpause_indx):
                     raise NotImplementedError(f'Indices were unique bad_(pre,pst)_pause_indx arrays before adding one to pst, but now theyre not. and thats bad.')                 
                 # prune the bad pauses as advertised, then re-evaluate pauses for segmenting
                 mask=np.ones(onsets.shape).astype(bool)
