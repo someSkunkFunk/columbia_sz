@@ -65,7 +65,8 @@ if __name__=='__main__':
     # sp_pth=os.path.join(results_dir,"sp")
     fs=100#TODO: un-hardcode
     n_elec=62
-    n_lags=51
+    t_min,t_max=-.1,.4
+    lags=np.arange(t_min,t_max+(1/fs),1/fs)
     posarr=utils.get_gtec_pos()
     exclude_list=[ "3283","3244"] # list of subjects to exclude due to no results file available
         
@@ -84,13 +85,13 @@ if __name__=='__main__':
             trf_results=pickle.load(f)
         weights=trf_results['trf_fitted'].weights.squeeze()
         
-        for n_lag in range(weights.shape[1]):  # which lag to plot topo for
+        for n_lag, lag_s in enumerate(lags):  # which lag to plot topo for
         # evokeds = trf.to_mne_evoked(montage)[0]
         #TODO: are we going to need the reference electrodes we removed?
-            lag_ms=1000*n_lag/fs
+            lag_ms=round(1000*lag_s)        
             fig,ax=plt.subplots()
             im,_=plot_topomap(weights[:, n_lag],posarr,axes=ax,show=False,vlim=topo_lims)
-            ax.set_title(f'lag={1000*n_lag/fs} ms')
+            ax.set_title(f'lag={lag_ms} ms')
             fig.colorbar(im,ax=ax)
             plt.show()
             save_dir=os.path.join("..","figures","topos",subj_cat,subj_num)
@@ -104,7 +105,7 @@ if __name__=='__main__':
 
     else:
         # get all subjects and plot grand average trf weights
-        avg_weights=np.zeros((n_elec,n_lags))
+        avg_weights=np.zeros((n_elec,lags.size))
         all_subjs=utils.get_all_subj_nums(single_cat=single_cat)
         #ignore subjects with no results file available
         all_subjs=list(filter(lambda s: s not in exclude_list, all_subjs))
@@ -122,10 +123,10 @@ if __name__=='__main__':
             avg_weights+=trf_results['trf_fitted'].weights.squeeze()
             
         avg_weights/=len(all_subjs)
-        for n_lag in range(avg_weights.shape[1]):  # which lag to plot topo for
+        for n_lag,lag_s in enumerate(lags):  # which lag to plot topo for
         # evokeds = trf.to_mne_evoked(montage)[0]
         #TODO: are we going to need the reference electrodes we removed?
-            lag_ms=1000*n_lag/fs
+            lag_ms=round(1000*lag_s)
             fig,ax=plt.subplots()
             im,_=plot_topomap(avg_weights[:, n_lag],posarr,axes=ax,show=False,vlim=topo_lims)
             ax.set_title(f'lag={lag_ms} ms')
