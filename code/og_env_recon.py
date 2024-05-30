@@ -367,6 +367,5 @@ if __name__=="__main__":
     print(f"{subj_num} TRF complete.")
 
                      
-#%%
-import mtrf.matrices
+
 

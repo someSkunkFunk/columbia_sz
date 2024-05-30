@@ -14,24 +14,25 @@ import numpy as np
 
 # DEFINE LOCAL FUNCTIONS
 # STEP ONE: LOAD ALL SUBJECT DATA & EVNT info
-def load_all_subj_data(evnt_thresh='000',subj_cat='all'):
+def load_all_subj_data(evnt_thresh='750',subj_cat='all'):
     _limit_subjs=False # for debugging
     thresh_dir=f"thresh_{evnt_thresh}" # should be three digit number representing decimals to third place
-    prep_data_dir=os.path.join("..","eeg_data","preprocessed_evnt",thresh_dir)
+    prep_data_dir=os.path.join("..","eeg_data","preprocessed_decimate",thresh_dir)
     all_subj_data={}
     if _limit_subjs:
         _amt_subjs=2
         print(f"only loading a {_amt_subjs} subject(s). set _limit_subjs to False to load all subjects")     
-    elif not _limit_subjs and subj_cat=='all':
-        print(f"loading all subject data.")
-        _amt_subjs=20 #number of subjs
-        subj_ints=[ii for ii in range(_amt_subjs)]
+    # elif not _limit_subjs and subj_cat=='all':
+    #     print(f"loading all subject data.")
+        # _amt_subjs=22 #number of subjs #TODO: CHANGE THIS
+        # subj_ints=[ii for ii in range(_amt_subjs)]
         
-        for subj_int in subj_ints:
-            subj_num=utils.assign_subj(subj_int)
-            all_subj_data[subj_num]=utils.load_preprocessed(subj_num,eeg_dir=prep_data_dir,
-                                                    evnt=True,which_xcorr=None)
-    elif not _limit_subjs and subj_cat in {"hc", "sp"}:
+        # for subj_int in subj_ints:
+        #     subj_num=utils.assign_subj(subj_int)
+        #     all_subj_data[subj_num]=utils.load_preprocessed(subj_num,eeg_dir=prep_data_dir,
+        #                                             evnt=True,which_xcorr=None)
+    elif not _limit_subjs and subj_cat in {"hc", "sp", "all"}:
+        print(f"loading all subjects from {subj_cat}")
         subjs_list=utils.read_subjs_list(which_cat=subj_cat)
         for subj_num in subjs_list:
             all_subj_data[subj_num]=utils.load_preprocessed(subj_num,eeg_dir=prep_data_dir,
@@ -169,7 +170,7 @@ def rvals_topo(pearsonr_vals,subj_cat):
     im,_=plot_topomap(pearsonr_vals,gtec_pos,axes=ax,show=False)
     fig.colorbar(im,ax=ax)
     ax.set_title(f"Split Half Correlation ({subj_cat} subjs)")
-    figs_dir=os.path.join("..","figures","splthlf_corr_topos")
+    figs_dir=os.path.join("..","figures","splthlf_corr_topos_decimate")
     if not os.path.isdir(figs_dir):
         os.makedirs(figs_dir,exist_ok=True)    
     # utils.rm_old_figs(figs_dir) #muted because realized if we only want one topo will delete the other categories as well
@@ -180,7 +181,7 @@ def rvals_topo(pearsonr_vals,subj_cat):
     
 #%% full script
 if __name__=='__main__':
-    subj_cat="sp"
+    subj_cat="all"
     all_subj_data=load_all_subj_data(subj_cat=subj_cat)
 
     fs_trf=100 # evnt times in seconds; use trf sampling rate for preprocessed data
