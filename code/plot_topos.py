@@ -54,7 +54,7 @@ def get_subj_trf_pth(subj_num,thresh_folds_dir,clean_or_noisy,rms_str,cv_method_
 if __name__=='__main__':
     
     # set colorbar upper and lower bounds
-    topo_lims=(-0.006, 0.006)
+    topo_lims=(-0.01, 0.01)
 
     grand_avg=True
     
@@ -65,7 +65,7 @@ if __name__=='__main__':
     # sp_pth=os.path.join(results_dir,"sp")
     fs=100#TODO: un-hardcode
     n_elec=62
-    n_lags=41
+    n_lags=51
     posarr=utils.get_gtec_pos()
     exclude_list=[ "3283","3244"] # list of subjects to exclude due to no results file available
         
