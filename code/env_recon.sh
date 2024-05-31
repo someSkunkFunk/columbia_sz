@@ -5,12 +5,12 @@
 ## bash script for backwards trf using nested cv
 #SBATCH -t 05:00:00
 #SBATCH --mem=60gb
-#SBATCH -n 20 ##Number of tasks
-#SBATCH -J norm_envs_750_shuff
+#SBATCH -n 22 ##Number of tasks
+#SBATCH -J decimate_750_shuff
 #SBATCH --partition=standard
 
 
-#SBATCH --array=1-20
+#SBATCH --array=1-22
 ##SBATCH --depend=afterany:17146968
 #SBATCH --mail-type=END
 #SBATCH --mail-user=apalaci6@ur.rochester.edu
@@ -24,7 +24,7 @@ date
 
 hostname
 
-echo "re-running env reconstructions rms stim envelopes from matlab toolbox"
+echo "using rms envelopes and now newly preprocessed data using decimate (plus 2 additional sp subjects)"
 
 export which_stmps="evnt"
 export which_xcorr="wavs"
@@ -32,8 +32,8 @@ export evnt_thresh="750"
 export k_folds="5"
 export shuffle_trials="true"
 ## export blocks="6"
-export blocks="1,2,3,4,5"
-## export blocks="all"
+## export blocks="1,2,3,4,5"
+export blocks="all"
 export cv_method='nested'
 export which_envs="rms"
 

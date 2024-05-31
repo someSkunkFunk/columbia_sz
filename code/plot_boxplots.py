@@ -8,12 +8,15 @@ import utils
 from mtrf.model import TRF
 import matplotlib.pyplot as plt
 
-def get_subj_trf_pth(subj_num,thresh_folds_dir,clean_or_noisy,rms_str,cv_method_str):
+def get_subj_trf_pth(subj_num,thresh_folds_dir,clean_or_noisy,rms_str,cv_method_str,use_decimate):
     subj_cat=utils.get_subj_cat(subj_num)
-            
+        
     results_fnm=f'bkwd_trf_{clean_or_noisy}{rms_str}stims{cv_method_str}.pkl'
-
-    subj_results_dir=os.path.join("..","results","evnt",
+    if use_decimate:
+        evnt_dir="evnt_decimate"
+    else:
+        evnt_dir="evnt"
+    subj_results_dir=os.path.join("..","results",evnt_dir,
                                 thresh_folds_dir,subj_cat,subj_num)
     subj_trf_pth=os.path.join(subj_results_dir,results_fnm)
     return subj_trf_pth
@@ -22,6 +25,7 @@ def get_subj_trf_pth(subj_num,thresh_folds_dir,clean_or_noisy,rms_str,cv_method_
 
 if __name__=='__main__':
     #specify results to load
+    use_decimate=True
     evnt=True
     shuffled_trials=True
     rm_old_figs=True
@@ -63,7 +67,11 @@ if __name__=='__main__':
 
     if evnt:
         # results_dir=os.path.join("..","results","evnt",thresh_dir)
-        save_dir=os.path.join("..","figures","boxplots",thresh_folds_dir)
+        if use_decimate:
+            decimate_str="_decimate"
+        else:
+            decimate_str=""
+        save_dir=os.path.join("..","figures","boxplots",thresh_folds_dir+decimate_str)
         if rm_old_figs:
             utils.rm_old_figs(save_dir)
     else:
@@ -89,7 +97,7 @@ if __name__=='__main__':
     for subj_num in all_subjs:
         # load each subject's trfs, compute average weights
         subj_cat=utils.get_subj_cat(subj_num)
-        subj_trf_pth=get_subj_trf_pth(subj_num,thresh_folds_dir,clean_or_noisy,rms_str,cv_method_str)
+        subj_trf_pth=get_subj_trf_pth(subj_num,thresh_folds_dir,clean_or_noisy,rms_str,cv_method_str,use_decimate)
         with open(subj_trf_pth, 'rb') as f:
             trf_results=pickle.load(f)
         # set first zero-valued element in arrya to mean of current subject, depending on category
