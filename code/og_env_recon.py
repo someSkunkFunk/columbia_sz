@@ -75,13 +75,19 @@ def make_debug_plots(eeg_dir,stim_nms,stimulus,other_stimulus,clean_or_noisy,
         ax[1].set_title(f'clean {nms} wav and eeg recorded audio')
         # plt.show()
 
-        ax[2].plot(t_stim,noisy_stim_wav,label="noisy stim")
+        other=list(filter(lambda s: s not in clean_or_noisy, {'clean','noisy'}))
+        if clean_or_noisy=='clean':
+            input_wav=clean_stim_wav
+            other_wav=noisy_stim_wav
+        else:
+            input_wav=noisy_stim_wav
+            other_wav=clean_stim_wav
+        ax[2].plot(t_stim,input_wav,label=f"{clean_or_noisy} stim wav")
         ax[2].plot(t_trf_input,stim_input,label=f"{clean_or_noisy} trf input")
         ax[2].legend()
         ax[2].set_title(f'noisy {nms} wav and noisy trf input envelope')
         # plt.show()
-        ax[3].plot(t_stim,clean_stim_wav,label="clean stim")
-        other=list(filter(lambda s: s not in clean_or_noisy, {'clean','noisy'}))
+        ax[3].plot(t_stim,other_wav,label=f"{other} stim wav")
         ax[3].plot(t_trf_input,not_stim_input,label=f"{other} trf input")
         ax[3].legend()
         ax[3].set_title(f'clean {nms} wav and clean trf input envelope')
