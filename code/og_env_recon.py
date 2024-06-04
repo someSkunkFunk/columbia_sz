@@ -42,7 +42,7 @@ def filter_lists_with_indices(lists_to_filter, filtered_indices):
     filtered_lists = [[inner[idx] for idx in filtered_indices] for inner in lists_to_filter]
     return filtered_lists
 
-def make_debug_plots(eeg_dir,stim_nms,stimulus,clean_stimulus,
+def make_debug_plots(eeg_dir,stim_nms,stimulus,other_stimulus,clean_or_noisy,
                      recorded_audio,fs_trf,subj_num,subj_cat,thresh_dir):
     import matplotlib.pyplot as plt
     
@@ -52,7 +52,7 @@ def make_debug_plots(eeg_dir,stim_nms,stimulus,clean_stimulus,
     fs_audio=stims_dict['fs'][0]
     fs_rec=2400
 
-    for stim_ii, (stim_input,clean_stim_input,recording,nms) in enumerate(zip(stimulus,clean_stimulus,recorded_audio,stim_nms)):
+    for stim_ii, (stim_input,not_stim_input,recording,nms) in enumerate(zip(stimulus,other_stimulus,recorded_audio,stim_nms)):
         print(f"plotting stim {stim_ii} of {len(stimulus)}")
         noisy_stim_wav=np.concatenate([utils.get_stim_wav(stims_dict,stim_nm,'noisy') for stim_nm in nms])
         clean_stim_wav=np.concatenate([utils.get_stim_wav(stims_dict,stim_nm,'clean') for stim_nm in nms])
@@ -64,24 +64,25 @@ def make_debug_plots(eeg_dir,stim_nms,stimulus,clean_stimulus,
         t_trf_input=np.arange(stim_input.size)/fs_trf
         fig,ax=plt.subplots(4,1,figsize=[12,10])
         ax[0].plot(t_rec,recording,label="eeg audio")
-        ax[0].plot(t_stim,noisy_stim_wav,label="noisy stim")
+        ax[0].plot(t_stim,noisy_stim_wav,label="noisy wav")
         ax[0].legend()
         ax[0].set_title(f'noisy {nms} wavs and eeg recorded audio')
         # plt.show()
 
         ax[1].plot(t_rec,recording,label="eeg audio")
-        ax[1].plot(t_stim,clean_stim_wav,label="clean stim")
+        ax[1].plot(t_stim,clean_stim_wav,label="clean wav")
         ax[1].legend()
         ax[1].set_title(f'clean {nms} wav and eeg recorded audio')
         # plt.show()
 
         ax[2].plot(t_stim,noisy_stim_wav,label="noisy stim")
-        ax[2].plot(t_trf_input,stim_input,label="noisy trf input")
+        ax[2].plot(t_trf_input,stim_input,label=f"{clean_or_noisy} trf input")
         ax[2].legend()
         ax[2].set_title(f'noisy {nms} wav and noisy trf input envelope')
         # plt.show()
         ax[3].plot(t_stim,clean_stim_wav,label="clean stim")
-        ax[3].plot(t_trf_input,clean_stim_input,label="clean trf input")
+        other=list(filter(lambda s: s not in clean_or_noisy, {'clean','noisy'}))
+        ax[3].plot(t_trf_input,not_stim_input,label=f"{other} trf input")
         ax[3].legend()
         ax[3].set_title(f'clean {nms} wav and clean trf input envelope')
         # plt.show()
@@ -105,7 +106,7 @@ def nested_cv_wrapper(subj_num,
                       lim_stim=None,
                       save_results=False,
                       drop_bad_electrodes=False,
-                      clean_nxor_noisy=['noisy'], 
+                      clean_nxor_noisy=['clean'], 
                       regs=np.logspace(-1, 8, 10),
                       reduce_trials_by="pauses",
                       return_xy=False, 
@@ -127,6 +128,7 @@ def nested_cv_wrapper(subj_num,
     # or grouping by pauses within a block ("pauses")
     '''
     print(f"running blocks: {blocks}")
+    print(f"stimuli envelopes: {clean_nxor_noisy}")
     # f_lp=49 #Hz, lowpass filter freq for get_stim_envs
     subj_cat=utils.get_subj_cat(subj_num)
     # specify fl paths assumes running from code as pwd
@@ -187,6 +189,7 @@ def nested_cv_wrapper(subj_num,
         #     pickle.dump(stim_envs,fl)
         #     print(f"saved stim_envs to {save_pth}")
         if which_envs=='rms':
+            print("Loading MATLAB computed envelopes")
             which_envs_str="_rms_"
             stim_envs=utils.load_matlab_envs(clean_or_noisy)
         else:
@@ -212,93 +215,100 @@ def nested_cv_wrapper(subj_num,
         # should disable plotting when running actual slurm job
         if "which_stmps" in os.environ:
             
-            _debug_alignment=False
+            _debug_alignment=True
+            if _debug_alignment:
+                print('Set debug alignent to true in SLURM job... will plott all stimuli and recorded audio')
         else:
             print("DEBUG ALIGNMENT AUTOMATICALLY SET TO TRUE HERE")
-            _debug_alignment=False  
+            _debug_alignment=True
         if _debug_alignment:
             print(f"DEBUG ALIGN ENABLED, NOT DOING TRF")
-            clean_envs=load_stim_envs(lowpass_f=_stim_lowpass_f,clean_or_noisy='clean',norm=True)
-            clean_stimulus,_,_,_=setup_xy(subj_data,clean_envs,
+            # clean_envs=load_stim_envs(lowpass_f=_stim_lowpass_f,clean_or_noisy='clean',norm=True)
+            if clean_or_noisy=='noisy':
+                other_envs=utils.load_matlab_envs('clean')
+            else:
+                other_envs=utils.load_matlab_envs('noisy')
+            other_stimulus,_,_,_=setup_xy(subj_data,other_envs,
                                                 subj_num,reduce_trials_by,
                                                 outlier_idx,evnt=evnt,which_xcorr=which_xcorr,
                                                 shuffle_trials=shuffle_trials)
-            make_debug_plots(eeg_dir,stim_nms,stimulus,clean_stimulus,recorded_audio,fs_trf,subj_num,subj_cat,thresh_dir)
+            make_debug_plots(eeg_dir,stim_nms,stimulus,other_stimulus,clean_or_noisy,
+                             recorded_audio,fs_trf,subj_num,subj_cat,thresh_dir)
             print("done plotting")
-        else:
-            if blocks!='all' and blocks!='1,2,3,4,5,6':
-                #filter blocks 
-                # add strings to match stim_nms
-                blocks_to_keep=['b0'+b.strip() for b in blocks.split(",")]
-                blocks_to_keep_idx=filter_blocks_idx(blocks_to_keep,stim_nms)
-                [stimulus,response,stim_nms]=filter_lists_with_indices([stimulus,response,stim_nms],blocks_to_keep_idx)
-                
-            total_sound_time=sum([len(s)/fs_trf for s in stimulus])
-            total_response_time=sum([len(r)/fs_trf for r in response])
-            print(f"total stim time: {total_sound_time}\ntotal response time: {total_response_time}")
-            # init bkwd model
-            trf = TRF(direction=direction)  
-
-            if cv_method.lower()=='nested':
-                print(f"using k={k} folds for nested cross validations")
-                r_ncv, best_lam=nested_crossval(trf, stimulus[:lim_stim], response[:lim_stim], fs_trf, tmin, tmax, regs, k=k)
-                print(f"r-values: {r_ncv}, mean: {r_ncv.mean()}, best_lam:{best_lam}")
-            elif cv_method.lower()=='crossval':
-                regularization=0
-                print(f"using k={k} folds for nested cross validations, with regularization={regularization}")
-                r_mean=crossval(trf, stimulus[:lim_stim], response[:lim_stim], fs_trf, tmin, tmax, regularization, k=k)
-                print(f"mean r-val: {r_mean}")
-
-
-
-            if lim_stim is None and save_results:
-                
-                # save results
+        
+        if blocks!='all' and blocks!='1,2,3,4,5,6':
+            #filter blocks 
+            # add strings to match stim_nms
+            blocks_to_keep=['b0'+b.strip() for b in blocks.split(",")]
+            blocks_to_keep_idx=filter_blocks_idx(blocks_to_keep,stim_nms)
+            [stimulus,response,stim_nms]=filter_lists_with_indices([stimulus,response,stim_nms],blocks_to_keep_idx)
             
-                results_file= f"bkwd_trf_{clean_or_noisy}{which_envs_str}stims_{cv_method}.pkl"
-                # note the clean ones didn't specify in file name since added string formatting after
-                # but whatever
-                if evnt:
-                    timestamps_generated_by="evnt"
-                    if k!=-1:
-                        thresh_folds_dir=thresh_dir+f"_{k}fold"+f"_{shuffled}"
-                    elif k==-1:
-                        thresh_folds_dir=thresh_dir+"_loo"+f"_{shuffled}"
-                    if blocks!="all" and blocks!="1,2,3,4,5,6":
-                        print("note: need to change this in xcorr case")
-                        blocks_str="".join(blocks_to_keep)
-                        thresh_folds_dir=thresh_folds_dir+"_"+blocks_str
-                    results_dir=os.path.join("..","results","evnt_decimate",
-                                            thresh_folds_dir,subj_cat,subj_num)
-                    # results_dir = os.path.join("..","evnt_results", subj_cat, subj_num)
-                else:
-                    timestamps_generated_by=f"xcorr{which_xcorr}"
-                    xcorr_subdir=f"xcorr_{which_xcorr}"
-                    results_dir = os.path.join("..","results",xcorr_subdir,subj_cat,subj_num)
-                
-                
-                if reduce_trials_by is not None:
-                    trial_reduction=reduce_trials_by
-                else:
-                    trial_reduction="None"
-                # Check if the directory exists; if not, create it
-                # note: will also create parent directoriesr
-                if not os.path.exists(results_dir):
-                    os.makedirs(results_dir, exist_ok=True)
-                results_pth=os.path.join(results_dir, results_file)
-                print(f"saving results to {results_pth}")
-                with open(results_pth, 'wb') as f:
-                    if cv_method.lower()=='nested':
-                        pickle.dump({'trf_fitted': trf, 'r_ncv': r_ncv, 'best_lam': best_lam,
-                                        'stimulus': stimulus, 'response': response, 'stim_nms': stim_nms,
-                                        'trials_reduced_by':trial_reduction,
-                                        'timestamps_generated_by':timestamps_generated_by}, f)
-                    elif cv_method.lower()=='crossval':
-                        pickle.dump({'trf_fitted': trf, 'r_mean': r_mean, 'regularization': regularization,
-                                        'stimulus': stimulus, 'response': response, 'stim_nms': stim_nms,
-                                        'trials_reduced_by':trial_reduction,
-                                        'timestamps_generated_by':timestamps_generated_by}, f)
-                
+        total_sound_time=sum([len(s)/fs_trf for s in stimulus])
+        total_response_time=sum([len(r)/fs_trf for r in response])
+        print(f"total stim time: {total_sound_time}\ntotal response time: {total_response_time}")
+        # init bkwd model
+        trf = TRF(direction=direction)  
+
+        if cv_method.lower()=='nested':
+            print(f"using k={k} folds for nested cross validations")
+            r_ncv, best_lam=nested_crossval(trf, stimulus[:lim_stim], response[:lim_stim], fs_trf, tmin, tmax, regs, k=k)
+            print(f"r-values: {r_ncv}, mean: {r_ncv.mean()}, best_lam:{best_lam}")
+        elif cv_method.lower()=='crossval':
+            regularization=0
+            print(f"using k={k} folds for nested cross validations, with regularization={regularization}")
+            r_mean=crossval(trf, stimulus[:lim_stim], response[:lim_stim], fs_trf, tmin, tmax, regularization, k=k)
+            print(f"mean r-val: {r_mean}")
+
+
+
+        if lim_stim is None and save_results:
+            
+            # save results
+        
+            results_file= f"bkwd_trf_{clean_or_noisy}{which_envs_str}stims_{cv_method}.pkl"
+            # note the clean ones didn't specify in file name since added string formatting after
+            # but whatever
+            if evnt:
+                timestamps_generated_by="evnt"
+                if k!=-1:
+                    thresh_folds_dir=thresh_dir+f"_{k}fold"+f"_{shuffled}"
+                elif k==-1:
+                    thresh_folds_dir=thresh_dir+"_loo"+f"_{shuffled}"
+                if blocks!="all" and blocks!="1,2,3,4,5,6":
+                    print("note: need to change this in xcorr case")
+                    blocks_str="".join(blocks_to_keep)
+                    thresh_folds_dir=thresh_folds_dir+"_"+blocks_str
+                results_dir=os.path.join("..","results","evnt_decimate",
+                                        thresh_folds_dir,subj_cat,subj_num)
+                # results_dir = os.path.join("..","evnt_results", subj_cat, subj_num)
+            else:
+                timestamps_generated_by=f"xcorr{which_xcorr}"
+                xcorr_subdir=f"xcorr_{which_xcorr}"
+                results_dir = os.path.join("..","results",xcorr_subdir,subj_cat,subj_num)
+            
+            
+            if reduce_trials_by is not None:
+                trial_reduction=reduce_trials_by
+            else:
+                trial_reduction="None"
+            # Check if the directory exists; if not, create it
+            # note: will also create parent directoriesr
+            if not os.path.exists(results_dir):
+                os.makedirs(results_dir, exist_ok=True)
+            results_pth=os.path.join(results_dir, results_file)
+            print(f"saving results to {results_pth}")
+            with open(results_pth, 'wb') as f:
+                if cv_method.lower()=='nested':
+                    pickle.dump({'trf_fitted': trf, 'r_ncv': r_ncv, 'best_lam': best_lam,
+                                    'stimulus': stimulus, 'response': response, 'stim_nms': stim_nms,
+                                    'trials_reduced_by':trial_reduction,
+                                    'timestamps_generated_by':timestamps_generated_by}, f)
+                elif cv_method.lower()=='crossval':
+                    pickle.dump({'trf_fitted': trf, 'r_mean': r_mean, 'regularization': regularization,
+                                    'stimulus': stimulus, 'response': response, 'stim_nms': stim_nms,
+                                    'trials_reduced_by':trial_reduction,
+                                    'timestamps_generated_by':timestamps_generated_by}, f)
+            
 
     #NOTE: disabling return functionality since we never use it and causes errors now when cv_method is not nested
     if return_xy == True:

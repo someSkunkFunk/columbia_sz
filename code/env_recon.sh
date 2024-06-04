@@ -3,10 +3,10 @@
 
 
 ## bash script for backwards trf using nested cv
-#SBATCH -t 05:00:00
+#SBATCH -t 08:00:00
 #SBATCH --mem=60gb
 #SBATCH -n 22 ##Number of tasks
-#SBATCH -J decimate_750_shuff
+#SBATCH -J clean_decimate_750_shuff
 #SBATCH --partition=standard
 
 
@@ -24,7 +24,7 @@ date
 
 hostname
 
-echo "using rms envelopes and now newly preprocessed data using decimate (plus 2 additional sp subjects)"
+echo "rms envelopes, decimated downsampling, using clean speech envelopes"
 
 export which_stmps="evnt"
 export which_xcorr="wavs"
