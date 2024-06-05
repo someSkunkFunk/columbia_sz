@@ -69,7 +69,13 @@ def setup_xy(subj_data,stim_envs,subj_num,
     NOTE SINCE SEPARATED AUDIO CHANNEL, 
     THIS FUNCTION WILL PROBABLY BREAK WHEN REDUCE_TRIALS_BY is NOT PAUSES
     BECAUSE IT"S THE ONLY CONDITION BLOCK I EDITED POST CHANGE
-    subj_data: eeg 
+    subj_data: list containing:
+                    [
+                    list(stim names),
+                    array(audio recording),
+                    array(eeg time x electrodes)
+                    ]
+
     stim_envs: envelopes of individual waveforms presented during experiment
         should already be downsampled to eeg fs
     reduce_trials_by: method of selecting which stimuli/trials to concatenate into one 
@@ -90,9 +96,12 @@ def setup_xy(subj_data,stim_envs,subj_num,
     if evnt:
         # subj_data has different structure -> just a python dictionary with segments already
         for ii, (_,seg_data) in enumerate(subj_data.items()):
-            # assumes overly-disparate stim/response pairs (in terms of duration)
-            # are already taken out of subj_data, so can just pad pairs that are uneven here
+            # seg_data: [list(stim_nms), array(audio_recording), array(eeg_time_electrodes)]
+            
+            # assumes durations mismatched stim-response durations have already been pre-filtered
+            # so that only small differences which can be padded remain here
             audio_recorded.append(seg_data[1])
+            # get all stim envs for current trial ii from dictionary into one array
             stim_nms.append([nm.strip('.wav') for nm in seg_data[0]])
             s=np.concatenate([stim_envs[nm] for nm in stim_nms[ii]])
             r=seg_data[-1]

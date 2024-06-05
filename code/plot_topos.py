@@ -58,7 +58,7 @@ if __name__=='__main__':
     # set colorbar upper and lower bounds
     topo_lims=(None, None)
 
-    grand_avg=True
+    grand_avg=False
     
     results_dir=os.path.join("..","results")
     # Single cat only matters if grand_avg=True (then do grand average of single category)
@@ -81,7 +81,7 @@ if __name__=='__main__':
         
     
         subj_trf_pth=get_subj_trf_pth(subj_num,thresh_folds_dir="thresh_750_5fold_shuffled",
-                                           clean_or_noisy="noisy",
+                                           clean_or_noisy="clean",
                                            rms_str='_rms_',cv_method_str="_nested")
         with open(subj_trf_pth, 'rb') as f:
             trf_results=pickle.load(f)

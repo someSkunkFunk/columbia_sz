@@ -8,9 +8,13 @@ import utils
 from mtrf.model import TRF
 import matplotlib.pyplot as plt
 
-def get_subj_trf_pth(subj_num,thresh_folds_dir,clean_or_noisy,rms_str,cv_method_str,use_decimate):
+def get_subj_trf_pth(subj_num,thresh_folds_dir,clean_or_noisy,rms_str,cv_method_str,use_decimate=True):
+    '''
+    note use_decimate=True should be standard now but sometimes I change it for comparison with old results
+    '''
     subj_cat=utils.get_subj_cat(subj_num)
-        
+    # if rms_str=='':
+    #     rms_str='_' 
     results_fnm=f'bkwd_trf_{clean_or_noisy}{rms_str}stims{cv_method_str}.pkl'
     if use_decimate:
         evnt_dir="evnt_decimate"
@@ -25,7 +29,6 @@ def get_subj_trf_pth(subj_num,thresh_folds_dir,clean_or_noisy,rms_str,cv_method_
 
 if __name__=='__main__':
     #specify results to load
-    use_decimate=True
     evnt=True
     shuffled_trials=True
     rm_old_figs=True
@@ -33,7 +36,7 @@ if __name__=='__main__':
     evnt_thresh='750'
     k=5 #number of cv folds
     clean_or_noisy='noisy'
-    rms_str='_rms_' # '_rms_' or ''
+    rms_str='' # '_rms_' or '_'
     cv_method_str='_nested' #"_nested" or "_crossval"
     
 
@@ -67,7 +70,8 @@ if __name__=='__main__':
 
     if evnt:
         # results_dir=os.path.join("..","results","evnt",thresh_dir)
-        if use_decimate:
+        _use_decimate=True #should just be standard default now...
+        if _use_decimate:
             decimate_str="_decimate"
         else:
             decimate_str=""
@@ -89,22 +93,30 @@ if __name__=='__main__':
     hc_subjs=utils.get_all_subj_nums(single_cat="hc")
     sp_subjs=utils.get_all_subj_nums(single_cat="sp")
     all_subjs=utils.get_all_subj_nums() 
-    # initialize r-values vectors
-    hc_rs=np.zeros(len(hc_subjs))
-    sp_rs=np.zeros(len(sp_subjs))
+    # initialize r-values vectors note changed to list to make it easier to deal
+    # w missing subjects
+    # hc_rs=np.zeros(len(hc_subjs))
+    # sp_rs=np.zeros(len(sp_subjs))
+    hc_rs=[]
+    sp_rs=[]
 
 
     for subj_num in all_subjs:
         # load each subject's trfs, compute average weights
         subj_cat=utils.get_subj_cat(subj_num)
-        subj_trf_pth=get_subj_trf_pth(subj_num,thresh_folds_dir,clean_or_noisy,rms_str,cv_method_str,use_decimate)
-        with open(subj_trf_pth, 'rb') as f:
-            trf_results=pickle.load(f)
-        # set first zero-valued element in arrya to mean of current subject, depending on category
+        subj_trf_pth=get_subj_trf_pth(subj_num,thresh_folds_dir,clean_or_noisy,rms_str,cv_method_str)
+        try:
+            with open(subj_trf_pth, 'rb') as f:
+                trf_results=pickle.load(f)
+        except FileNotFoundError:
+            print(f"No data found for {subj_num}")
+        # set first zero-valued element in array to mean of current subject, depending on category
         if subj_cat=='hc':
-            hc_rs[np.where(hc_rs==0)[0][0]]=trf_results['r_ncv'].mean()
+            hc_rs.append(trf_results['r_ncv'].mean())
+            # hc_rs[np.where(hc_rs==0)[0][0]]=trf_results['r_ncv'].mean()
         elif subj_cat=="sp":
-            sp_rs[np.where(sp_rs==0)[0][0]]=trf_results['r_ncv'].mean()
+            sp_rs.append(trf_results['r_ncv'].mean())
+            # sp_rs[np.where(sp_rs==0)[0][0]]=trf_results['r_ncv'].mean()
 
     fig,ax=plt.subplots()
     ax.boxplot((hc_rs,sp_rs), labels=("hc", "sp"))

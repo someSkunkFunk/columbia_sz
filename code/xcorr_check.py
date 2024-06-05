@@ -1,6 +1,6 @@
 # script to check that stim envelopes actually give anything when using xcorr
 #%%
-# import packages
+# INIT
 import pickle
 import scipy.io as spio
 import numpy as np
@@ -10,7 +10,7 @@ import matplotlib.pyplot as plt
 import utils
 from trf_helpers import load_stim_envs, setup_xy
 from scipy import signal 
-#%%
+
 # set up
 all_subjs=utils.get_all_subj_nums()
 stims_dict=utils.get_stims_dict()
@@ -21,7 +21,7 @@ if evnt:
     which_xcorr=None 
     reduce_trials_by=None
     thresh_dir='thresh_750'
-    eeg_dir=os.path.join("..","eeg_data","preprocessed_evnt",thresh_dir)
+    eeg_dir=os.path.join("..","eeg_data","preprocessed_decimate",thresh_dir)
 else:
     eeg_dir=None
     which_xcorr='wavs'
@@ -71,7 +71,7 @@ for subj_num in all_subjs:
     # average out stimuli
     subj_xcorrs=subj_xcorrs.mean(axis=1).squeeze()
     figs_dir=os.path.join("..","figures",
-                            "evnt_info",thresh_dir,"xcorr_align_check",
+                            "evnt_info",thresh_dir,"xcorr_align_check_decimate",
                             subj_cat,subj_num)
     utils.rm_old_figs(figs_dir)#NOTE: CAREFUL NOT TO SPECIFY PARENT DIRECTORY CAUSING UNRELATED FIGURES
     # TO BE DELETED SINCE THIS FUNCTION REMOVES FILES IN SUB-DIRECTORIES ALSO

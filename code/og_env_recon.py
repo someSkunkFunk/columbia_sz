@@ -75,7 +75,8 @@ def make_debug_plots(eeg_dir,stim_nms,stimulus,other_stimulus,clean_or_noisy,
         ax[1].set_title(f'clean {nms} wav and eeg recorded audio')
         # plt.show()
 
-        other=list(filter(lambda s: s not in clean_or_noisy, {'clean','noisy'}))
+        other=list(filter(lambda s: s not in clean_or_noisy, {'clean','noisy'}))[0]
+        
         if clean_or_noisy=='clean':
             input_wav=clean_stim_wav
             other_wav=noisy_stim_wav
@@ -205,7 +206,6 @@ def nested_cv_wrapper(subj_num,
         
 
         #recorded audio mostly for debuggning and checking alignment of timestamps
-        #TODO: fix setupxy so it works with evnt stamps
         if evnt:
             # clean subj_data trials where stim/response durations are too different
             num_trials_pre=len(subj_data)
@@ -221,12 +221,12 @@ def nested_cv_wrapper(subj_num,
         # should disable plotting when running actual slurm job
         if "which_stmps" in os.environ:
             
-            _debug_alignment=True
+            _debug_alignment=False
             if _debug_alignment:
                 print('Set debug alignent to true in SLURM job... will plott all stimuli and recorded audio')
         else:
-            print("DEBUG ALIGNMENT AUTOMATICALLY SET TO TRUE HERE")
-            _debug_alignment=True
+            # print("SET DEBUG ALIGNMENT TO TRUE HERE FOR PLOTTING DURING INTERACTIVE SESSION")
+            _debug_alignment=False
         if _debug_alignment:
             print(f"DEBUG ALIGN ENABLED, NOT DOING TRF")
             # clean_envs=load_stim_envs(lowpass_f=_stim_lowpass_f,clean_or_noisy='clean',norm=True)
@@ -356,7 +356,7 @@ if __name__=="__main__":
         evnt=True
         evnt_thresh="750"
         k=5
-        shuffle_trials=False
+        shuffle_trials=True
         blocks='all'
         cv_method="nested"
         # lim_stim=50

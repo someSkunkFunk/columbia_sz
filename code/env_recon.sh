@@ -26,7 +26,7 @@ hostname
 
 echo "rms envelopes, decimated downsampling, using clean speech envelopes"
 
-export which_stmps="evnt"s
+export which_stmps="evnt"
 export which_xcorr="wavs"
 export evnt_thresh="750"
 export k_folds="5"
