@@ -234,7 +234,7 @@ def nested_cv_wrapper(subj_num,
             print(f"r-values: {r_ncv}, mean: {r_ncv.mean()}, best_lam:{best_lam}")
         elif cv_method.lower()=='crossval':
             regularization=0
-            print(f"using k={k} folds for nested cross validations, with regularization={regularization}")
+            print(f"using k={k} folds for cross validations, with regularization={regularization}")
             r_mean=crossval(trf, stimulus[:lim_stim], response[:lim_stim], fs_trf, tmin, tmax, regularization, k=k)
             print(f"mean r-val: {r_mean}")
 
