@@ -1,3 +1,23 @@
+def sensible_lengths(seg_data:tuple,stim_data):
+    '''
+    helper fnc to filter out eeg data where durations are obviously wrong
+    due to evnt timestamps
+    stim data is assumed to be dictionary with stim envelopes, keys are stim nms
+    seg_data is evnt-generated preprocessed data tuple with 
+    (list of stim nms in segment, audio recodring array for segment, eeg segment array)
+    returns True or False
+    '''
+    # NOTE: subj_data contains eeg data sampled at fs_trf
+    # and audio recording at eeg_fs
+    _fs=100
+    _max_diff=0.5 # in seconds
+    eeg_dur=(len(seg_data[-1])-1)/_fs #hard-coded fs here...
+    stim_nms=[nm.strip(".wav") for nm in seg_data[0]]
+    audio_dur=sum([stim_data[nm].size for nm in stim_nms])/_fs
+    if abs(audio_dur-eeg_dur) < _max_diff:
+        return True
+    else:
+        return False 
 import os
 import pickle
 def load_stim_envs(lowpass_f='49',clean_or_noisy='clean',norm=False):

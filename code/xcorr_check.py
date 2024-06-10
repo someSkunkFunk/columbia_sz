@@ -12,7 +12,7 @@ from trf_helpers import load_stim_envs, setup_xy
 from scipy import signal 
 
 # set up
-all_subjs=utils.get_all_subj_nums()
+all_subjs=utils.get_all_subj_nums() #NOTE: consider changing to pulling form subjs_list.txt
 stims_dict=utils.get_stims_dict()
 all_stim_nms=stims_dict["ID"] #note .wav not in name
 # f_lp=49 #Hz, lowpass filter freq for get_stim_envs

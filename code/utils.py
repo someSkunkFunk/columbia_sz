@@ -1,3 +1,12 @@
+def filter_lists_with_indices(lists_to_filter, filtered_indices):
+    'filter list based on list of indices'
+    filtered_lists = [[inner[idx] for idx in filtered_indices] for inner in lists_to_filter]
+    return filtered_lists
+def filter_blocks_idx(blocks_to_keep,stim_nms):
+    'generate list of indices for which blocks to keep'
+    btk_set=set(blocks_to_keep)
+    blocks_idx=[idx for idx,nms in enumerate(stim_nms) if nms[0][:3] in btk_set]
+    return blocks_idx
 import os
 import scipy.io as spio
 import numpy as np

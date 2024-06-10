@@ -1,4 +1,4 @@
-# script for bkwd mtrf analysis 
+# script for getting optimization tuning curve for regularization parameter lambda
 #%%
 # INIT
 import pickle
@@ -9,76 +9,8 @@ import os
 import utils
 from trf_helpers import find_bad_electrodes, load_stim_envs, setup_xy, sensible_lengths
 from mtrf.model import TRF
-from mtrf.stats import crossval, nested_crossval
-
-# define wrapper,utilities
-
- 
-
-def make_debug_plots(eeg_dir,stim_nms,stimulus,other_stimulus,clean_or_noisy,
-                     recorded_audio,fs_trf,subj_num,subj_cat,thresh_dir):
-    import matplotlib.pyplot as plt
-    
-    stim_fl_path=os.path.join(eeg_dir, "stim_info.mat")
-    stims_dict=utils.get_stims_dict(stim_fl_path)
-    
-    fs_audio=stims_dict['fs'][0]
-    fs_rec=2400
-
-    for stim_ii, (stim_input,not_stim_input,recording,nms) in enumerate(zip(stimulus,other_stimulus,recorded_audio,stim_nms)):
-        print(f"plotting stim {stim_ii} of {len(stimulus)}")
-        noisy_stim_wav=np.concatenate([utils.get_stim_wav(stims_dict,stim_nm,'noisy') for stim_nm in nms])
-        clean_stim_wav=np.concatenate([utils.get_stim_wav(stims_dict,stim_nm,'clean') for stim_nm in nms])
-        # stim_input=stimulus[stim_ii]
-
-        # recording=recorded_audio[stim_ii]
-        t_rec=np.arange(recording.size)/fs_rec
-        t_stim=np.arange(noisy_stim_wav.size)/fs_audio
-        t_trf_input=np.arange(stim_input.size)/fs_trf
-        fig,ax=plt.subplots(4,1,figsize=[12,10])
-        ax[0].plot(t_rec,recording,label="eeg audio")
-        ax[0].plot(t_stim,noisy_stim_wav,label="noisy wav")
-        ax[0].legend()
-        ax[0].set_title(f'noisy {nms} wavs and eeg recorded audio')
-        # plt.show()
-
-        ax[1].plot(t_rec,recording,label="eeg audio")
-        ax[1].plot(t_stim,clean_stim_wav,label="clean wav")
-        ax[1].legend()
-        ax[1].set_title(f'clean {nms} wav and eeg recorded audio')
-        # plt.show()
-
-        other=list(filter(lambda s: s not in clean_or_noisy, {'clean','noisy'}))[0]
-        
-        if clean_or_noisy=='clean':
-            input_wav=clean_stim_wav
-            other_wav=noisy_stim_wav
-        else:
-            input_wav=noisy_stim_wav
-            other_wav=clean_stim_wav
-        ax[2].plot(t_stim,input_wav,label=f"{clean_or_noisy} stim wav")
-        ax[2].plot(t_trf_input,stim_input,label=f"{clean_or_noisy} trf input")
-        ax[2].legend()
-        ax[2].set_title(f'noisy {nms} wav and noisy trf input envelope')
-        # plt.show()
-        ax[3].plot(t_stim,other_wav,label=f"{other} stim wav")
-        ax[3].plot(t_trf_input,not_stim_input,label=f"{other} trf input")
-        ax[3].legend()
-        ax[3].set_title(f'clean {nms} wav and clean trf input envelope')
-        # plt.show()
-
-        # raise NotImplementedError('temporary pause here')
-        stim_num=f'{stim_ii:03}'
-
-        fig_dir=os.path.join("..","figures","trf_input_align_check_decimate",
-                             thresh_dir,subj_cat,subj_num)
-        if not os.path.isdir(fig_dir):
-            os.makedirs(fig_dir,exist_ok=True)
-        fig_pth=os.path.join(fig_dir,stim_num)
-        plt.savefig(fig_pth)
-        plt.close()
-        del fig, ax
-def nested_cv_wrapper(subj_num,
+from mtrf.stats import crossval
+def get_tuning_curve(subj_num,
                       direction=-1,
                       tmin=-0.1,
                       tmax=0.4,
@@ -109,7 +41,6 @@ def nested_cv_wrapper(subj_num,
     '''
     print(f"running blocks: {blocks}")
     print(f"stimuli envelopes: {clean_nxor_noisy}")
-    # f_lp=49 #Hz, lowpass filter freq for get_stim_envs
     subj_cat=utils.get_subj_cat(subj_num)
     # specify fl paths assumes running from code as pwd
     eeg_dir=os.path.join("..","eeg_data")
@@ -143,10 +74,6 @@ def nested_cv_wrapper(subj_num,
         fs_trf=subj_data['fs'][0]
     
     
-    if lim_stim is not None:
-        # in case we want to run to completion for testing 
-        print(f'running number of stimuli limited to {lim_stim}, wont save result...\n')
-        print(' NOTE THIS IS ACTUALLY NOT DOING ANYTHING')
     if (lim_stim is not None) and save_results:
         print("not saving results by default because assuming we just want to test that this runs.") 
 
@@ -207,13 +134,7 @@ def nested_cv_wrapper(subj_num,
                 other_envs=utils.load_matlab_envs('clean')
             else:
                 other_envs=utils.load_matlab_envs('noisy')
-            other_stimulus,_,_,_=setup_xy(subj_data,other_envs,
-                                                subj_num,reduce_trials_by,
-                                                outlier_idx,evnt=evnt,which_xcorr=which_xcorr,
-                                                shuffle_trials=shuffle_trials)
-            make_debug_plots(eeg_dir,stim_nms,stimulus,other_stimulus,clean_or_noisy,
-                             recorded_audio,fs_trf,subj_num,subj_cat,thresh_dir)
-            print("done plotting")
+
         
         if blocks!='all' and blocks!='1,2,3,4,5,6':
             #filter blocks 
@@ -289,13 +210,7 @@ def nested_cv_wrapper(subj_num,
                                     'timestamps_generated_by':timestamps_generated_by}, f)
             
 
-    #NOTE: disabling return functionality since we never use it and causes errors now when cv_method is not nested
-    if return_xy == True:
-        pass
-        # return trf, r_ncv, best_lam, (stimulus, response, stim_nms)
-    else:
-        pass
-        # return trf, r_ncv, best_lam
+
 #%% MAIN SCRIPT
 if __name__=="__main__":
     
@@ -353,7 +268,3 @@ if __name__=="__main__":
                     blocks=blocks,cv_method=cv_method,
                     which_envs=which_envs)
     print(f"{subj_num} TRF complete.")
-
-                     
-
-
