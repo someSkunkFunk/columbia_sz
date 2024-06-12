@@ -2,7 +2,6 @@
 #%%
 # INIT
 import pickle
-
 import numpy as np
 import os
 
@@ -21,7 +20,7 @@ def get_tuning_curve(subj_num,
                       clean_nxor_noisy=['clean'], 
                       regs=np.logspace(-1, 8, 10),
                       reduce_trials_by="pauses",
-                      return_xy=False, 
+                      return_xy=False,
                       evnt=False,which_xcorr=None,
                       evnt_thresh=None,
                       shuffle_trials=True,
@@ -84,7 +83,16 @@ def get_tuning_curve(subj_num,
         outlier_idx=find_bad_electrodes(subj_data)
     else:
         outlier_idx=None
-
+    # generate mathching thresh-folds dir 
+    # (note: maybe make this a function called in both og_env_recon and here so names are consistent)
+    if k!=-1:
+        thresh_folds_dir=thresh_dir+f"_{k}fold"+f"_{shuffled}"
+    elif k==-1:
+        thresh_folds_dir=thresh_dir+"_loo"+f"_{shuffled}"
+    if blocks!="all" and blocks!="1,2,3,4,5,6":
+        print("note: need to change this in xcorr case")
+        blocks_str="".join(blocks_to_keep)
+        thresh_folds_dir=thresh_folds_dir+"_"+blocks_str
     for clean_or_noisy in clean_nxor_noisy:
         #TODO: pre-compute the stim envelopes before running trf analysis
         # so they can just be loaded rather than waiting for computing each
@@ -145,14 +153,27 @@ def get_tuning_curve(subj_num,
         total_sound_time=sum([len(s)/fs_trf for s in stimulus])
         total_response_time=sum([len(r)/fs_trf for r in response])
         print(f"total stim time: {total_sound_time}\ntotal response time: {total_response_time}")
+        results=[('regularization', 'mean_r','trf_model')]#store (regularization, r-val, trf_model)
         for regularization in regs:
             # init bkwd model
-            trf = TRF(direction=direction)  
+            trf=TRF(direction=direction)  
 
         
             print(f"using k={k} folds for cross validation, with regularization={regularization}")
             r_mean=crossval(trf, stimulus[:lim_stim], response[:lim_stim], fs_trf, tmin, tmax, regularization, k=k)
             print(f"mean r-val: {r_mean}")
+            results.append((regularization,r_mean,trf))
+        
+        
+        results_dir=os.path.join("..","results","evnt_decimate",thresh_folds_dir,subj_cat,subj_num)
+        results_fnm=f"lambda_tuning_curve_{clean_or_noisy}{which_envs_str}"
+        results_path=os.path.join(results_dir,results_fnm)
+        print(f"Storing (regularization, r-val, trf_model) to {results_path}")
+        with open(results_path, 'wb') as file:
+            pickle.dump(results, file)
+        print(f"{subj_num} complete.")
+            
+            
 
 
 # save results TODO: figure out what we want to save and where
@@ -216,7 +237,6 @@ if __name__=="__main__":
         bool_dict={'true':True,'false':False}
         shuffle_trials=bool_dict[os.environ["shuffle_trials"].lower()]
         blocks=os.environ["blocks"]
-        cv_method=os.environ["cv_method"]
         which_envs=os.environ["which_envs"]
 
         
@@ -251,15 +271,12 @@ if __name__=="__main__":
         else:
             which_xcorr="wavs"
         which_envs='rms'
-        
-        
-    #note: return_xy is False by default but when save_results is True will store them in pkl anyway
     print(f"running subject {subj_num}...")
     get_tuning_curve(subj_num,save_results=True,
                     evnt=evnt,
                     evnt_thresh=evnt_thresh,
                     which_xcorr=which_xcorr,
                     k=k,shuffle_trials=shuffle_trials,
-                    blocks=blocks,cv_method=cv_method,
+                    blocks=blocks,
                     which_envs=which_envs)
-    print(f"{subj_num} tuning complete.")
+    print(f"{subj_num} tuning curve complete.")

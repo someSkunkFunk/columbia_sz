@@ -1,8 +1,7 @@
 # script for bkwd mtrf analysis 
-#%%
+# %%
 # INIT
 import pickle
-
 import numpy as np
 import os
 
