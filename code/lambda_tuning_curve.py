@@ -17,8 +17,8 @@ def get_tuning_curve(subj_num,
                       lim_stim=None,
                       save_results=False,
                       drop_bad_electrodes=False,
-                      clean_nxor_noisy=['clean'], 
-                      regs=np.logspace(-1, 8, 10),
+                      clean_nxor_noisy=['clean','noisy'], 
+                      regs=np.logspace(-10, 12, 50),
                       reduce_trials_by="pauses",
                       return_xy=False,
                       evnt=False,which_xcorr=None,
@@ -38,7 +38,7 @@ def get_tuning_curve(subj_num,
     # or grouping by pauses within a block ("pauses")
     '''
     print(f"running blocks: {blocks}")
-    print(f"stimuli envelopes: {clean_nxor_noisy}")
+    print(f"stimuli envelopes to use as input: {clean_nxor_noisy}")
     subj_cat=utils.get_subj_cat(subj_num)
     # specify fl paths assumes running from code as pwd
     eeg_dir=os.path.join("..","eeg_data")
@@ -94,19 +94,13 @@ def get_tuning_curve(subj_num,
         blocks_str="".join(blocks_to_keep)
         thresh_folds_dir=thresh_folds_dir+"_"+blocks_str
     for clean_or_noisy in clean_nxor_noisy:
-        #TODO: pre-compute the stim envelopes before running trf analysis
-        # so they can just be loaded rather than waiting for computing each
-        _stim_lowpass_f='49'
-        # stim_envs=get_stim_envs(stims_dict,clean_or_noisy,fs_output=fs_trf,f_lp=f_lp)
-        # save_pth=os.path.join("..","eeg_data","stim_envs.pkl")
-        # with open(save_pth,'wb') as fl:
-        #     pickle.dump(stim_envs,fl)
-        #     print(f"saved stim_envs to {save_pth}")
+        print(f'running {clean_or_noisy}...')
         if which_envs=='rms':
             print("Loading MATLAB computed envelopes")
             which_envs_str="_rms"
             stim_envs=utils.load_matlab_envs(clean_or_noisy)
         else:
+            _stim_lowpass_f='49'
             print(f"loading pre-computed envelopes for {clean_or_noisy} stims lowpassed at {_stim_lowpass_f};")
             which_envs_str=""
             stim_envs=load_stim_envs(lowpass_f=_stim_lowpass_f,clean_or_noisy=clean_or_noisy)
@@ -173,60 +167,6 @@ def get_tuning_curve(subj_num,
             pickle.dump(results, file)
         print(f"{subj_num} complete.")
             
-            
-
-
-# save results TODO: figure out what we want to save and where
-        # if lim_stim is None and save_results:
-            
-            
-        
-            # results_file= f"bkwd_trf_{clean_or_noisy}{which_envs_str}stims_{cv_method}.pkl"
-            # # note the clean ones didn't specify in file name since added string formatting after
-            # # but whatever
-            # if evnt:
-            #     timestamps_generated_by="evnt"
-            #     if k!=-1:
-            #         thresh_folds_dir=thresh_dir+f"_{k}fold"+f"_{shuffled}"
-            #     elif k==-1:
-            #         thresh_folds_dir=thresh_dir+"_loo"+f"_{shuffled}"
-            #     if blocks!="all" and blocks!="1,2,3,4,5,6":
-            #         print("note: need to change this in xcorr case")
-            #         blocks_str="".join(blocks_to_keep)
-            #         thresh_folds_dir=thresh_folds_dir+"_"+blocks_str
-            #     results_dir=os.path.join("..","results","evnt_decimate",
-            #                             thresh_folds_dir,subj_cat,subj_num)
-            #     # results_dir = os.path.join("..","evnt_results", subj_cat, subj_num)
-            # else:
-            #     timestamps_generated_by=f"xcorr{which_xcorr}"
-            #     xcorr_subdir=f"xcorr_{which_xcorr}"
-            #     results_dir = os.path.join("..","results",xcorr_subdir,subj_cat,subj_num)
-            
-            
-            # if reduce_trials_by is not None:
-            #     trial_reduction=reduce_trials_by
-            # else:
-            #     trial_reduction="None"
-            # # Check if the directory exists; if not, create it
-            # # note: will also create parent directoriesr
-            # if not os.path.exists(results_dir):
-            #     os.makedirs(results_dir, exist_ok=True)
-            # results_pth=os.path.join(results_dir, results_file)
-            # print(f"saving results to {results_pth}")
-            # with open(results_pth, 'wb') as f:
-            #     if cv_method.lower()=='nested':
-            #         pickle.dump({'trf_fitted': trf, 'r_ncv': r_ncv, 'best_lam': best_lam,
-            #                         'stimulus': stimulus, 'response': response, 'stim_nms': stim_nms,
-            #                         'trials_reduced_by':trial_reduction,
-            #                         'timestamps_generated_by':timestamps_generated_by}, f)
-            #     elif cv_method.lower()=='crossval':
-            #         pickle.dump({'trf_fitted': trf, 'r_mean': r_mean, 'regularization': regularization,
-            #                         'stimulus': stimulus, 'response': response, 'stim_nms': stim_nms,
-            #                         'trials_reduced_by':trial_reduction,
-            #                         'timestamps_generated_by':timestamps_generated_by}, f)
-            
-
-
 #%% MAIN SCRIPT
 if __name__=="__main__":
     
@@ -238,7 +178,7 @@ if __name__=="__main__":
         shuffle_trials=bool_dict[os.environ["shuffle_trials"].lower()]
         blocks=os.environ["blocks"]
         which_envs=os.environ["which_envs"]
-        clean_or_noisy=os.environ["clean_or_noisy"]
+        # clean_or_noisy=os.environ["clean_or_noisy"]
 
 
         
@@ -280,6 +220,5 @@ if __name__=="__main__":
                     which_xcorr=which_xcorr,
                     k=k,shuffle_trials=shuffle_trials,
                     blocks=blocks,
-                    which_envs=which_envs,
-                    clean_nxor_noisy=clean_or_noisy)
+                    which_envs=which_envs)
     print(f"{subj_num} tuning curve complete.")

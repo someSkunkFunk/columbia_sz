@@ -86,7 +86,7 @@ def nested_cv_wrapper(subj_num,
                       save_results=False,
                       drop_bad_electrodes=False,
                       clean_nxor_noisy=['clean'], 
-                      regs=np.logspace(-1, 8, 10),
+                      regs=np.logspace(-10, 12, 50),
                       reduce_trials_by="pauses",
                       return_xy=False, 
                       evnt=False,which_xcorr=None,
@@ -107,7 +107,7 @@ def nested_cv_wrapper(subj_num,
     # or grouping by pauses within a block ("pauses")
     '''
     print(f"running blocks: {blocks}")
-    print(f"stimuli envelopes: {clean_nxor_noisy}")
+    print(f"using stimuli envelopes: {clean_nxor_noisy}")
     # f_lp=49 #Hz, lowpass filter freq for get_stim_envs
     subj_cat=utils.get_subj_cat(subj_num)
     # specify fl paths assumes running from code as pwd
@@ -159,19 +159,13 @@ def nested_cv_wrapper(subj_num,
         outlier_idx=None
 
     for clean_or_noisy in clean_nxor_noisy:
-        #TODO: pre-compute the stim envelopes before running trf analysis
-        # so they can just be loaded rather than waiting for computing each
-        _stim_lowpass_f='49'
-        # stim_envs=get_stim_envs(stims_dict,clean_or_noisy,fs_output=fs_trf,f_lp=f_lp)
-        # save_pth=os.path.join("..","eeg_data","stim_envs.pkl")
-        # with open(save_pth,'wb') as fl:
-        #     pickle.dump(stim_envs,fl)
-        #     print(f"saved stim_envs to {save_pth}")
+        print(f"fetching {clean_or_noisy} envelopes...")
         if which_envs=='rms':
             print("Loading MATLAB computed envelopes")
             which_envs_str="_rms_"
             stim_envs=utils.load_matlab_envs(clean_or_noisy)
         else:
+            _stim_lowpass_f='49'
             print(f"loading pre-computed envelopes for {clean_or_noisy} stims lowpassed at {_stim_lowpass_f};")
             which_envs_str=""
             stim_envs=load_stim_envs(lowpass_f=_stim_lowpass_f,clean_or_noisy=clean_or_noisy)
@@ -201,7 +195,6 @@ def nested_cv_wrapper(subj_num,
             _debug_alignment=False
         if _debug_alignment:
             print(f"DEBUG ALIGN ENABLED, NOT DOING TRF")
-            # clean_envs=load_stim_envs(lowpass_f=_stim_lowpass_f,clean_or_noisy='clean',norm=True)
             if clean_or_noisy=='noisy':
                 other_envs=utils.load_matlab_envs('clean')
             else:
