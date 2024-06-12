@@ -11,7 +11,7 @@ subjs_list=utils.get_all_subj_nums()
 #NOTE THRESH FOLDS DIR HARDCODED BUT THIS MAY BE CUMBERSOME IN FUTURE
 lambda_dir=os.path.join("..","results","evnt_decimate",
 "thresh_750_5fold_shuffled")
-noisy_or_clean="noisy"
+noisy_or_clean="clean"
 rms_str="_rms"
 lambda_fnm=f"lambda_tuning_curve_{noisy_or_clean}{rms_str}.pkl"
 def extract_tuning_curve(subj_lambda:list):
@@ -50,6 +50,7 @@ for indx,subj_num in enumerate(subjs_list):
     ax.set_title(f"{subj_num} tuning curve")
     ax.set_xlabel("lambda")
     ax.set_ylabel("r-value")
+    ax.set_xscale("log")
     # utils.rm_old_figs(figs_dir) #NOTE DECIDED AGAINST RM_OLD_FIGS since both noisy and clean will be put in same folder
     fig_nm=f"{noisy_or_clean}_tuning curve.png"
     fig_pth=os.path.join(figs_dir,fig_nm)
