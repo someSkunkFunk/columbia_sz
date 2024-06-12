@@ -104,7 +104,7 @@ def get_tuning_curve(subj_num,
         #     print(f"saved stim_envs to {save_pth}")
         if which_envs=='rms':
             print("Loading MATLAB computed envelopes")
-            which_envs_str="_rms_"
+            which_envs_str="_rms"
             stim_envs=utils.load_matlab_envs(clean_or_noisy)
         else:
             print(f"loading pre-computed envelopes for {clean_or_noisy} stims lowpassed at {_stim_lowpass_f};")
@@ -166,7 +166,7 @@ def get_tuning_curve(subj_num,
         
         
         results_dir=os.path.join("..","results","evnt_decimate",thresh_folds_dir,subj_cat,subj_num)
-        results_fnm=f"lambda_tuning_curve_{clean_or_noisy}{which_envs_str}"
+        results_fnm=f"lambda_tuning_curve_{clean_or_noisy}{which_envs_str}.pkl"
         results_path=os.path.join(results_dir,results_fnm)
         print(f"Storing (regularization, r-val, trf_model) to {results_path}")
         with open(results_path, 'wb') as file:
@@ -238,6 +238,8 @@ if __name__=="__main__":
         shuffle_trials=bool_dict[os.environ["shuffle_trials"].lower()]
         blocks=os.environ["blocks"]
         which_envs=os.environ["which_envs"]
+        clean_or_noisy=os.environ["clean_or_noisy"]
+
 
         
         if which_stmps.lower()=="xcorr":
@@ -261,7 +263,7 @@ if __name__=="__main__":
         k=5
         shuffle_trials=True
         blocks='all'
-        cv_method="nested"
+        clean_or_noisy="noisy"
         # lim_stim=50
         print(f"evnt_thresh selected: {evnt_thresh}")
 
@@ -278,5 +280,6 @@ if __name__=="__main__":
                     which_xcorr=which_xcorr,
                     k=k,shuffle_trials=shuffle_trials,
                     blocks=blocks,
-                    which_envs=which_envs)
+                    which_envs=which_envs,
+                    clean_nxor_noisy=clean_or_noisy)
     print(f"{subj_num} tuning curve complete.")

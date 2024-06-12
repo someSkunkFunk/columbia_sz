@@ -6,7 +6,7 @@
 #SBATCH -t 08:00:00
 #SBATCH --mem=60gb
 #SBATCH -n 22 ##Number of tasks
-#SBATCH -J tuning_curve
+#SBATCH -J tuning_curve_noisy
 #SBATCH --partition=standard
 
 
@@ -24,7 +24,7 @@ date
 
 hostname
 
-echo "rms envelopes, decimated downsampling, using clean speech envelopes"
+echo "calculate prediction accuracy as function of lambda, save models also (using noisy envelopes)"
 
 export which_stmps="evnt"
 export which_xcorr="wavs"
@@ -35,6 +35,7 @@ export shuffle_trials="true"
 ## export blocks="1,2,3,4,5"
 export blocks="all"
 export which_envs="rms"
+export clean_or_noisy="noisy"
 
 source /scratch/apalaci6/miniconda3/bin/activate lalor0
 
