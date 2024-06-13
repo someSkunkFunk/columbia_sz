@@ -13,8 +13,8 @@ def get_subj_trf_pth(subj_num,thresh_folds_dir,clean_or_noisy,rms_str,cv_method_
     note use_decimate=True should be standard now but sometimes I change it for comparison with old results
     '''
     subj_cat=utils.get_subj_cat(subj_num)
-    # if rms_str=='':
-    #     rms_str='_' 
+    if rms_str=='':
+        rms_str='_' 
     results_fnm=f'bkwd_trf_{clean_or_noisy}{rms_str}stims{cv_method_str}.pkl'
     if use_decimate:
         evnt_dir="evnt_decimate"
@@ -32,16 +32,16 @@ if __name__=='__main__':
     evnt=True
     shuffled_trials=True
     rm_old_figs=True
-    blocks='1,2,3,4,5,6' # all or list of numbers as a string
+    blocks='6' # all or list of numbers as a string
     evnt_thresh='750'
     k=5 #number of cv folds
-    clean_or_noisy='noisy'
-    rms_str='' # '_rms_' or '_'
+    clean_or_noisy='clean'
+    rms_str='_rms_'#'_rms_' or '_'
     cv_method_str='_nested' #"_nested" or "_crossval"
     
 
 
-    ylims=[-0.02, 0.08] # vertical axis limits
+    ylims=[-0.08, 0.2] # vertical axis limits
     if shuffled_trials:
         shuffled="shuffled"
     else:
