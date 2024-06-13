@@ -7,23 +7,8 @@ import os
 import utils
 from mtrf.model import TRF
 import matplotlib.pyplot as plt
+from trf_helpers import get_subj_trf_pth
 
-def get_subj_trf_pth(subj_num,thresh_folds_dir,clean_or_noisy,rms_str,cv_method_str,use_decimate=True):
-    '''
-    note use_decimate=True should be standard now but sometimes I change it for comparison with old results
-    '''
-    subj_cat=utils.get_subj_cat(subj_num)
-    if rms_str=='':
-        rms_str='_' 
-    results_fnm=f'bkwd_trf_{clean_or_noisy}{rms_str}stims{cv_method_str}.pkl'
-    if use_decimate:
-        evnt_dir="evnt_decimate"
-    else:
-        evnt_dir="evnt"
-    subj_results_dir=os.path.join("..","results",evnt_dir,
-                                thresh_folds_dir,subj_cat,subj_num)
-    subj_trf_pth=os.path.join(subj_results_dir,results_fnm)
-    return subj_trf_pth
 #%%
 # MAIN BOXPLOT SCRIPT
 

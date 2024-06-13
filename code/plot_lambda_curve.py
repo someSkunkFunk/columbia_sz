@@ -11,7 +11,7 @@ subjs_list=utils.get_all_subj_nums()
 #NOTE THRESH FOLDS DIR HARDCODED BUT THIS MAY BE CUMBERSOME IN FUTURE
 lambda_dir=os.path.join("..","results","evnt_decimate",
 "thresh_750_5fold_shuffled")
-noisy_or_clean="clean"
+noisy_or_clean="noisy"
 rms_str="_rms"
 lambda_fnm=f"lambda_tuning_curve_{noisy_or_clean}{rms_str}.pkl"
 def extract_tuning_curve(subj_lambda:list):

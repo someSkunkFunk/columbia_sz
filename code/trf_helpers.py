@@ -1,3 +1,42 @@
+def get_thresh_folds_dir(blocks='all',k=5,thresh:str='750',shuffled:str='shuffled'):
+    '''
+    shuffled: shufless or shuffled
+    '''
+    thresh_dir=f"thresh_{thresh}" # should be three digit number representing decimals to third 
+    if k!=-1:
+        thresh_folds_dir=thresh_dir+f"_{k}fold"+f"_{shuffled}"
+    elif k==-1:
+        thresh_folds_dir=thresh_dir+"_loo"+f"_{shuffled}"
+    if blocks!="all" and blocks!="1,2,3,4,5,6":
+        print("note: need to change this in xcorr case")
+        blocks_to_keep=['b0'+b.strip() for b in blocks.split(",")]
+        blocks_str="".join(blocks_to_keep)
+        thresh_folds_dir=thresh_folds_dir+"_"+blocks_str
+    return thresh_folds_dir
+
+import os
+def get_subj_trf_pth(subj_num,
+thresh_folds_dir,
+clean_or_noisy,
+rms_str,
+cv_method_str="nested",
+use_decimate=True):
+    from utils import get_subj_cat
+    '''
+    note use_decimate=True should be standard now but sometimes I change it for comparison with old results
+    '''
+    subj_cat=get_subj_cat(subj_num)
+    if rms_str=='':
+        rms_str='_' 
+    results_fnm=f'bkwd_trf_{clean_or_noisy}{rms_str}stims{cv_method_str}.pkl'
+    if use_decimate:
+        evnt_dir="evnt_decimate"
+    else:
+        evnt_dir="evnt"
+    subj_results_dir=os.path.join("..","results",evnt_dir,
+                                thresh_folds_dir,subj_cat,subj_num)
+    subj_trf_pth=os.path.join(subj_results_dir,results_fnm)
+    return subj_trf_pth
 def sensible_lengths(seg_data:tuple,stim_data):
     '''
     helper fnc to filter out eeg data where durations are obviously wrong

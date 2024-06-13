@@ -12,44 +12,10 @@ import utils
 from mtrf.model import TRF
 import matplotlib.pyplot as plt
 from mne.viz import plot_topomap
+from trf_helpers import get_subj_trf_pth, get_thresh_folds_dir
 
-# # define custom montage position array
-# from mne.channels import read_custom_montage
 
-# def get_gtec_pos():
-#     locs_fl_pth = os.path.join('..',"eeg_data", "raw", 'gtec62.locs')
-#     montage = read_custom_montage(locs_fl_pth)
-#     pos = montage.get_positions()
-#     posarr=np.asarray([xyz[:2] for _y, xyz in pos['ch_pos'].items()])
-#     return posarr
 
-# stupid helper function 
-def get_subj_results_fnm(results_dir,subj_num=None,all_same=True):
-    '''
-    function is basically a relic of when I was trying different timestamping methods 
-    and thus file naming schemes, but have since abandoned that and all results files
-    are currently the same. 
-    '''
-    if all_same:
-        return 'bkwd_trf.pkl'
-    if 'envs' in results_dir or 'wavs' in results_dir or 'evnt' in results_dir:
-            results_fnm="env_recon_trf.pkl"
-    else:
-        # old results directory naming - used wavs but bad timestamp algorithm
-        #  (honestly should just delete these)
-        results_fnm=subj_num+"_clean_pauses_env_recon_results.pkl"
-    return results_fnm
-
-def get_subj_trf_pth(subj_num,thresh_folds_dir,clean_or_noisy,rms_str,cv_method_str):
-    
-    subj_cat=utils.get_subj_cat(subj_num)
-            
-    results_fnm=f'bkwd_trf_{clean_or_noisy}{rms_str}stims{cv_method_str}.pkl'
-
-    subj_results_dir=os.path.join("..","results","evnt_decimate",
-                                thresh_folds_dir,subj_cat,subj_num)
-    subj_trf_pth=os.path.join(subj_results_dir,results_fnm)
-    return subj_trf_pth
 #%%
 # topoplotting script
 
@@ -58,7 +24,7 @@ if __name__=='__main__':
     # set colorbar upper and lower bounds
     topo_lims=(None, None)
 
-    grand_avg=False
+    grand_avg=True
     
     results_dir=os.path.join("..","results")
     # Single cat only matters if grand_avg=True (then do grand average of single category)
@@ -70,8 +36,8 @@ if __name__=='__main__':
     t_min,t_max=-.1,.4
     lags=np.arange(t_min,t_max+(1/fs),1/fs)
     posarr=utils.get_gtec_pos()
-    exclude_list=[ "3283","3244"] # list of subjects to exclude due to no results file available
-        
+    exclude_list=[] # list of subjects to exclude due to no results file available
+    thresh_folds_dir=get_thresh_folds_dir(blocks='6')
     if not grand_avg:
         # do one subject's topomaps
         subj_num="3323"
@@ -80,7 +46,7 @@ if __name__=='__main__':
         # results_fnm=get_subj_results_fnm(results_dir,subj_num)
         
     
-        subj_trf_pth=get_subj_trf_pth(subj_num,thresh_folds_dir="thresh_750_5fold_shuffled",
+        subj_trf_pth=get_subj_trf_pth(subj_num,thresh_folds_dir=thresh_folds_dir,
                                            clean_or_noisy="clean",
                                            rms_str='_rms_',cv_method_str="_nested")
         with open(subj_trf_pth, 'rb') as f:
