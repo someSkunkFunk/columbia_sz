@@ -22,15 +22,14 @@ from trf_helpers import get_subj_trf_pth, get_thresh_folds_dir
 if __name__=='__main__':
     
     # set colorbar upper and lower bounds
-    topo_lims=(None, None)
+    topo_lims=(-0.06, 0.06)
 
     grand_avg=True
     
     results_dir=os.path.join("..","results")
     # Single cat only matters if grand_avg=True (then do grand average of single category)
     single_cat="hc" #set to None or mute this line to get all subjects
-    # hc_pth=os.path.join(results_dir,"hc")
-    # sp_pth=os.path.join(results_dir,"sp")
+    clean_or_noisy="clean"
     fs=100#TODO: un-hardcode
     n_elec=62
     t_min,t_max=-.1,.4
@@ -47,7 +46,7 @@ if __name__=='__main__':
         
     
         subj_trf_pth=get_subj_trf_pth(subj_num,thresh_folds_dir=thresh_folds_dir,
-                                           clean_or_noisy="clean",
+                                           clean_or_noisy=clean_or_noisy,
                                            rms_str='_rms_',cv_method_str="_nested")
         with open(subj_trf_pth, 'rb') as f:
             trf_results=pickle.load(f)
@@ -82,8 +81,8 @@ if __name__=='__main__':
             subj_cat=utils.get_subj_cat(subj_num)
             # subj_fnm=get_subj_results_fnm(results_dir,subj_num)
             # subj_trf_pth=os.path.join(results_dir,subj_cat,subj_num,subj_fnm)
-            subj_trf_pth=get_subj_trf_pth(subj_num,thresh_folds_dir="thresh_750_5fold_shuffled",
-                                           clean_or_noisy="noisy",
+            subj_trf_pth=get_subj_trf_pth(subj_num,thresh_folds_dir=thresh_folds_dir,
+                                           clean_or_noisy=clean_or_noisy,
                                            rms_str='_rms_',cv_method_str="_nested")
             with open(subj_trf_pth, 'rb') as f:
                 trf_results=pickle.load(f)
