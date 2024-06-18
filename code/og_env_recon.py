@@ -93,7 +93,7 @@ def nested_cv_wrapper(subj_num,
                       evnt_thresh=None,
                       shuffle_trials=True,
                       blocks='all',
-                      cv_method='crossval',
+                      cv_method='nested',
                       which_envs=None
                       ):
     '''
@@ -105,6 +105,7 @@ def nested_cv_wrapper(subj_num,
     regs: ridge regularization params to optimize over
     reduce_trials_by: str specifying  by grouping stories wihtin a block ("stim_nm")
     # or grouping by pauses within a block ("pauses")
+    nested_crossval_format: 'new' or 'old' -> tells wrapper how many and which output values to expect from nested_crossval since different in different brances
     '''
     print(f"running blocks: {blocks}")
     print(f"using stimuli envelopes: {clean_nxor_noisy}")
@@ -222,7 +223,19 @@ def nested_cv_wrapper(subj_num,
 
         if cv_method.lower()=='nested':
             print(f"using k={k} folds for nested cross validations")
-            r_ncv, best_lam=nested_crossval(trf, stimulus[:lim_stim], response[:lim_stim], fs_trf, tmin, tmax, regs, k=k)
+            trf_out=nested_crossval(trf, stimulus[:lim_stim], response[:lim_stim], fs_trf, tmin, tmax, regs, k=k)
+            #CODE BELOW ASSUMES NUMBER OF OUTPUTS FIXED IN EACH VERSION AND THEIR VALUES BASED ON TRFPY VERSION
+            if not isinstance(trf_out,tuple):
+                trf_out=(trf_out,)
+            if len(trf_out)==2:
+                #master branch
+                print("2 outputs detected... assuming master branch behavior...")
+                r_ncv,best_lam=trf_out
+            elif len(trf_out)==3:
+                #multicrossval
+                print("3 outputs detected... assuming multicrossval branch behavior....")
+                trained_models,r_ncv,best_lam=trf_out
+                
             print(f"r-values: {r_ncv}, mean: {r_ncv.mean()}, best_lam:{best_lam}")
         elif cv_method.lower()=='crossval':
             regularization=0
@@ -270,10 +283,18 @@ def nested_cv_wrapper(subj_num,
             print(f"saving results to {results_pth}")
             with open(results_pth, 'wb') as f:
                 if cv_method.lower()=='nested':
-                    pickle.dump({'trf_fitted': trf, 'r_ncv': r_ncv, 'best_lam': best_lam,
-                                    'stimulus': stimulus, 'response': response, 'stim_nms': stim_nms,
-                                    'trials_reduced_by':trial_reduction,
-                                    'timestamps_generated_by':timestamps_generated_by}, f)
+                    try:
+                        #multicross branch returns each fold's model, is original trf model one of them?
+                        pickle.dump({'trained_models':trained_models,'trf_fitted': trf, 'r_ncv': r_ncv, 'best_lam': best_lam,
+                                        'stimulus': stimulus, 'response': response, 'stim_nms': stim_nms,
+                                        'trials_reduced_by':trial_reduction,
+                                        'timestamps_generated_by':timestamps_generated_by}, f)
+                    except NameError:
+                        # master branch returns single model
+                        pickle.dump({'trf_fitted': trf, 'r_ncv': r_ncv, 'best_lam': best_lam,
+                                        'stimulus': stimulus, 'response': response, 'stim_nms': stim_nms,
+                                        'trials_reduced_by':trial_reduction,
+                                        'timestamps_generated_by':timestamps_generated_by}, f)
                 elif cv_method.lower()=='crossval':
                     pickle.dump({'trf_fitted': trf, 'r_mean': r_mean, 'regularization': regularization,
                                     'stimulus': stimulus, 'response': response, 'stim_nms': stim_nms,

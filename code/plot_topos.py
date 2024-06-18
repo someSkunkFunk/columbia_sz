@@ -61,22 +61,24 @@ if __name__=='__main__':
             ax.set_title(f'lag={lag_ms} ms')
             fig.colorbar(im,ax=ax)
             plt.show()
-            save_dir=os.path.join("..","figures","topos",subj_cat,subj_num)
-            save_fnm=f"bkwd_trf_weights_{lag_ms:.0f}_ms"
-            save_pth=os.path.join(save_dir, save_fnm)
-            if os.path.isdir(save_dir):
-                plt.savefig(save_pth)
+            topos_figs_dir=os.path.join("..","figures","topos",thresh_folds_dir,subj_cat,subj_num)
+            fig_fnm=f"bkwd_trf_weights_{lag_ms:.0f}_ms"
+            fig_pth=os.path.join(topos_figs_dir, fig_fnm)
+            if os.path.isdir(topos_figs_dir):
+                plt.savefig(fig_pth)
             else:
-                os.makedirs(save_dir,exist_ok=True)
-                plt.savefig(save_pth)
+                os.makedirs(topos_figs_dir,exist_ok=True)
+                plt.savefig(fig_pth)
 
     else:
-        # get all subjects and plot grand average trf weights
-        avg_weights=np.zeros((n_elec,lags.size))
+        _nfolds=5
         all_subjs=utils.get_all_subj_nums(single_cat=single_cat)
         #ignore subjects with no results file available
         all_subjs=list(filter(lambda s: s not in exclude_list, all_subjs))
-        for subj_num in all_subjs:
+        # get all subjects and plot grand average trf weights
+        avg_weights=np.zeros((n_elec,lags.size))
+        best_lams=np.zeros((len(all_subjs),_nfolds))
+        for subj_indx,subj_num in enumerate(all_subjs):
             # load each subject's trfs, compute average weights
             subj_cat=utils.get_subj_cat(subj_num)
             # subj_fnm=get_subj_results_fnm(results_dir,subj_num)
@@ -88,6 +90,9 @@ if __name__=='__main__':
                 trf_results=pickle.load(f)
                 
             avg_weights+=trf_results['trf_fitted'].weights.squeeze()
+            best_lams[subj_indx]=trf_results['best_lam']
+       
+
             
         avg_weights/=len(all_subjs)
         for n_lag,lag_s in enumerate(lags):  # which lag to plot topo for
@@ -100,19 +105,33 @@ if __name__=='__main__':
             fig.colorbar(im,ax=ax)
             plt.show()
             if single_cat is not None:
-                save_dir=os.path.join("..","figures","topos",single_cat,"grand_avg")
+                topos_figs_dir=os.path.join("..","figures","topos",single_cat,"grand_avg")
             else:
-                save_dir=os.path.join("..","figures","topos","all_grand_avg")
-            save_fnm=f"bkwd_trf_weights_{lag_ms:.0f}ms"
-            save_pth=os.path.join(save_dir, save_fnm)
-            if os.path.isdir(save_dir):
-                plt.savefig(save_pth)
+                topos_figs_dir=os.path.join("..","figures","topos","all_grand_avg")
+            fig_fnm=f"bkwd_trf_weights_{lag_ms:.0f}ms"
+            fig_pth=os.path.join(topos_figs_dir, fig_fnm)
+            if os.path.isdir(topos_figs_dir):
+                plt.savefig(fig_pth)
             else:
-                os.makedirs(save_dir,exist_ok=True)
-                plt.savefig(save_pth)
+                os.makedirs(topos_figs_dir,exist_ok=True)
+                plt.savefig(fig_pth)
 
 
-
+         #plot distribution of lambda values
+        fig,ax=plt.subplots()
+        ax.hist(best_lams.flatten())
+        ax.set_title("Distribution of lambda values across subjects")
+        if single_cat is not None:
+            lambdist_figs_dir=os.path.join("..","figures","lambda_distribution",single_cat)
+        else:
+            lambdist_figs_dir=os.path.join("..","figures","lambda_distribution","all subjs")
+        lambda_fig_fnm=f"{thresh_folds_dir}"
+        lambda_fig_pth=os.path.join(lambdist_figs_dir, fig_fnm)
+        if os.path.isdir(lambdist_figs_dir):
+            plt.savefig(lambda_fig_pth)
+        else:
+            os.makedirs(lambdist_figs_dir,exist_ok=True)
+            plt.savefig(lambda_fig_pth)
 
 
 
