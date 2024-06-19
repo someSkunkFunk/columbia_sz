@@ -3,7 +3,7 @@
 
 
 ## bash script for backwards trf using nested cv
-#SBATCH -t 2-00:00:00
+#SBATCH -t 1-00:00:00
 #SBATCH --mem=60gb
 #SBATCH -n 22 ##Number of tasks
 #SBATCH -J clean_decimate_750_shuff
@@ -24,7 +24,7 @@ date
 
 hostname
 
-echo "rms envelopes, decimated downsampling, using clean speech envelopes on all blocks; using expanded lambda range but with half as many values as prev job (which was just on block 6)"
+echo "rms envelopes, decimated downsampling, using clean speech envelopes on all blocks; using expanded lambda range but with half as many values as prev job (which was just on block 6) also now using noisy envelopes"
 
 export which_stmps="evnt"
 export which_xcorr="wavs"

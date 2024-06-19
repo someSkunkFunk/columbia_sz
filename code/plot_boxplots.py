@@ -16,7 +16,7 @@ if __name__=='__main__':
     evnt=True
     shuffled_trials=True
     rm_old_figs=True
-    blocks='6' # all or list of numbers as a string
+    blocks='all' # all or list of numbers as a string
     evnt_thresh='750'
     k=5 #number of cv folds
     clean_or_noisy='clean'
@@ -26,7 +26,7 @@ if __name__=='__main__':
     
 
 
-    ylims=[-0.1, 0.25] # vertical axis limits
+    ylims=[-0.01, 0.15] # vertical axis limits
     if shuffled_trials:
         shuffled="shuffled"
     else:

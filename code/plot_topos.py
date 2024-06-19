@@ -14,29 +14,26 @@ import matplotlib.pyplot as plt
 from mne.viz import plot_topomap
 from trf_helpers import get_subj_trf_pth, get_thresh_folds_dir
 
-
-
 #%%
 # topoplotting script
 
 if __name__=='__main__':
-    
-    # set colorbar upper and lower bounds
-    topo_lims=(-0.06, 0.06)
 
+    # set colorbar upper and lower bounds
+    topo_lims=(-0.05, 0.05)
     grand_avg=True
-    
     results_dir=os.path.join("..","results")
     # Single cat only matters if grand_avg=True (then do grand average of single category)
     single_cat="hc" #set to None or mute this line to get all subjects
     clean_or_noisy="clean"
+    blocks='all'
     fs=100#TODO: un-hardcode
     n_elec=62
     t_min,t_max=-.1,.4
     lags=np.arange(t_min,t_max+(1/fs),1/fs)
     posarr=utils.get_gtec_pos()
     exclude_list=[] # list of subjects to exclude due to no results file available
-    thresh_folds_dir=get_thresh_folds_dir(blocks='6')
+    thresh_folds_dir=get_thresh_folds_dir(blocks)
     if not grand_avg:
         # do one subject's topomaps
         subj_num="3323"
