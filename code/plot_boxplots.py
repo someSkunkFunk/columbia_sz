@@ -8,7 +8,6 @@ import utils
 from mtrf.model import TRF
 import matplotlib.pyplot as plt
 from trf_helpers import get_subj_trf_pth
-
 #%%
 # MAIN BOXPLOT SCRIPT
 
@@ -23,10 +22,11 @@ if __name__=='__main__':
     clean_or_noisy='clean'
     rms_str='_rms_'#'_rms_' or '_'
     cv_method_str='_nested' #"_nested" or "_crossval"
+    leave_out_negatives=False
     
 
 
-    ylims=[-0.08, 0.2] # vertical axis limits
+    ylims=[-0.1, 0.25] # vertical axis limits
     if shuffled_trials:
         shuffled="shuffled"
     else:
@@ -96,13 +96,15 @@ if __name__=='__main__':
         except FileNotFoundError:
             print(f"No data found for {subj_num}")
         # set first zero-valued element in array to mean of current subject, depending on category
-        if subj_cat=='hc':
-            hc_rs.append(trf_results['r_ncv'].mean())
-            # hc_rs[np.where(hc_rs==0)[0][0]]=trf_results['r_ncv'].mean()
-        elif subj_cat=="sp":
-            sp_rs.append(trf_results['r_ncv'].mean())
-            # sp_rs[np.where(sp_rs==0)[0][0]]=trf_results['r_ncv'].mean()
-
+        current_subj_mean=trf_results['r_ncv'].mean()
+        print(f"subj_num:{subj_num, subj_cat} mean r: {current_subj_mean}")
+        if current_subj_mean<0 and leave_out_negatives:
+            continue
+        else:
+            if subj_cat=='hc':
+                hc_rs.append(current_subj_mean)
+            elif subj_cat=="sp":
+                sp_rs.append(current_subj_mean)
     fig,ax=plt.subplots()
     ax.boxplot((hc_rs,sp_rs), labels=("hc", "sp"))
    

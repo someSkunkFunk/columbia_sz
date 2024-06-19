@@ -86,7 +86,7 @@ def nested_cv_wrapper(subj_num,
                       save_results=False,
                       drop_bad_electrodes=False,
                       clean_nxor_noisy=['clean'], 
-                      regs=np.logspace(-10, 12, 50),
+                      regs=np.logspace(-10, 12, 25),
                       reduce_trials_by="pauses",
                       return_xy=False, 
                       evnt=False,which_xcorr=None,
@@ -105,7 +105,6 @@ def nested_cv_wrapper(subj_num,
     regs: ridge regularization params to optimize over
     reduce_trials_by: str specifying  by grouping stories wihtin a block ("stim_nm")
     # or grouping by pauses within a block ("pauses")
-    nested_crossval_format: 'new' or 'old' -> tells wrapper how many and which output values to expect from nested_crossval since different in different brances
     '''
     print(f"running blocks: {blocks}")
     print(f"using stimuli envelopes: {clean_nxor_noisy}")
