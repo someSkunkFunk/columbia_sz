@@ -12,6 +12,8 @@ from trf_helpers import get_subj_trf_pth
 # MAIN BOXPLOT SCRIPT
 
 if __name__=='__main__':
+    # set vertical axis limits
+    ylims=[-0.01, 0.15] 
     #specify results to load
     evnt=True
     shuffled_trials=True
@@ -24,9 +26,6 @@ if __name__=='__main__':
     cv_method_str='_nested' #"_nested" or "_crossval"
     leave_out_negatives=False
     
-
-
-    ylims=[-0.01, 0.15] # vertical axis limits
     if shuffled_trials:
         shuffled="shuffled"
     else:

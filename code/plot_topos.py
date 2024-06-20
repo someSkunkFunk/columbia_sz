@@ -13,14 +13,22 @@ from mtrf.model import TRF
 import matplotlib.pyplot as plt
 from mne.viz import plot_topomap
 from trf_helpers import get_subj_trf_pth, get_thresh_folds_dir
-
+def calculate_topo_lims(weights:np.ndarray,std_factor=0.001):
+    weights_std=weights.std()
+    return -weights_std*std_factor, weights_std*std_factor
 #%%
 # topoplotting script
 
 if __name__=='__main__':
 
     # set colorbar upper and lower bounds
-    topo_lims=(-0.05, 0.05)
+    use_auto_lims=True
+    if use_auto_lims:
+        # set limits later based on std
+        pass
+    else:
+        #use these limits
+        topo_lims=(-0.05, 0.05)
     grand_avg=True
     results_dir=os.path.join("..","results")
     # Single cat only matters if grand_avg=True (then do grand average of single category)
@@ -48,7 +56,8 @@ if __name__=='__main__':
         with open(subj_trf_pth, 'rb') as f:
             trf_results=pickle.load(f)
         weights=trf_results['trf_fitted'].weights.squeeze()
-        
+        if use_auto_lims:
+            topo_lims=calculate_topo_lims(weights)
         for n_lag, lag_s in enumerate(lags):  # which lag to plot topo for
         # evokeds = trf.to_mne_evoked(montage)[0]
         #TODO: are we going to need the reference electrodes we removed?
@@ -57,7 +66,7 @@ if __name__=='__main__':
             im,_=plot_topomap(weights[:, n_lag],posarr,axes=ax,show=False,vlim=topo_lims)
             ax.set_title(f'lag={lag_ms} ms')
             fig.colorbar(im,ax=ax)
-            plt.show()
+            
             topos_figs_dir=os.path.join("..","figures","topos",thresh_folds_dir,subj_cat,subj_num)
             fig_fnm=f"bkwd_trf_weights_{lag_ms:.0f}_ms"
             fig_pth=os.path.join(topos_figs_dir, fig_fnm)
@@ -66,6 +75,7 @@ if __name__=='__main__':
             else:
                 os.makedirs(topos_figs_dir,exist_ok=True)
                 plt.savefig(fig_pth)
+            plt.show()
 
     else:
         _nfolds=5
@@ -92,6 +102,8 @@ if __name__=='__main__':
 
             
         avg_weights/=len(all_subjs)
+        if use_auto_lims:
+            topo_lims=calculate_topo_lims(avg_weights)
         for n_lag,lag_s in enumerate(lags):  # which lag to plot topo for
         # evokeds = trf.to_mne_evoked(montage)[0]
         #TODO: are we going to need the reference electrodes we removed?
@@ -100,7 +112,7 @@ if __name__=='__main__':
             im,_=plot_topomap(avg_weights[:, n_lag],posarr,axes=ax,show=False,vlim=topo_lims)
             ax.set_title(f'lag={lag_ms} ms')
             fig.colorbar(im,ax=ax)
-            plt.show()
+            
             if single_cat is not None:
                 topos_figs_dir=os.path.join("..","figures","topos",single_cat,"grand_avg")
             else:
@@ -112,6 +124,7 @@ if __name__=='__main__':
             else:
                 os.makedirs(topos_figs_dir,exist_ok=True)
                 plt.savefig(fig_pth)
+            plt.show()
 
 
          #plot distribution of lambda values
