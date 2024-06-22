@@ -13,7 +13,7 @@ from mtrf.model import TRF
 import matplotlib.pyplot as plt
 from mne.viz import plot_topomap
 from trf_helpers import get_subj_trf_pth, get_thresh_folds_dir
-def calculate_topo_lims(weights:np.ndarray,std_factor=0.001):
+def calculate_topo_lims(weights:np.ndarray,std_factor=0.0001):
     weights_std=weights.std()
     return -weights_std*std_factor, weights_std*std_factor
 #%%
@@ -22,18 +22,18 @@ def calculate_topo_lims(weights:np.ndarray,std_factor=0.001):
 if __name__=='__main__':
 
     # set colorbar upper and lower bounds
-    use_auto_lims=True
+    use_auto_lims=False
     if use_auto_lims:
         # set limits later based on std
         pass
     else:
         #use these limits
-        topo_lims=(-0.05, 0.05)
+        topo_lims=(None, None)
     grand_avg=True
     results_dir=os.path.join("..","results")
     # Single cat only matters if grand_avg=True (then do grand average of single category)
     single_cat="hc" #set to None or mute this line to get all subjects
-    clean_or_noisy="clean"
+    clean_or_noisy="noisy"
     blocks='all'
     fs=100#TODO: un-hardcode
     n_elec=62

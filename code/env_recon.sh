@@ -3,10 +3,10 @@
 
 
 ## bash script for backwards trf using nested cv
-#SBATCH -t 1-00:00:00
+#SBATCH -t 2-00:00:00
 #SBATCH --mem=60gb
 #SBATCH -n 22 ##Number of tasks
-#SBATCH -J clean_decimate_750_shuff
+#SBATCH -J block6_fwd_model
 #SBATCH --partition=standard
 
 
@@ -24,16 +24,16 @@ date
 
 hostname
 
-echo "rms envelopes, decimated downsampling, using clean speech envelopes on all blocks; using expanded lambda range but with half as many values as prev job (which was just on block 6) also now using noisy envelopes"
-
+echo "forward model with nested cross validation"
+export direction="1"
 export which_stmps="evnt"
 export which_xcorr="wavs"
 export evnt_thresh="750"
 export k_folds="5"
 export shuffle_trials="true"
-## export blocks="6"
+export blocks="6"
 ## export blocks="1,2,3,4,5"
-export blocks="all"
+## export blocks="all"
 export cv_method='nested'
 export which_envs="rms"
 

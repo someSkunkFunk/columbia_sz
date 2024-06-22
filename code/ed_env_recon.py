@@ -1,6 +1,6 @@
 # script for mtrf analysis on Ed's test dataset to make sure problems in my trf code aren't the problem
 #%%
-# import packages
+# INIT
 import pickle
 import scipy.io as spio
 import numpy as np
@@ -12,10 +12,6 @@ from trf_helpers import find_bad_electrodes, get_stim_envs, setup_xy
 
 from mtrf.model import TRF
 from mtrf.stats import crossval, nested_crossval
-
-
-    
-#%%
 
     
 data_loc=os.path.join("..","Ed")
@@ -46,7 +42,8 @@ for fnm in eeg_fnms_sorted:
 
 #%%
 # TRF analysis
-trf_mode="crossval"
+#NOTE: haven't updated code to reflect mtrfpy changes
+trf_mode="nested_cv"
 print(f"initializing TRF using {trf_mode}")
 
 fs=128#Hz
@@ -58,9 +55,10 @@ for subj in eeg:
     response=[r for r in eeg[subj]]
     if trf_mode=="nested_cv":
         reg=np.logspace(-1, 8, 10)
-        r_ncv, best_lam=nested_crossval(trf, stimulus, response, fs, tmin, tmax, reg, k)
+        _,r_ncv,best_lam=nested_crossval(trf, stimulus, response, fs, tmin, tmax, reg, k)
         print(f"{subj} r-values: {r_ncv}, mean: {r_ncv.mean().round(3)}")
     elif trf_mode=="crossval":
+        
         reg=100 #to match Ed's numbers
         # _=trf.train(stimulus, response, fs, tmin, tmax, reg, k)
         r_bkwd=crossval(trf, stimulus, response, fs, tmin, tmax, reg)

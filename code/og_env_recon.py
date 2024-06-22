@@ -77,6 +77,50 @@ def make_debug_plots(eeg_dir,stim_nms,stimulus,other_stimulus,clean_or_noisy,
         plt.savefig(fig_pth)
         plt.close()
         del fig, ax
+
+def make_results_path(subj_num,subj_cat,direction,clean_or_noisy,
+which_envs_str,cv_method,evnt,
+thresh_dir,shuffled_str,reduce_trials_by):
+    # save results
+    if direction==-1:
+        model_direction_str="bkwd"
+    elif direction==1:
+        model_direction_str="frwd"
+    else:
+        raise NotImplementedError("Direction set incorrectly.")
+    results_file=f"{model_direction_str}_trf_{clean_or_noisy}{which_envs_str}stims_{cv_method}.pkl"
+    # note the clean ones didn't specify in file name since added string formatting after
+    # but whatever
+    if evnt:
+        timestamps_generated_by="evnt"
+        if k!=-1:
+            thresh_folds_dir=thresh_dir+f"_{k}fold"+f"_{shuffled_str}"
+        elif k==-1:
+            thresh_folds_dir=thresh_dir+"_loo"+f"_{shuffled_str}"
+        if blocks!="all" and blocks!="1,2,3,4,5,6":
+            print("note: need to change this in xcorr case")
+            blocks_str="".join(blocks_to_keep)
+            thresh_folds_dir=thresh_folds_dir+"_"+blocks_str
+        results_dir=os.path.join("..","results","evnt_decimate",
+                                thresh_folds_dir,subj_cat,subj_num)
+        # results_dir = os.path.join("..","evnt_results", subj_cat, subj_num)
+    else:
+        timestamps_generated_by=f"xcorr{which_xcorr}"
+        xcorr_subdir=f"xcorr_{which_xcorr}"
+        results_dir = os.path.join("..","results",xcorr_subdir,subj_cat,subj_num)
+    
+    
+    if reduce_trials_by is not None:
+        trial_reduction=reduce_trials_by
+    else:
+        trial_reduction="None"
+    # Check if the directory exists; if not, create it
+    # note: will also create parent directoriesr
+    if not os.path.exists(results_dir):
+        os.makedirs(results_dir, exist_ok=True)
+    results_pth=os.path.join(results_dir, results_file)
+    return results_pth
+
 def nested_cv_wrapper(subj_num,
                       direction=-1,
                       tmin=-0.1,
@@ -126,9 +170,9 @@ def nested_cv_wrapper(subj_num,
     #NOTE that  by leaving eeg_dir blank below it's looking 
     # in eeg_data/preproessed_xcorr by default
     if shuffle_trials:
-        shuffled="shuffled"
+        shuffled_str="shuffled"
     else:
-        shuffled="shuffless"
+        shuffled_str="shuffless"
     if evnt:
         print(f"Evnt preprocessed data loaded.")
         # evnt data has ([stim_nms],np.arr[normalized_aud],np.arr[eeg])
@@ -217,6 +261,10 @@ def nested_cv_wrapper(subj_num,
         total_sound_time=sum([len(s)/fs_trf for s in stimulus])
         total_response_time=sum([len(r)/fs_trf for r in response])
         print(f"total stim time: {total_sound_time}\ntotal response time: {total_response_time}")
+        #NOTE: moved results_pth stuff before model training because training the model is much slower and don't wanna find bug after
+        results_pth=make_results_path(subj_num,subj_cat,direction,clean_or_noisy,
+        which_envs_str,cv_method,evnt,
+        thresh_dir,shuffled_str,reduce_trials_by)
         # init bkwd model
         trf = TRF(direction=direction)  
 
@@ -245,40 +293,6 @@ def nested_cv_wrapper(subj_num,
 
 
         if lim_stim is None and save_results:
-            
-            # save results
-        
-            results_file= f"bkwd_trf_{clean_or_noisy}{which_envs_str}stims_{cv_method}.pkl"
-            # note the clean ones didn't specify in file name since added string formatting after
-            # but whatever
-            if evnt:
-                timestamps_generated_by="evnt"
-                if k!=-1:
-                    thresh_folds_dir=thresh_dir+f"_{k}fold"+f"_{shuffled}"
-                elif k==-1:
-                    thresh_folds_dir=thresh_dir+"_loo"+f"_{shuffled}"
-                if blocks!="all" and blocks!="1,2,3,4,5,6":
-                    print("note: need to change this in xcorr case")
-                    blocks_str="".join(blocks_to_keep)
-                    thresh_folds_dir=thresh_folds_dir+"_"+blocks_str
-                results_dir=os.path.join("..","results","evnt_decimate",
-                                        thresh_folds_dir,subj_cat,subj_num)
-                # results_dir = os.path.join("..","evnt_results", subj_cat, subj_num)
-            else:
-                timestamps_generated_by=f"xcorr{which_xcorr}"
-                xcorr_subdir=f"xcorr_{which_xcorr}"
-                results_dir = os.path.join("..","results",xcorr_subdir,subj_cat,subj_num)
-            
-            
-            if reduce_trials_by is not None:
-                trial_reduction=reduce_trials_by
-            else:
-                trial_reduction="None"
-            # Check if the directory exists; if not, create it
-            # note: will also create parent directoriesr
-            if not os.path.exists(results_dir):
-                os.makedirs(results_dir, exist_ok=True)
-            results_pth=os.path.join(results_dir, results_file)
             print(f"saving results to {results_pth}")
             with open(results_pth, 'wb') as f:
                 if cv_method.lower()=='nested':
@@ -312,7 +326,7 @@ def nested_cv_wrapper(subj_num,
 if __name__=="__main__":
     
     if "which_stmps" in os.environ:
-        subj_num=utils.assign_subj(os.environ["SLURM_ARRAY_TASK_ID"]) 
+        subj_num=utils.assign_subj(os.environ["SLURM_ARRAY_TASK_ID"])
         which_stmps=os.environ["which_stmps"]
         k=int(os.environ["k_folds"])
         bool_dict={'true':True,'false':False}
@@ -320,6 +334,8 @@ if __name__=="__main__":
         blocks=os.environ["blocks"]
         cv_method=os.environ["cv_method"]
         which_envs=os.environ["which_envs"]
+        direction=int(os.environi["direction"])
+        lim_stim=None
 
         
         if which_stmps.lower()=="xcorr":
@@ -346,6 +362,9 @@ if __name__=="__main__":
         cv_method="nested"
         # lim_stim=50
         print(f"evnt_thresh selected: {evnt_thresh}")
+        direction=1
+        print(f"direction set to {direction}")
+        lim_stim=10
 
         # subj_cat=utils.get_subj_cat(subj_num)
         if evnt:
@@ -363,7 +382,9 @@ if __name__=="__main__":
                     which_xcorr=which_xcorr,
                     k=k,shuffle_trials=shuffle_trials,
                     blocks=blocks,cv_method=cv_method,
-                    which_envs=which_envs)
+                    which_envs=which_envs,
+                    direction=direction, 
+                    lim_stim=lim_stim)
     print(f"{subj_num} TRF complete.")
 
                      
