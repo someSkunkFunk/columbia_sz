@@ -334,7 +334,7 @@ if __name__=="__main__":
         blocks=os.environ["blocks"]
         cv_method=os.environ["cv_method"]
         which_envs=os.environ["which_envs"]
-        direction=int(os.environi["direction"])
+        direction=int(os.environ["direction"])
         lim_stim=None
 
         
