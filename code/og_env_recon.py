@@ -80,7 +80,8 @@ def make_debug_plots(eeg_dir,stim_nms,stimulus,other_stimulus,clean_or_noisy,
 
 def make_results_path(subj_num,subj_cat,direction,clean_or_noisy,
 which_envs_str,cv_method,evnt,
-thresh_dir,shuffled_str,reduce_trials_by):
+thresh_dir,shuffled_str,
+blocks_to_keep):
     # save results
     if direction==-1:
         model_direction_str="bkwd"
@@ -92,7 +93,7 @@ thresh_dir,shuffled_str,reduce_trials_by):
     # note the clean ones didn't specify in file name since added string formatting after
     # but whatever
     if evnt:
-        timestamps_generated_by="evnt"
+        # timestamps_generated_by="evnt"
         if k!=-1:
             thresh_folds_dir=thresh_dir+f"_{k}fold"+f"_{shuffled_str}"
         elif k==-1:
@@ -105,15 +106,10 @@ thresh_dir,shuffled_str,reduce_trials_by):
                                 thresh_folds_dir,subj_cat,subj_num)
         # results_dir = os.path.join("..","evnt_results", subj_cat, subj_num)
     else:
-        timestamps_generated_by=f"xcorr{which_xcorr}"
+        # timestamps_generated_by=f"xcorr{which_xcorr}"
         xcorr_subdir=f"xcorr_{which_xcorr}"
         results_dir = os.path.join("..","results",xcorr_subdir,subj_cat,subj_num)
     
-    
-    if reduce_trials_by is not None:
-        trial_reduction=reduce_trials_by
-    else:
-        trial_reduction="None"
     # Check if the directory exists; if not, create it
     # note: will also create parent directoriesr
     if not os.path.exists(results_dir):
@@ -152,6 +148,10 @@ def nested_cv_wrapper(subj_num,
     '''
     print(f"running blocks: {blocks}")
     print(f"using stimuli envelopes: {clean_nxor_noisy}")
+    if reduce_trials_by is not None:
+        trial_reduction=reduce_trials_by
+    else:
+        trial_reduction="None"
     # f_lp=49 #Hz, lowpass filter freq for get_stim_envs
     subj_cat=utils.get_subj_cat(subj_num)
     # specify fl paths assumes running from code as pwd
@@ -175,15 +175,16 @@ def nested_cv_wrapper(subj_num,
         shuffled_str="shuffless"
     if evnt:
         print(f"Evnt preprocessed data loaded.")
+        timestamps_generated_by="evnt"
         # evnt data has ([stim_nms],np.arr[normalized_aud],np.arr[eeg])
         fs_trf=100 #TODO: something about this
         #NOTE: reduction by pauses may still be applicable here but for now
         # just going to worry about removing evnt stims with nonsensical durations
-        
         reduce_trials_by=None # already "reduced" by pauses
     else:
         print(f"{which_xcorr} xcorr preprocessed data loaded.")
         fs_trf=subj_data['fs'][0]
+        timestamps_generated_by=f"xcorr{which_xcorr}"
     
     
     if lim_stim is not None:
@@ -205,7 +206,6 @@ def nested_cv_wrapper(subj_num,
     for clean_or_noisy in clean_nxor_noisy:
         print(f"fetching {clean_or_noisy} envelopes...")
         if which_envs=='rms':
-            print("Loading MATLAB computed envelopes")
             which_envs_str="_rms_"
             stim_envs=utils.load_matlab_envs(clean_or_noisy)
         else:
@@ -257,14 +257,16 @@ def nested_cv_wrapper(subj_num,
             blocks_to_keep=['b0'+b.strip() for b in blocks.split(",")]
             blocks_to_keep_idx=utils.filter_blocks_idx(blocks_to_keep,stim_nms)
             [stimulus,response,stim_nms]=utils.filter_lists_with_indices([stimulus,response,stim_nms],blocks_to_keep_idx)
-            
+        else:
+            blocks_to_keep=['b0'+str(b) for b in range(1,7)]
         total_sound_time=sum([len(s)/fs_trf for s in stimulus])
         total_response_time=sum([len(r)/fs_trf for r in response])
         print(f"total stim time: {total_sound_time}\ntotal response time: {total_response_time}")
         #NOTE: moved results_pth stuff before model training because training the model is much slower and don't wanna find bug after
         results_pth=make_results_path(subj_num,subj_cat,direction,clean_or_noisy,
         which_envs_str,cv_method,evnt,
-        thresh_dir,shuffled_str,reduce_trials_by)
+        thresh_dir,shuffled_str,
+        blocks_to_keep)
         # init bkwd model
         trf = TRF(direction=direction)  
 
@@ -360,7 +362,7 @@ if __name__=="__main__":
         shuffle_trials=True
         blocks='all'
         cv_method="nested"
-        # lim_stim=50
+        
         print(f"evnt_thresh selected: {evnt_thresh}")
         direction=1
         print(f"direction set to {direction}")

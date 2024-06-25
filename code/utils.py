@@ -10,14 +10,15 @@ def filter_blocks_idx(blocks_to_keep,stim_nms):
 import os
 import scipy.io as spio
 import numpy as np
-def load_matlab_envs(noisy_or_clean='clean'):
+def load_matlab_envs(clean_or_noisy='clean'):
+    print(f"Loading MATLAB computed envelopes ({clean_or_noisy})")
     envs_path=os.path.join("..","eeg_data","rms_envelopes.mat")
     envs_mat=spio.loadmat(envs_path)
     both_envs=mat2dict(envs_mat['rms_envelopes'].squeeze())
     # there's gotta be a more efficient way to do this selelction
     # ex: what if we want both
     n_stims=len(both_envs['stim_name'])
-    envs={both_envs['stim_name'][ii][0]:both_envs[f"{noisy_or_clean}_rms_envelope"][ii].squeeze() for ii in range(n_stims)}
+    envs={both_envs['stim_name'][ii][0]:both_envs[f"{clean_or_noisy}_rms_envelope"][ii].squeeze() for ii in range(n_stims)}
     return envs
 import numpy as np
 def extract_evnt_data(evnt,fs_eeg):
