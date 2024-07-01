@@ -3,7 +3,7 @@
 
 
 ## bash script for backwards trf using nested cv
-#SBATCH -t 2-00:00:00
+#SBATCH -t 10:00:00
 #SBATCH --mem=60gb
 #SBATCH -n 22 ##Number of tasks
 #SBATCH -J block6_bkwd_model
@@ -24,7 +24,7 @@ date
 
 hostname
 
-echo "forward model with nested cross validation"
+echo "bckwrd model with nested cross validation"
 export direction="-1"
 export which_stmps="evnt"
 export which_xcorr="wavs"

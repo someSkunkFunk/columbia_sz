@@ -13,12 +13,14 @@ from trf_helpers import get_subj_trf_pth
 
 if __name__=='__main__':
     # set vertical axis limits
-    ylims=[-0.01, 0.15] 
+    ylims=[-0.01, 0.15]
+    set_ylims=False
+
     #specify results to load
     evnt=True
     shuffled_trials=True
-    rm_old_figs=True
-    blocks='all' # all or list of numbers as a string
+    rm_old_figs=False
+    blocks='6' # all or list of numbers as a string
     evnt_thresh='750'
     k=5 #number of cv folds
     clean_or_noisy='clean'
@@ -114,7 +116,8 @@ if __name__=='__main__':
     ax.set_title(f'{k}fold mean recontruction accuracies using {clean_or_noisy} stims ({shuff_str})'+blocks_title_str)
    
     ax.set_ylabel('mean r')
-    ax.set_ylim(ylims[0], ylims[1])
+    if set_ylims:
+        ax.set_ylim(ylims[0], ylims[1])
     
     save_fnm=f"bkwd_trf_recons_{clean_or_noisy}_stims"
     save_pth=os.path.join(save_dir,save_fnm)

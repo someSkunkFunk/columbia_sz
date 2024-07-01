@@ -9,9 +9,10 @@ import utils
 
 subjs_list=utils.get_all_subj_nums()
 #NOTE THRESH FOLDS DIR HARDCODED BUT THIS MAY BE CUMBERSOME IN FUTURE
+thresh_folds_dir="thresh_750_5fold_shuffled_b06"
 lambda_dir=os.path.join("..","results","evnt_decimate",
-"thresh_750_5fold_shuffled")
-noisy_or_clean="noisy"
+thresh_folds_dir)
+noisy_or_clean="clean"
 rms_str="_rms"
 lambda_fnm=f"lambda_tuning_curve_{noisy_or_clean}{rms_str}.pkl"
 def extract_tuning_curve(subj_lambda:list):
@@ -32,7 +33,7 @@ for indx,subj_num in enumerate(subjs_list):
     print(f"loading subj {indx+1} of {len(subjs_list)}...")
     subj_cat=utils.get_subj_cat(subj_num)
     figs_dir=os.path.join("..","figures",
-    "lambda_tuning_curve",subj_cat,subj_num)
+    "lambda_tuning_curve",thresh_folds_dir,subj_cat,subj_num)
     if not os.path.isdir(figs_dir):
         os.makedirs(figs_dir,exist_ok=True)
     subj_lambda_pth=os.path.join(lambda_dir,subj_cat,subj_num,lambda_fnm)

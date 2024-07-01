@@ -17,8 +17,8 @@ def get_tuning_curve(subj_num,
                       lim_stim=None,
                       save_results=False,
                       drop_bad_electrodes=False,
-                      clean_nxor_noisy=['clean','noisy'], 
-                      regs=np.logspace(-10, 12, 50),
+                      clean_nxor_noisy=['clean'], 
+                      regs=np.logspace(-9, 9, 15),
                       reduce_trials_by="pauses",
                       return_xy=False,
                       evnt=False,which_xcorr=None,
@@ -89,10 +89,6 @@ def get_tuning_curve(subj_num,
         thresh_folds_dir=thresh_dir+f"_{k}fold"+f"_{shuffled}"
     elif k==-1:
         thresh_folds_dir=thresh_dir+"_loo"+f"_{shuffled}"
-    if blocks!="all" and blocks!="1,2,3,4,5,6":
-        print("note: need to change this in xcorr case")
-        blocks_str="".join(blocks_to_keep)
-        thresh_folds_dir=thresh_folds_dir+"_"+blocks_str
     for clean_or_noisy in clean_nxor_noisy:
         print(f'running {clean_or_noisy}...')
         if which_envs=='rms':
@@ -119,7 +115,14 @@ def get_tuning_curve(subj_num,
                                                 subj_num,reduce_trials_by,
                                                 outlier_idx,evnt=evnt,which_xcorr=which_xcorr,
                                                 shuffle_trials=shuffle_trials)
-        # should disable plotting when running actual slurm job
+        if blocks!="all" and blocks!="1,2,3,4,5,6":
+                print("note: need to change this in xcorr case")
+                # add strings to match stim_nms
+                blocks_to_keep=['b0'+b.strip() for b in blocks.split(",")]
+                blocks_to_keep_idx=utils.filter_blocks_idx(blocks_to_keep,stim_nms)
+                blocks_str="".join(blocks_to_keep)
+                thresh_folds_dir=thresh_folds_dir+"_"+blocks_str
+            
         if "which_stmps" in os.environ:
             
             _debug_alignment=False
@@ -139,9 +142,7 @@ def get_tuning_curve(subj_num,
         
         if blocks!='all' and blocks!='1,2,3,4,5,6':
             #filter blocks 
-            # add strings to match stim_nms
-            blocks_to_keep=['b0'+b.strip() for b in blocks.split(",")]
-            blocks_to_keep_idx=utils.filter_blocks_idx(blocks_to_keep,stim_nms)
+            
             [stimulus,response,stim_nms]=utils.filter_lists_with_indices([stimulus,response,stim_nms],blocks_to_keep_idx)
             
         total_sound_time=sum([len(s)/fs_trf for s in stimulus])
@@ -178,7 +179,8 @@ if __name__=="__main__":
         shuffle_trials=bool_dict[os.environ["shuffle_trials"].lower()]
         blocks=os.environ["blocks"]
         which_envs=os.environ["which_envs"]
-        # clean_or_noisy=os.environ["clean_or_noisy"]
+        if "clean_or_noisy" in os.environ:
+            clean_or_noisy=os.environ["clean_or_noisy"]
 
 
         
@@ -202,7 +204,7 @@ if __name__=="__main__":
         evnt_thresh="750"
         k=5
         shuffle_trials=True
-        blocks='all'
+        blocks='6'
         clean_or_noisy="noisy"
         # lim_stim=50
         print(f"evnt_thresh selected: {evnt_thresh}")
@@ -220,5 +222,6 @@ if __name__=="__main__":
                     which_xcorr=which_xcorr,
                     k=k,shuffle_trials=shuffle_trials,
                     blocks=blocks,
-                    which_envs=which_envs)
+                    which_envs=which_envs,
+                    clean_nxor_noisy=clean_or_noisy)
     print(f"{subj_num} tuning curve complete.")

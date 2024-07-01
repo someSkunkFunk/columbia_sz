@@ -3,10 +3,10 @@
 
 
 ## bash script for generating lambda tuning curve
-#SBATCH -t 12:00:00
+#SBATCH -t 3:00:00
 #SBATCH --mem=60gb
 #SBATCH -n 22 ##Number of tasks
-#SBATCH -J tuning_curve_noisy
+#SBATCH -J tuning_curves_block6
 #SBATCH --partition=standard
 
 
@@ -24,18 +24,18 @@ date
 
 hostname
 
-echo "calculate prediction accuracy as function of lambda, with extended regularization value range, then save models also (using clena AND noisy envelopes)"
+echo "calculate prediction accuracy as function of lambda, only using block 6 clean data"
 
 export which_stmps="evnt"
 export which_xcorr="wavs"
 export evnt_thresh="750"
 export k_folds="5"
 export shuffle_trials="true"
-## export blocks="6"
+export blocks="6"
 ## export blocks="1,2,3,4,5"
-export blocks="all"
+## export blocks="all"
 export which_envs="rms"
-# export clean_or_noisy="noisy"
+export clean_or_noisy="clean"
 
 source /scratch/apalaci6/miniconda3/bin/activate lalor0
 
