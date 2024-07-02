@@ -421,6 +421,7 @@ if not just_stmp:
                     if "subj_num" in os.environ:
                         fig_pth=os.path.join(figs_dir,f"{subj_num}_{block}_{round(seg_ii+1):02}.png")
                         plt.savefig(fig_pth)
+                        print(f"saved fig to {fig_pth}")
                         del fig_pth
                     else:
                         plt.show()

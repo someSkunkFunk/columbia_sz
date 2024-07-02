@@ -88,6 +88,7 @@ if __name__=='__main__':
 
 
     for subj_num in all_subjs:
+        print(f"loading {subj_num}...")
         # load each subject's trfs, compute average weights
         subj_cat=utils.get_subj_cat(subj_num)
         subj_trf_pth=get_subj_trf_pth(subj_num,thresh_folds_dir,clean_or_noisy,rms_str,cv_method_str)
@@ -96,6 +97,8 @@ if __name__=='__main__':
                 trf_results=pickle.load(f)
         except FileNotFoundError:
             print(f"No data found for {subj_num}")
+        if subj_num=="3318":
+            pass
         # set first zero-valued element in array to mean of current subject, depending on category
         current_subj_mean=trf_results['r_ncv'].mean()
         print(f"subj_num:{subj_num, subj_cat} mean r: {current_subj_mean}")

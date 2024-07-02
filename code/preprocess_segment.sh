@@ -6,7 +6,7 @@
 #SBATCH -t 02:00:00
 #SBATCH --mem=60gb
 #SBATCH -n 20 ##Number of tasks
-#SBATCH -J evnt_segments_800
+#SBATCH -J evnt_resegment_750_3318
 #SBATCH --partition=standard
 #SBATCH --output=preprocess_with_decimate_pt2.log
 
@@ -16,7 +16,7 @@
 #SBATCH --mail-user=apalaci6@ur.rochester.edu 
 
 ##bash vars
-echo "segmenting eeg using evnt timestamps and overall confidence threshold at 0.75. Updated downsapling w scipy decimate instead of resample. Forgot to save results for these subjects"
+echo "segmenting eeg using evnt timestamps and overall confidence threshold at 0.75. Updated downsapling w scipy decimate instead of resample. redoing subject 3318 because suspicious results"
 do_avg_ref="true"
 which_stmps="evnt"
 script_name="preprocess_segment"
@@ -25,9 +25,7 @@ noisy_or_clean="clean"
 just_stmp="false"
 evnt_thresh=0.75
 subjs=(
-    0194
-    3244
-    3283
+3318
 )
 ##NOTE 0194, 3244, 3283 all done manually during interactive session while debugging script so not included here
 source /scratch/apalaci6/miniconda3/bin/activate lalor0
