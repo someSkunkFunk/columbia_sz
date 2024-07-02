@@ -125,7 +125,7 @@ def nested_cv_wrapper(subj_num,
                       lim_stim=None,
                       save_results=False,
                       drop_bad_electrodes=False,
-                      clean_nxor_noisy=['clean'], 
+                      clean_nxor_noisy=['clean','noisy'], 
                       regs=np.logspace(-9, 9, 15),
                       reduce_trials_by="pauses",
                       return_xy=False, 
@@ -329,7 +329,11 @@ def nested_cv_wrapper(subj_num,
 if __name__=="__main__":
     
     if "which_stmps" in os.environ:
-        subj_num=utils.assign_subj(os.environ["SLURM_ARRAY_TASK_ID"])
+        if "single_subj" in os.environ:
+            subj_num=os.environ["single_subj"]
+            print(f"using single specified subject in bash script ({subj_num}) intead for full subject list")
+        else:
+            subj_num=utils.assign_subj(os.environ["SLURM_ARRAY_TASK_ID"])
         which_stmps=os.environ["which_stmps"]
         k=int(os.environ["k_folds"])
         bool_dict={'true':True,'false':False}
@@ -361,7 +365,7 @@ if __name__=="__main__":
         evnt_thresh="750"
         k=5
         shuffle_trials=True
-        blocks='6'
+        blocks='all'
         cv_method="nested"
         
         print(f"evnt_thresh selected: {evnt_thresh}")

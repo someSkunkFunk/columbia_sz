@@ -23,7 +23,7 @@ if __name__=='__main__':
     blocks='all' # all or list of numbers as a string
     evnt_thresh='750'
     k=5 #number of cv folds
-    clean_or_noisy='noisy'
+    clean_or_noisy='clean'
     rms_str='_rms_'#'_rms_' or '_'
     cv_method_str='_nested' #"_nested" or "_crossval"
     leave_out_negatives=False
@@ -93,8 +93,6 @@ if __name__=='__main__':
                 trf_results=pickle.load(f)
         except FileNotFoundError:
             print(f"No data found for {subj_num}")
-        if subj_num=="3318":
-            pass
         # set first zero-valued element in array to mean of current subject, depending on category
         current_subj_mean=trf_results['r_ncv'].mean()
         print(f"subj_num:{subj_num, subj_cat} mean r: {current_subj_mean}")
