@@ -199,13 +199,13 @@ if __name__=="__main__":
         # running interactively probably for debugging purposes
         #NOTE: why do I need which_stamps AND evnt??
         #RE: seems like which_stmps used in bash script, automate in interactive more
-        subj_num="3316"
+        subj_num="3318"
         evnt=True
         evnt_thresh="750"
         k=5
         shuffle_trials=True
         blocks='6'
-        clean_or_noisy="noisy"
+        clean_or_noisy="clean"
         # lim_stim=50
         print(f"evnt_thresh selected: {evnt_thresh}")
 

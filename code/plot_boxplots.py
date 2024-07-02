@@ -14,16 +14,16 @@ from trf_helpers import get_subj_trf_pth
 if __name__=='__main__':
     # set vertical axis limits
     ylims=[-0.01, 0.15]
-    set_ylims=False
+    set_ylims=True
 
     #specify results to load
     evnt=True
     shuffled_trials=True
     rm_old_figs=False
-    blocks='6' # all or list of numbers as a string
+    blocks='all' # all or list of numbers as a string
     evnt_thresh='750'
     k=5 #number of cv folds
-    clean_or_noisy='clean'
+    clean_or_noisy='noisy'
     rms_str='_rms_'#'_rms_' or '_'
     cv_method_str='_nested' #"_nested" or "_crossval"
     leave_out_negatives=False
@@ -73,9 +73,6 @@ if __name__=='__main__':
     fs=100#TODO: un-hardcode
     n_elec=62
     n_lags=41
-    
-    # get all subjects and plot grand average trf weights
-    avg_weights=np.zeros((n_elec,n_lags))
     hc_subjs=utils.get_all_subj_nums(single_cat="hc")
     sp_subjs=utils.get_all_subj_nums(single_cat="sp")
     all_subjs=utils.get_all_subj_nums() 
@@ -89,7 +86,6 @@ if __name__=='__main__':
 
     for subj_num in all_subjs:
         print(f"loading {subj_num}...")
-        # load each subject's trfs, compute average weights
         subj_cat=utils.get_subj_cat(subj_num)
         subj_trf_pth=get_subj_trf_pth(subj_num,thresh_folds_dir,clean_or_noisy,rms_str,cv_method_str)
         try:
@@ -131,7 +127,8 @@ if __name__=='__main__':
         plt.savefig(save_pth)
 
     plt.show()
-
+    print(f"{clean_or_noisy} hc/sp (max,min,mean):")
+    print([(max(x), min(x), np.mean(x)) for x in [hc_rs,sp_rs]])
 
 
 

@@ -228,17 +228,18 @@ def nested_cv_wrapper(subj_num,
                                                 subj_num,reduce_trials_by,
                                                 outlier_idx,evnt=evnt,which_xcorr=which_xcorr,
                                                 shuffle_trials=shuffle_trials)
-        # should disable plotting when running actual slurm job
         if "which_stmps" in os.environ:
             
             _debug_alignment=False
+            # set to false if should disable plotting when running actual slurm job
+        
             if _debug_alignment:
                 print('Set debug alignent to true in SLURM job... will plott all stimuli and recorded audio')
         else:
             # print("SET DEBUG ALIGNMENT TO TRUE HERE FOR PLOTTING DURING INTERACTIVE SESSION")
-            _debug_alignment=False
+            _debug_alignment=True
         if _debug_alignment:
-            print(f"DEBUG ALIGN ENABLED, NOT DOING TRF")
+            print(f"DEBUG ALIGN ENABLED")
             if clean_or_noisy=='noisy':
                 other_envs=utils.load_matlab_envs('clean')
             else:
@@ -355,18 +356,18 @@ if __name__=="__main__":
         # running interactively probably for debugging purposes
         #NOTE: why do I need which_stamps AND evnt??
         #RE: seems like which_stmps used in bash script, automate in interactive more
-        subj_num="3316"
+        subj_num="3318"
         evnt=True
         evnt_thresh="750"
         k=5
         shuffle_trials=True
-        blocks='all'
+        blocks='6'
         cv_method="nested"
         
         print(f"evnt_thresh selected: {evnt_thresh}")
-        direction=1
+        direction=-1
         print(f"direction set to {direction}")
-        lim_stim=10
+        lim_stim=None
 
         # subj_cat=utils.get_subj_cat(subj_num)
         if evnt:

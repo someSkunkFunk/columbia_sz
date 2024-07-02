@@ -3,7 +3,7 @@
 
 
 ## bash script for segmenting and preprocessing eeg data
-#SBATCH -t 02:00:00
+#SBATCH -t 01:00:00
 #SBATCH --mem=60gb
 #SBATCH -n 20 ##Number of tasks
 #SBATCH -J evnt_resegment_750_3318
