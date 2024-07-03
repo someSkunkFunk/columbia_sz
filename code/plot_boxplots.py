@@ -23,7 +23,7 @@ if __name__=='__main__':
     blocks='all' # all or list of numbers as a string
     evnt_thresh='750'
     k=5 #number of cv folds
-    clean_or_noisy='clean'
+    clean_or_noisy='noisy'
     rms_str='_rms_'#'_rms_' or '_'
     cv_method_str='_nested' #"_nested" or "_crossval"
     leave_out_negatives=False

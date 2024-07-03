@@ -61,8 +61,9 @@ def my_downsample(raw_eeg,filt_params,fs_in,fs_out):
 # bash script vars
 # 
 ###########################################################################################
-if "subj_num" in os.environ: 
-    subj_num=os.environ["subj_num"]
+if "SLURM_ARRAY_TASK_ID" in os.environ:
+    print("SLURM_ARRAY_TASK_ID detected, running with bash script vars")
+    subj_num=utils.assign_subj(os.environ["SLURM_ARRAY_TASK_ID"])
     which_stmps=os.environ["which_stmps"] #xcorr or evnt
     which_xcorr=os.environ["which_xcorr"]
     #bool vars need to be converted from strings
@@ -267,7 +268,7 @@ if not just_stmp:
             plt.hist(confidence,bins=25)
             plt.title(f"{subj_num}, {block} Evnt confidence vals")
             plt.axvline(evnt_ovrall_thresh,label=f'confidence threshold: {evnt_ovrall_thresh}')
-            if "subj_num" in os.environ:
+            if "SLURM_ARRAY_TASK_ID" in os.environ:
                 #TODO: make this depend on the actual corrections
                 corrections_dir='first_onset_correction'
                 figs_dir=os.path.join("..","figures","evnt_info",thresh_dir,corrections_dir,subj_num,block)
@@ -418,7 +419,7 @@ if not just_stmp:
                     fig.subplots_adjust(bottom=legend_box.ymin * fig_height / (fig_height - legend_box.height))
                     ax[1].legend(loc='upper center',bbox_to_anchor=(0.5,-0.1),
                                 ncol=_ncol) 
-                    if "subj_num" in os.environ:
+                    if "SLURM_ARRAY_TASK_ID" in os.environ:
                         fig_pth=os.path.join(figs_dir,f"{subj_num}_{block}_{round(seg_ii+1):02}.png")
                         plt.savefig(fig_pth)
                         print(f"saved fig to {fig_pth}")

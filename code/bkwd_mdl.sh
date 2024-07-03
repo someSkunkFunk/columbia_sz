@@ -3,7 +3,7 @@
 
 
 ## bash script for backwards trf using nested cv
-#SBATCH -t 2:00:00
+#SBATCH -t 3:00:00
 #SBATCH --mem=60gb
 #SBATCH -n 1 ##Number of tasks
 #SBATCH -J 3318_bkwdmodels
@@ -28,7 +28,7 @@ echo "bckwrd model with nested cross validation"
 export direction="-1"
 export which_stmps="evnt"
 export which_xcorr="wavs"
-export evnt_thresh="750"
+export evnt_thresh="000"
 export k_folds="5"
 export shuffle_trials="true"
 export blocks="all"
@@ -37,7 +37,7 @@ export blocks="all"
 export cv_method='nested'
 export which_envs="rms"
 ## use when only single subject model required
-export single_subj="3318"
+## export single_subj="3318"
 
 source /scratch/apalaci6/miniconda3/bin/activate lalor0
 
