@@ -3,14 +3,14 @@
 
 
 ## bash script for backwards trf using nested cv
-#SBATCH -t 3:00:00
+#SBATCH -t 12:00:00
 #SBATCH --mem=60gb
-#SBATCH -n 1 ##Number of tasks
-#SBATCH -J 3318_bkwdmodels
+#SBATCH -n 22 ##Number of tasks
+#SBATCH -J block6_thresh000_bkwdmodels
 #SBATCH --partition=standard
 
 
-#SBATCH --array=1
+#SBATCH --array=1-22
 ##SBATCH --depend=afterany:17146968
 #SBATCH --mail-type=END
 #SBATCH --mail-user=apalaci6@ur.rochester.edu
@@ -31,7 +31,7 @@ export which_xcorr="wavs"
 export evnt_thresh="000"
 export k_folds="5"
 export shuffle_trials="true"
-export blocks="all"
+export blocks="6"
 ## export blocks="1,2,3,4,5"
 ## export blocks="all"
 export cv_method='nested'

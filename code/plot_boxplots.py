@@ -13,17 +13,17 @@ from trf_helpers import get_subj_trf_pth
 
 if __name__=='__main__':
     # set vertical axis limits
-    ylims=[-0.01, 0.15]
+    ylims=[-0.01, 0.20]
     set_ylims=True
 
     #specify results to load
     evnt=True
     shuffled_trials=True
     rm_old_figs=False
-    blocks='all' # all or list of numbers as a string
-    evnt_thresh='750'
+    blocks='6' # all or list of numbers as a string
+    evnt_thresh='000'
     k=5 #number of cv folds
-    clean_or_noisy='noisy'
+    clean_or_noisy='clean'
     rms_str='_rms_'#'_rms_' or '_'
     cv_method_str='_nested' #"_nested" or "_crossval"
     leave_out_negatives=False
