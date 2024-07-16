@@ -85,12 +85,15 @@ def make_bounds_vctrs(bounds:list,fs=16e3):
     # add string prefix and suffix back to enable exact string comparison
     t_max=bounds[-1][1] # assuming last value for phn AND wrds is the same 
     time_vec=np.arange(0,t_max,1/fs)
-    [on_iis,off_iis]=[None]*len(bounds)
+    on_iis=[None]*len(bounds)
+    off_iis=[None]*len(bounds)
+    wrds_list=[None]*len(bounds)
     # and corresponds with final word; also units of seconds assumed
     for ii, (on_t, off_t, word) in enumerate(bounds):
         # since boundaries are sparse, just return indices along with time vector, use indices to populate at plotting time
         on_iis[ii]=np.argmin(np.abs(time_vec-on_t))
         off_iis[ii]=np.argmin(np.abs(time_vec-off_t))
+        wrds_list[ii]=word
     return time_vec,on_iis,off_iis,wrds_list
 
 import matplotlib.pyplot as plt
@@ -106,10 +109,11 @@ for ii,(story_nm,bounds) in enumerate(boundaries.items()):
     # checked that indexing works with non-repeated stims also
     stim_wav=stims_dict['orig_clean'][nm_match_idx][0]
     wav_id=stims_dict['ID'][nm_match_idx][0]
-    t_stim=np.arange(0,stim_wav.size,1/fs_wavs)
+    t_stim=np.arange(0,stim_wav.size/fs_wavs,1/fs_wavs)
     
     bound_t,on_iis,off_iis,_=make_bounds_vctrs(bounds['words'])
-    [on_imps,off_imps]=[np.zeros(bound_t.shape)]*2
+    on_imps=np.zeros(bound_t.shape)
+    off_imps=np.zeros(bound_t.shape)
     on_imps[on_iis]+=1
     off_imps[off_iis]+=1
 
