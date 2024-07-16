@@ -469,6 +469,9 @@ def get_missing_stim_nms(timestamps):
     return missing_stims
 
 def get_stim_wav(stims_dict, stim_nm:str, noisy_or_clean='clean'):
+    '''
+    note that stim_nm should actually correspond with ID entry in stim_info mat not Name
+    '''
     if "noisy_or_clean" in os.environ:
         noisy_or_clean=os.environ['noisy_or_clean']
         # print(f'yay this worked, noisy_or_clean is {noisy_or_clean}')
