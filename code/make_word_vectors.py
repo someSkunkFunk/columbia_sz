@@ -111,30 +111,31 @@ fig_height=6
 make_figs=False
 show_figs=False
 start_from=0 # if restarting due to kernel crash
-for ii,(story_nm,bounds) in enumerate(boundaries.items()):
-    if ii<start_from:
-        continue
-    else:
+if make_figs==True:
+    for ii,(story_nm,bounds) in enumerate(boundaries.items()):
+        if ii<start_from:
+            continue
+        else:
+            
+            # add the stupid prefix and suffix back to enable exact match str comparison
+            full_nm='./Sounds/'+story_nm+'_16K_NM.wav'
+            # match the textgrid fl name to appropirate wav
+            nm_match_idx=stims_dict['Name']==full_nm 
+            #note some are repeated so multiple matches will be returned
+            #grab clean wav from first match
+            # checked that indexing works with non-repeated stims also
+            stim_wav=stims_dict['orig_clean'][nm_match_idx][0]
+            wav_id=stims_dict['ID'][nm_match_idx][0]
+            t_stim=np.arange(0,stim_wav.size/fs_wavs,1/fs_wavs)
+            if t_stim.size>stim_wav.size:
+                # sometimes ends up with extra sample, remove it
+                t_stim=t_stim[:stim_wav.size]
+            bound_t,on_iis,off_iis,wrds_list=make_bounds_vctrs(bounds['words'])
+            on_imps=np.zeros(bound_t.shape)
+            off_imps=np.zeros(bound_t.shape)
+            on_imps[on_iis]+=1
+            off_imps[off_iis]+=1
         
-        # add the stupid prefix and suffix back to enable exact match str comparison
-        full_nm='./Sounds/'+story_nm+'_16K_NM.wav'
-        # match the textgrid fl name to appropirate wav
-        nm_match_idx=stims_dict['Name']==full_nm 
-        #note some are repeated so multiple matches will be returned
-        #grab clean wav from first match
-        # checked that indexing works with non-repeated stims also
-        stim_wav=stims_dict['orig_clean'][nm_match_idx][0]
-        wav_id=stims_dict['ID'][nm_match_idx][0]
-        t_stim=np.arange(0,stim_wav.size/fs_wavs,1/fs_wavs)
-        if t_stim.size>stim_wav.size:
-            # sometimes ends up with extra sample, remove it
-            t_stim=t_stim[:stim_wav.size]
-        bound_t,on_iis,off_iis,wrds_list=make_bounds_vctrs(bounds['words'])
-        on_imps=np.zeros(bound_t.shape)
-        off_imps=np.zeros(bound_t.shape)
-        on_imps[on_iis]+=1
-        off_imps[off_iis]+=1
-        if make_figs=True:
             print(f"plotting {ii+1} of {len(boundaries)}")
             fig,ax=plt.subplots(figsize=(fig_width,fig_height))
             try:
@@ -160,5 +161,7 @@ def load_surprisal():
 def make_surprisal_vector(onsets,surprisal_vals,fs_input,fs_output):
     pass
 
+
+# dict: {'values, 'words'}
 surprisals=load_surprisal()
  
