@@ -58,26 +58,31 @@ stim_nms=[n.replace('_16K_NM.wav','') for n in stim_nms]
 
 textgrids_path=os.path.join("..","eeg_data","textgrids")
 textgrids_fnms=os.listdir(textgrids_path)
-boundaries={}
-for ii,stim in enumerate(stim_nms):
-    print(f"extracting stim {ii+1} of {len(stim_nms)}...")
-    tg_path=os.path.join(textgrids_path,stim)
-    phns,wrds=get_word_boundaries(tg_path)
-    # save to pkl for later use
-    #NOTE this is only going to save bounds for last stim 
-    boundaries[stim]={'phones':phns,'words':wrds}
-    del phns,wrds
-
+extract_bounds=False
 bounds_fl_nm="phn_wrd_bounds.pkl"
 bounds_fl_pth=os.path.join("..","eeg_data",bounds_fl_nm)
-with open(bounds_fl_pth, 'wb') as fl:
-    print("saving boundaries..")
-    pickle.dump(boundaries,fl)
-print('saved.')
+if extract_bounds:
+    boundaries={}
+    for ii,stim in enumerate(stim_nms):
+        print(f"extracting stim {ii+1} of {len(stim_nms)}...")
+        tg_path=os.path.join(textgrids_path,stim)
+        phns,wrds=get_word_boundaries(tg_path)
+        # save to pkl for later use
+        #NOTE this is only going to save bounds for last stim 
+        boundaries[stim]={'phones':phns,'words':wrds}
+        del phns,wrds
+    with open(bounds_fl_pth, 'wb') as fl:
+        print("saving boundaries..")
+        pickle.dump(boundaries,fl)
+    print('saved.')
+else:
+    print('loading existing bounds from pkl...')
+    with open(bounds_fl_pth, 'rb') as fl:
+        boundaries=pickle.load(fl)
+    print('done.')
 
-#%%
 # visualize stims along with waveforms to verify fs
-def make_bounds_vctrs(bounds:list,fs=16e3):
+def make_bounds_vctrs(bounds:list,fs=16e3,displace_offset=True):
     # shoudl work with either words or phns, but must be fed individually
     # since operating on individual stimulus set of boundaries
     # assumes time in seconds
@@ -92,39 +97,66 @@ def make_bounds_vctrs(bounds:list,fs=16e3):
     for ii, (on_t, off_t, word) in enumerate(bounds):
         # since boundaries are sparse, just return indices along with time vector, use indices to populate at plotting time
         on_iis[ii]=np.argmin(np.abs(time_vec-on_t))
-        off_iis[ii]=np.argmin(np.abs(time_vec-off_t))
+        if displace_offset:
+            # shift offsets so stems don't plot on top of each other for visualization
+            _amt_shift=200 # number of samples to shift offset by
+            off_iis[ii]=np.argmin(np.abs(time_vec-off_t))-_amt_shift
         wrds_list[ii]=word
     return time_vec,on_iis,off_iis,wrds_list
 
 import matplotlib.pyplot as plt
 fs_wavs=stims_dict['fs'][0]
+fig_width=20
+fig_height=6
+show_figs=False
+start_from=274 # if restarting due to kernel crash
 for ii,(story_nm,bounds) in enumerate(boundaries.items()):
-    print(f"plotting {ii} of {len(boundaries)}")
-    # add the stupid prefix and suffix back to enable exact match str comparison
-    full_nm='./Sounds/'+story_nm+'_16K_NM.wav'
-    # match the textgrid fl name to appropirate wav
-    nm_match_idx=stims_dict['Name']==full_nm 
-    #note some are repeated so multiple matches will be returned
-    #grab clean wav from first match
-    # checked that indexing works with non-repeated stims also
-    stim_wav=stims_dict['orig_clean'][nm_match_idx][0]
-    wav_id=stims_dict['ID'][nm_match_idx][0]
-    t_stim=np.arange(0,stim_wav.size/fs_wavs,1/fs_wavs)
-    
-    bound_t,on_iis,off_iis,_=make_bounds_vctrs(bounds['words'])
-    on_imps=np.zeros(bound_t.shape)
-    off_imps=np.zeros(bound_t.shape)
-    on_imps[on_iis]+=1
-    off_imps[off_iis]+=1
+    if ii<start_from:
+        continue
+    else:
+        print(f"plotting {ii+1} of {len(boundaries)}")
+        # add the stupid prefix and suffix back to enable exact match str comparison
+        full_nm='./Sounds/'+story_nm+'_16K_NM.wav'
+        # match the textgrid fl name to appropirate wav
+        nm_match_idx=stims_dict['Name']==full_nm 
+        #note some are repeated so multiple matches will be returned
+        #grab clean wav from first match
+        # checked that indexing works with non-repeated stims also
+        stim_wav=stims_dict['orig_clean'][nm_match_idx][0]
+        wav_id=stims_dict['ID'][nm_match_idx][0]
+        t_stim=np.arange(0,stim_wav.size/fs_wavs,1/fs_wavs)
+        if t_stim.size>stim_wav.size:
+            # sometimes ends up with extra sample, remove it
+            t_stim=t_stim[:stim_wav.size]
+        bound_t,on_iis,off_iis,wrds_list=make_bounds_vctrs(bounds['words'])
+        on_imps=np.zeros(bound_t.shape)
+        off_imps=np.zeros(bound_t.shape)
+        on_imps[on_iis]+=1
+        off_imps[off_iis]+=1
 
-    fig,ax=plt.subplots()
-    ax.plot(t_stim,stim_wav,label=f"ID:{wav_id}")
-    ax.stem(bound_t,on_imps,label='onsets')
-    ax.stem(bound_t,off_imps,label='offsets')
-    plt.legend()
-    ax.set_title(f'{story_nm}')
-    fig_pth=os.path.join("..","figures","word_bounds",f"{story_nm}")
-    plt.savefig(fig_pth)
-    plt.close()
+        fig,ax=plt.subplots(figsize=(fig_width,fig_height))
+        try:
+            ax.plot(t_stim,stim_wav,label=f"ID:{wav_id}")
+            ax.stem(bound_t,on_imps,linefmt='green',label='onsets')
+            ax.stem(bound_t,off_imps,linefmt='red',label='offsets')
+            plt.legend()
+            ax.set_title(f'{story_nm}')
+            fig_pth=os.path.join("..","figures","word_bounds",f"{story_nm}")
+            plt.savefig(fig_pth)
+            if show_figs:
+                plt.show()
+            plt.close()
+        except:
+            print("something went wrong here")
+#%%
+# make surprisal values
+def load_surprisal():
+    surprisal_fl_pth=os.path.join("..","eeg_data","surprisal.bin")
+    with open(surprisal_fl_pth,'rb') as fl:
+        surprisals=pickle.load(fl)
+    return surprisals
+def make_surprisal_vector(onsets,surprisal_vals,fs_input,fs_output):
+    pass
 
-
+surprisals=load_surprisal()
+ 
