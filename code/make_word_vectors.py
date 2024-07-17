@@ -108,13 +108,14 @@ import matplotlib.pyplot as plt
 fs_wavs=stims_dict['fs'][0]
 fig_width=20
 fig_height=6
+make_figs=False
 show_figs=False
-start_from=274 # if restarting due to kernel crash
+start_from=0 # if restarting due to kernel crash
 for ii,(story_nm,bounds) in enumerate(boundaries.items()):
     if ii<start_from:
         continue
     else:
-        print(f"plotting {ii+1} of {len(boundaries)}")
+        
         # add the stupid prefix and suffix back to enable exact match str comparison
         full_nm='./Sounds/'+story_nm+'_16K_NM.wav'
         # match the textgrid fl name to appropirate wav
@@ -133,21 +134,22 @@ for ii,(story_nm,bounds) in enumerate(boundaries.items()):
         off_imps=np.zeros(bound_t.shape)
         on_imps[on_iis]+=1
         off_imps[off_iis]+=1
-
-        fig,ax=plt.subplots(figsize=(fig_width,fig_height))
-        try:
-            ax.plot(t_stim,stim_wav,label=f"ID:{wav_id}")
-            ax.stem(bound_t,on_imps,linefmt='green',label='onsets')
-            ax.stem(bound_t,off_imps,linefmt='red',label='offsets')
-            plt.legend()
-            ax.set_title(f'{story_nm}')
-            fig_pth=os.path.join("..","figures","word_bounds",f"{story_nm}")
-            plt.savefig(fig_pth)
-            if show_figs:
-                plt.show()
-            plt.close()
-        except:
-            print("something went wrong here")
+        if make_figs=True:
+            print(f"plotting {ii+1} of {len(boundaries)}")
+            fig,ax=plt.subplots(figsize=(fig_width,fig_height))
+            try:
+                ax.plot(t_stim,stim_wav,label=f"ID:{wav_id}")
+                ax.stem(bound_t,on_imps,linefmt='green',label='onsets')
+                ax.stem(bound_t,off_imps,linefmt='red',label='offsets')
+                plt.legend()
+                ax.set_title(f'{story_nm}')
+                fig_pth=os.path.join("..","figures","word_bounds",f"{story_nm}")
+                plt.savefig(fig_pth)
+                if show_figs:
+                    plt.show()
+                plt.close()
+            except:
+                print("something went wrong here")
 #%%
 # make surprisal values
 def load_surprisal():
