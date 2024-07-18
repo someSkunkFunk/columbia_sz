@@ -1,10 +1,10 @@
 #script for converting textgrid file information into phoneme and word vectors
 #%%
 # INIT
-
 import os
 import utils
 import numpy as np
+from string import punctuation
 import pickle
 # assume short format only (and that phone precedes word tier in each case)
 def read_textgrid(textgrid_path):
@@ -40,8 +40,9 @@ def get_word_boundaries(textgrid_path,remove_sp=True,nums2float=True):
         wrds=list(filter(lambda x: x[-1]!='"sp"',wrds))
     if nums2float:
         # convert numbers to float from str
-        phns=[[float(x[0]),float(x[1]),x[2]] for x in phns]
-        wrds=[[float(x[0]),float(x[1]),x[2]] for x in wrds]
+        # and remove quotation marks from strings
+        phns=[[float(x[0]),float(x[1]),x[2].replace('"',"")] for x in phns]
+        wrds=[[float(x[0]),float(x[1]),x[2].replace('"',"")] for x in wrds]
     return phns, wrds
 
 
@@ -158,10 +159,51 @@ def load_surprisal():
     with open(surprisal_fl_pth,'rb') as fl:
         surprisals=pickle.load(fl)
     return surprisals
-def make_surprisal_vector(onsets,surprisal_vals,fs_input,fs_output):
+def make_surprisal_vector(onsets,surprisal_vals,fs_output=100):
+    '''
+    onsets are in seconds relative to sentence beginning
+    '''
     pass
 
+def pair_surp_stims(surprisals, stims_dict):
+    '''
+    wont work for phonemes since matching based on words in stims_dict
+    need to regroup word surprisals with corresponding stim ID
+    returns:
+    stim_surprisal_dict: {'stim_id':[IDs], 'words': [words]}
+    '''
+    paired_surprisals={}
+    srprs_idx=0 # keep track of where in surprisals lists we are
+    for stim_id,stim_nm,stim_str in zip(stims_dict['ID'],
+    stims_dict['Name'],
+    stims_dict['String']):
+        if isinstance(stim_str,str):
+            # note: using split without parameter automaticall strips trailing whitespace,
+            # which was giving an error before when using split(" ")
+            stim_word_list=stim_str.split()
+        # for some weird reason some strings return an array??
+        elif isinstance(stim_str,np.ndarray):
+            stim_word_list=stim_str[0].split()
+        else:
+            pass
+        n_wrds=len(stim_word_list)
+        srprs_word_list=surprisals["words"][srprs_idx:srprs_idx+n_wrds]
+        #remove punctuation before word-matching
+        stim_word_list=[s.translate(str.maketrans('','',punctuation)) for s in stim_word_list]
+        srprs_word_list=[s.translate(str.maketrans('','',punctuation)) for s in srprs_word_list]
 
+        #ensure words match in both lists
+        if all([w1.lower()==w2.lower() for w1,w2 in zip(stim_word_list,srprs_word_list)]):
+            paired_surprisals['ID']=stim_id
+            paired_surprisals['Name']=stim_nm
+            paired_surprisals['surprise_values']=surprisals["values"].squeeze()[srprs_idx:srprs_idx+n_wrds]
+        else:
+            raise NotImplementedError("word lists do not match!")
+
+        #update index
+        srprs_idx+=n_wrds
+    return paired_surprisals
+    
 # dict: {'values, 'words'}
 surprisals=load_surprisal()
- 
+paired_surprisals=pair_surp_stims(surprisals,stims_dict)
