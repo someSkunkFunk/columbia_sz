@@ -6,7 +6,7 @@
 #SBATCH -t 12:00:00
 #SBATCH --mem=60gb
 #SBATCH -n 22 ##Number of tasks
-#SBATCH -J block6_thresh000_bkwdmodels
+#SBATCH -J noiseblocks_thresh000_bkwdmodels
 #SBATCH --partition=standard
 
 
@@ -24,15 +24,15 @@ date
 
 hostname
 
-echo "bckwrd model with nested cross validation"
+echo "bckwrd model with nested cross validation on just the noisy blocks"
 export direction="-1"
 export which_stmps="evnt"
 export which_xcorr="wavs"
 export evnt_thresh="000"
 export k_folds="5"
 export shuffle_trials="true"
-export blocks="6"
-## export blocks="1,2,3,4,5"
+## export blocks="6"
+export blocks="1,2,3,4,5"
 ## export blocks="all"
 export cv_method='nested'
 export which_envs="rms"
