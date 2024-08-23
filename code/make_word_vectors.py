@@ -6,6 +6,7 @@ import utils
 import numpy as np
 from string import punctuation
 import pickle
+import matplotlib.pyplot as plt
 # assume short format only (and that phone precedes word tier in each case)
 def read_textgrid(textgrid_path):
     '''
@@ -45,13 +46,98 @@ def get_word_boundaries(textgrid_path,remove_sp=True,nums2float=True):
         wrds=[[float(x[0]),float(x[1]),x[2].replace('"',"")] for x in wrds]
     return phns, wrds
 
+def make_bounds_vctrs(bounds:list,fs=16e3,displace_offset=True):
+    # should work with either words or phns, but must be fed individually
+    # since operating on individual stimulus set of boundaries
+    # assumes time in seconds
+    print(f"using fs: {fs} to make onset offset vectors") #NOTE UNSURE IF 16kHz or 11025
+    # add string prefix and suffix back to enable exact string comparison
+    t_max=bounds[-1][1] # assuming last value for phn AND wrds is the same 
+    time_vec=np.arange(0,t_max,1/fs)
+    on_iis=[None]*len(bounds)
+    off_iis=[None]*len(bounds)
+    wrds_list=[None]*len(bounds)
+    # and corresponds with final word; also units of seconds assumed
+    for ii, (on_t, off_t, word) in enumerate(bounds):
+        # since boundaries are sparse, just return indices along with time vector, use indices to populate at plotting time
+        on_iis[ii]=np.argmin(np.abs(time_vec-on_t))
+        if displace_offset:
+            # shift offsets so stems don't plot on top of each other for visualization
+            _amt_shift=200 # number of samples to shift offset by
+            off_iis[ii]=np.argmin(np.abs(time_vec-off_t))-_amt_shift
+        wrds_list[ii]=word
+    return time_vec,on_iis,off_iis,wrds_list
 
+
+
+# make surprisal values
+def load_surprisal():
+    surprisal_fl_pth=os.path.join("..","eeg_data","surprisal.bin")
+    with open(surprisal_fl_pth,'rb') as fl:
+        surprisals=pickle.load(fl)
+    return surprisals
+def make_surprisal_vector(onsets,surprisal_vals,fs_output=100):
+    '''
+    onsets are in seconds relative to sentence beginning
+    '''
+    pass
+
+def pair_surp_stims(surprisals, stims_dict):
+    '''
+    ACTUALLY just realized the point of this function is to pair each sentence with surprisal values for that sentence, which is unnecessary since Jin provided surprisals already organized in this fashin now...
+    so really all there is to do is verify that the stims words list for each sentence match that of the provided surprisal values, then use those along with textgrid time bounds to make word vectors...
+    surprisals: dict - {story_nm: [([word strings], [surprisal numbers])]}
+
+    returns:
+    stim_surprisal_dict: {'stim_id':[IDs], 'words': [words]}
+    '''
+    paired_surprisals={}
+    # i think indexing method came from the old surprisals dict having the entire story in one list rather than sentece by sentence....
+    # so i muted all lines with srprs_idx
+    # look at names just to check that surprisals dict matches info on original stims_dict
+    stim_nms=utils.get_story_nms(stims_dict,detailed=False)
+    # srprs_idx=0 # keep track of where in surprisals lists we are
+    # get current sentence from stims_dict for comparison
+
+    for stim_id,stim_nm,stim_str in zip(stims_dict['ID'],
+    stim_nms,
+    stims_dict['String']):
+        if isinstance(stim_str,str):
+            # note: using split without parameter automaticall strips trailing whitespace,
+            # which was giving an error before when using split(" ")
+            stim_word_list=stim_str.split()
+        # for some weird reason some strings return an array??
+        elif isinstance(stim_str,np.ndarray):
+            stim_word_list=stim_str[0].split()
+        else:
+            pass
+        n_wrds=len(stim_word_list)
+        # get words list for current story,sentence:
+
+        # srprs_word_list=surprisals["words"][srprs_idx:srprs_idx+n_wrds]
+
+        #remove punctuation before word-matching
+        stim_word_list=[s.translate(str.maketrans('','',punctuation)) for s in stim_word_list]
+        srprs_word_list=[s.translate(str.maketrans('','',punctuation)) for s in srprs_word_list]
+
+        #ensure words match in both lists (assumes in same order in surprisals.bin)
+        if all([w1.lower()==w2.lower() for w1,w2 in zip(stim_word_list,srprs_word_list)]):
+            paired_surprisals['ID']=stim_id
+            paired_surprisals['Name']=stim_nm
+            
+            # paired_surprisals['surprise_values']=surprisals["values"].squeeze()[srprs_idx:srprs_idx+n_wrds]
+        else:
+            raise NotImplementedError("word lists do not match!")
+
+        #update index
+        # srprs_idx+=n_wrds
+    return paired_surprisals
 #%%
 # EXEC
 stim_fl_path=os.path.join("..","eeg_data","stim_info.mat")
 stims_dict=utils.get_stims_dict(stim_fl_path)
 # strip prefix and suffix in stim names to match textgrid file names
-
+#TODO: we have a function for this now
 stim_nms=[n.replace('./Sounds/','') for n in stims_dict['Name']]
 #note pretty sure this means the textgrids have time in 16kHz 
 # fs instead of original audio fs
@@ -83,41 +169,18 @@ else:
     print('done.')
 
 # visualize stims along with waveforms to verify fs
-def make_bounds_vctrs(bounds:list,fs=16e3,displace_offset=True):
-    # shoudl work with either words or phns, but must be fed individually
-    # since operating on individual stimulus set of boundaries
-    # assumes time in seconds
-    print(f"using fs: {fs} to make onset offset vectors") #NOTE UNSURE IF 16kHz or 11025
-    # add string prefix and suffix back to enable exact string comparison
-    t_max=bounds[-1][1] # assuming last value for phn AND wrds is the same 
-    time_vec=np.arange(0,t_max,1/fs)
-    on_iis=[None]*len(bounds)
-    off_iis=[None]*len(bounds)
-    wrds_list=[None]*len(bounds)
-    # and corresponds with final word; also units of seconds assumed
-    for ii, (on_t, off_t, word) in enumerate(bounds):
-        # since boundaries are sparse, just return indices along with time vector, use indices to populate at plotting time
-        on_iis[ii]=np.argmin(np.abs(time_vec-on_t))
-        if displace_offset:
-            # shift offsets so stems don't plot on top of each other for visualization
-            _amt_shift=200 # number of samples to shift offset by
-            off_iis[ii]=np.argmin(np.abs(time_vec-off_t))-_amt_shift
-        wrds_list[ii]=word
-    return time_vec,on_iis,off_iis,wrds_list
-
-import matplotlib.pyplot as plt
-fs_wavs=stims_dict['fs'][0]
-fig_width=20
-fig_height=6
 make_figs=False
 show_figs=False
-start_from=0 # if restarting due to kernel crash
+
 if make_figs==True:
+    fs_wavs=stims_dict['fs'][0]
+    fig_width=20
+    fig_height=6    
+    start_from=0 # if restarting due to kernel crash
     for ii,(story_nm,bounds) in enumerate(boundaries.items()):
         if ii<start_from:
             continue
         else:
-            
             # add the stupid prefix and suffix back to enable exact match str comparison
             full_nm='./Sounds/'+story_nm+'_16K_NM.wav'
             # match the textgrid fl name to appropirate wav
@@ -152,58 +215,8 @@ if make_figs==True:
                 plt.close()
             except:
                 print("something went wrong here")
-#%%
-# make surprisal values
-def load_surprisal():
-    surprisal_fl_pth=os.path.join("..","eeg_data","surprisal.bin")
-    with open(surprisal_fl_pth,'rb') as fl:
-        surprisals=pickle.load(fl)
-    return surprisals
-def make_surprisal_vector(onsets,surprisal_vals,fs_output=100):
-    '''
-    onsets are in seconds relative to sentence beginning
-    '''
-    pass
-
-def pair_surp_stims(surprisals, stims_dict):
-    '''
-    wont work for phonemes since matching based on words in stims_dict
-    need to regroup word surprisals with corresponding stim ID
-    returns:
-    stim_surprisal_dict: {'stim_id':[IDs], 'words': [words]}
-    '''
-    paired_surprisals={}
-    srprs_idx=0 # keep track of where in surprisals lists we are
-    for stim_id,stim_nm,stim_str in zip(stims_dict['ID'],
-    stims_dict['Name'],
-    stims_dict['String']):
-        if isinstance(stim_str,str):
-            # note: using split without parameter automaticall strips trailing whitespace,
-            # which was giving an error before when using split(" ")
-            stim_word_list=stim_str.split()
-        # for some weird reason some strings return an array??
-        elif isinstance(stim_str,np.ndarray):
-            stim_word_list=stim_str[0].split()
-        else:
-            pass
-        n_wrds=len(stim_word_list)
-        srprs_word_list=surprisals["words"][srprs_idx:srprs_idx+n_wrds]
-        #remove punctuation before word-matching
-        stim_word_list=[s.translate(str.maketrans('','',punctuation)) for s in stim_word_list]
-        srprs_word_list=[s.translate(str.maketrans('','',punctuation)) for s in srprs_word_list]
-
-        #ensure words match in both lists
-        if all([w1.lower()==w2.lower() for w1,w2 in zip(stim_word_list,srprs_word_list)]):
-            paired_surprisals['ID']=stim_id
-            paired_surprisals['Name']=stim_nm
-            paired_surprisals['surprise_values']=surprisals["values"].squeeze()[srprs_idx:srprs_idx+n_wrds]
-        else:
-            raise NotImplementedError("word lists do not match!")
-
-        #update index
-        srprs_idx+=n_wrds
-    return paired_surprisals
     
 # dict: {'values, 'words'}
 surprisals=load_surprisal()
+#%%
 paired_surprisals=pair_surp_stims(surprisals,stims_dict)

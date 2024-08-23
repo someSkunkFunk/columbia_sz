@@ -70,9 +70,10 @@ def group_stories(stims_dict,story_nms,story_filter):
 
     return grouped_strings,keep_ids
 
-# i learned how to use map function finally oooo...
-story_nms_detailed=list(map(lambda n: n.replace('./Sounds/','').replace('_16K_NM.wav',''), stims_dict["Name"]))
-story_nms=list(map(lambda n: n.split("_")[1].rstrip(digits), story_nms_detailed))
+
+
+story_nms_detailed=utils.get_story_nms(stims_dict,detailed=True)
+story_nms=utils.get_story_nms(stims_dict,detailed=False)
 # generate set of unique stories since some are repeated with different speaker/noise but doesn't affect surprisal value:
 gender_stories=set([n.rstrip(digits) for n in story_nms_detailed])
 stories=set([nm.split('_')[1] for nm in gender_stories])
@@ -92,18 +93,25 @@ print(f"numbers consistent? {consistent_bool}")
 story_filter=make_story_filter(story_stim_ids)
 for story_info,filter_value in zip(story_stim_ids,story_filter):
     print(story_info,filter_value)
-grouped_transcripts=group_stories(stims_dict,story_nms,story_filter)
+grouped_transcripts,grouped_ids=group_stories(stims_dict,story_nms,story_filter)
+print(grouped_transcripts)
+#TODO: re-verify that grouped_ids doesn't contain 
+print(grouped_ids)
+#%%
+tr_pth=os.path.join("..","eeg_data","grouped_transcripts.pkl")
+ids_pth=os.path.join("..","eeg_data","grouped_ids.pkl")
+with open(tr_pth,'wb') as fl:
+    pickle.dump(grouped_transcripts,fl)
+with open(ids_pth,'wb') as fl:
+    pickle.dump(grouped_ids,fl)
 
+
+
+# for sentence,nm in zip(stims_dict['String'],story_nms_detailed):
     
-
-
-
-
-for sentence,nm in zip(stims_dict['String'],story_nms_detailed):
-    
-    if isinstance(sentence,str):
-        pass
-    elif isinstance(sentence,np.ndarray):
-        print(sentence)
-        print(sentence[0])
-        print(type(sentence[0]))
+#     if isinstance(sentence,str):
+#         pass
+#     elif isinstance(sentence,np.ndarray):
+#         print(sentence)
+#         print(sentence[0])
+#         print(type(sentence[0]))

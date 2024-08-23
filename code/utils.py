@@ -1,3 +1,14 @@
+from string import digits
+def get_story_nms(stims_dict,detailed=False):
+    'helper function for trimming out garbage from stim names and just keep story title'
+    # i learned how to use map function finally oooo...
+    story_nms_detailed=list(map(lambda n: n.replace('./Sounds/','').replace('_16K_NM.wav',''), stims_dict["Name"]))
+    if detailed:
+        return story_nms_detailed
+    else:
+        story_nms=list(map(lambda n: n.split("_")[1].rstrip(digits), story_nms_detailed))
+        return story_nms
+
 def filter_lists_with_indices(lists_to_filter, filtered_indices):
     'filter list based on list of indices'
     filtered_lists = [[inner[idx] for idx in filtered_indices] for inner in lists_to_filter]
