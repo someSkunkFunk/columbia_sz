@@ -132,16 +132,67 @@ def pair_surp_stims(surprisals, stims_dict):
         #update index
         # srprs_idx+=n_wrds
     return paired_surprisals
+
+def check_wordlists_match(*word_lists):
+        '''
+        tiddiesgive list of word lists for particular sentence, check that all lists have the same words (for arbitrary number of word lists - at least 2)
+        '''
+        if not word_lists:
+            raise ValueError('no lists.') 
+        sentence_len=len(word_lists[0])
+        # check all equal
+        lengths_match=[sentence_len==len(l) for l in word_lists]
+        if not all(lengths_match):
+            raise Exception('List lengths need to match!')
+        for word_indx in range(sentence_len):
+            #note: might need to remove spaces and punctuation as well...?
+            words_at_indx=[lst[word_indx].lower() for lst in word_lists]
+            if len(set(words_at_indx))!=1:
+                return False
+        return True
+def match_short_nm(long_nm,short_nms):
+    '''
+    helper function to match detailed/long name to corresponding short sor
+    '''
+    pass
+def pair_surprisals_with_boundaries(surprisals,boundaries):
+    # get just word boundaries for simplicity
+    word_boundaries={lng_nm:stnc['words'] for lng_nm,stnc in boundaries.items()}
+    story_nms=list(surprisals.keys())
+    surp_bounds_dict={}
+    for stnc_nm_long,stnc_word_bounds in word_boundaries.items():
+        # get words for current sentence into separate list
+        bound_stnc_list=[x[-1].lower() for x in stnc_word_bounds]
+        #TODO: check is punctuation removal/other weird shit needed here
+        
+        story_nm_mask=[True if short_nm in stnc_nm_long else False for short_nm in surprisals]
+        story_nm_idx=story_nm_mask.index(True)
+        # get all surprisal organized by sentence from current story
+        current_story=story_nms[story_nm_idx]
+        for surp_stnc_list,stnc_surp_vals in surprisals[current_story]: 
+            # check that word lists match
+            if check_wordlists_match(surp_stnc_list,bound_stnc_list):
+                surp_bounds_dict[stnc_nm_long]=(surp_stnc_list,stnc_surp_vals,stnc_word_bouns)
+    return supr_bounds_dict
+    
+# note: seems like below function won't be necessary since surprisals already arranged by sentences
+# instead need to match that back to original stimulus ID somehow
+# def get_sentence_boundaries(boundaries,story_nm):
+#     '''
+#     arrange boundaries into sentences for a particular story
+#     '''
+
+#     pass
 #%%
 # EXEC
 stim_fl_path=os.path.join("..","eeg_data","stim_info.mat")
 stims_dict=utils.get_stims_dict(stim_fl_path)
 # strip prefix and suffix in stim names to match textgrid file names
 #TODO: we have a function for this now
-stim_nms=[n.replace('./Sounds/','') for n in stims_dict['Name']]
-#note pretty sure this means the textgrids have time in 16kHz 
-# fs instead of original audio fs
-stim_nms=[n.replace('_16K_NM.wav','') for n in stim_nms]
+# stim_nms=[n.replace('./Sounds/','') for n in stims_dict['Name']]
+# #note pretty sure this means the textgrids have time in 16kHz 
+# # fs instead of original audio fs
+# stim_nms=[n.replace('_16K_NM.wav','') for n in stim_nms]
 
 textgrids_path=os.path.join("..","eeg_data","textgrids")
 textgrids_fnms=os.listdir(textgrids_path)
@@ -218,5 +269,9 @@ if make_figs==True:
     
 # dict: {'values, 'words'}
 surprisals=load_surprisal()
-#%%
-paired_surprisals=pair_surp_stims(surprisals,stims_dict)
+story_nms_detailed=utils.get_story_nms(stims_dict,detailed=True)
+# for detailed_sntc_nm in story_nms_detailed:
+#     story_nms=surprisals.keys()
+    
+#     current_story=story_nms[story_idx]
+poop=pair_surprisals_with_boundaries(surprisals,boundaries)
