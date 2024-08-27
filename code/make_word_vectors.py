@@ -135,21 +135,23 @@ def pair_surp_stims(surprisals, stims_dict):
 
 def check_wordlists_match(*word_lists):
         '''
-        tiddiesgive list of word lists for particular sentence, check that all lists have the same words (for arbitrary number of word lists - at least 2)
+        give list of word lists for particular sentence, check that all lists have the same words (for arbitrary number of word lists - at least 2)
         '''
         if not word_lists:
-            raise ValueError('no lists.') 
+            raise ValueError('no lists.')
+        words_match=False
         sentence_len=len(word_lists[0])
         # check all equal
         lengths_match=[sentence_len==len(l) for l in word_lists]
-        if not all(lengths_match):
-            raise Exception('List lengths need to match!')
-        for word_indx in range(sentence_len):
-            #note: might need to remove spaces and punctuation as well...?
-            words_at_indx=[lst[word_indx].lower() for lst in word_lists]
-            if len(set(words_at_indx))!=1:
-                return False
-        return True
+        if all(lengths_match):
+            # raise Exception('List lengths need to match!')
+            
+            for word_indx in range(sentence_len):
+                #note: might need to remove spaces and punctuation as well...?
+                words_at_indx=[lst[word_indx].lower() for lst in word_lists]
+            if len(set(words_at_indx))==1:
+                words_match=True
+        return words_match
 def match_short_nm(long_nm,short_nms):
     '''
     helper function to match detailed/long name to corresponding short sor
@@ -163,16 +165,30 @@ def pair_surprisals_with_boundaries(surprisals,boundaries):
     for stnc_nm_long,stnc_word_bounds in word_boundaries.items():
         # get words for current sentence into separate list
         bound_stnc_list=[x[-1].lower() for x in stnc_word_bounds]
-        #TODO: check is punctuation removal/other weird shit needed here
+        #TODO: check if punctuation removal/other weird shit needed here
         
         story_nm_mask=[True if short_nm in stnc_nm_long else False for short_nm in surprisals]
         story_nm_idx=story_nm_mask.index(True)
         # get all surprisal organized by sentence from current story
         current_story=story_nms[story_nm_idx]
-        for surp_stnc_list,stnc_surp_vals in surprisals[current_story]: 
+        current_story_surprisal=surprisals[current_story]
+        
+        for ii, (surp_stnc_list,stnc_surp_vals) in enumerate(current_story_surprisal): 
             # check that word lists match
-            if check_wordlists_match(surp_stnc_list,bound_stnc_list):
-                surp_bounds_dict[stnc_nm_long]=(surp_stnc_list,stnc_surp_vals,stnc_word_bouns)
+            # print(f'{current_story} {ii}')
+            words_match=check_wordlists_match(surp_stnc_list,bound_stnc_list)
+            if words_match:
+                surp_bounds_dict[stnc_nm_long]=(surp_stnc_list,stnc_surp_vals,stnc_word_bounds)
+                # remove matched element from surprisals so won't re-check on next sentence
+                surprisals[current_story].pop(ii)
+                current_story_surprisal.pop(ii)
+                print(f"number remanining in {current_story}: {len(current_story_surprisal)}")
+                print(f"nmber equals number remaining in surprisals[current_story]: {len(surprisals[current_story])==len(current_story_surprisal)}")
+                break
+                # NOTE: surprisals should ideally have nothing in it by the time this function is done running due to pop?
+
+            # CONTINUE HERE....
+            
     return supr_bounds_dict
     
 # note: seems like below function won't be necessary since surprisals already arranged by sentences
@@ -274,4 +290,5 @@ story_nms_detailed=utils.get_story_nms(stims_dict,detailed=True)
 #     story_nms=surprisals.keys()
     
 #     current_story=story_nms[story_idx]
+# NOTE: after this function runs, suprisals should have nothing in it
 poop=pair_surprisals_with_boundaries(surprisals,boundaries)
