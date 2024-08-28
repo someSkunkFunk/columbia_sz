@@ -157,9 +157,19 @@ def match_short_nm(long_nm,short_nms):
     helper function to match detailed/long name to corresponding short sor
     '''
     pass
-def pair_surprisals_with_boundaries(surprisals,boundaries):
+def pair_surprisals_with_boundaries(surprisals,boundaries,exclude_stories={'hankFour','common'}):
     # get just word boundaries for simplicity
-    word_boundaries={lng_nm:stnc['words'] for lng_nm,stnc in boundaries.items()}
+    word_boundaries_temp={lng_nm:stnc['words'] for lng_nm,stnc in boundaries.items()}
+    # remove excluded stories
+    word_boundaries={}
+    for lng_nm,stnc in word_boundaries_temp.items():
+        in_exclude=any([xclude_nm in lng_nm for xclude_nm in exclude_stories])
+        if in_exclude:
+            continue
+        else:
+            word_boundaries[lng_nm]=stnc
+    del word_boundaries_temp
+
     story_nms=list(surprisals.keys())
     surp_bounds_dict={}
     for stnc_nm_long,stnc_word_bounds in word_boundaries.items():
@@ -168,7 +178,10 @@ def pair_surprisals_with_boundaries(surprisals,boundaries):
         #TODO: check if punctuation removal/other weird shit needed here
         
         story_nm_mask=[True if short_nm in stnc_nm_long else False for short_nm in surprisals]
-        story_nm_idx=story_nm_mask.index(True)
+        try:
+            story_nm_idx=story_nm_mask.index(True)
+        except:
+            pass
         # get all surprisal organized by sentence from current story
         current_story=story_nms[story_nm_idx]
         current_story_surprisal=surprisals[current_story]
@@ -180,10 +193,10 @@ def pair_surprisals_with_boundaries(surprisals,boundaries):
             if words_match:
                 surp_bounds_dict[stnc_nm_long]=(surp_stnc_list,stnc_surp_vals,stnc_word_bounds)
                 # remove matched element from surprisals so won't re-check on next sentence
-                surprisals[current_story].pop(ii)
+                # surprisals[current_story].pop(ii)
                 current_story_surprisal.pop(ii)
                 print(f"number remanining in {current_story}: {len(current_story_surprisal)}")
-                print(f"nmber equals number remaining in surprisals[current_story]: {len(surprisals[current_story])==len(current_story_surprisal)}")
+                # print(f"nmber equals number remaining in surprisals[current_story]: {len(surprisals[current_story])==len(current_story_surprisal)}")
                 break
                 # NOTE: surprisals should ideally have nothing in it by the time this function is done running due to pop?
 
@@ -203,12 +216,6 @@ def pair_surprisals_with_boundaries(surprisals,boundaries):
 # EXEC
 stim_fl_path=os.path.join("..","eeg_data","stim_info.mat")
 stims_dict=utils.get_stims_dict(stim_fl_path)
-# strip prefix and suffix in stim names to match textgrid file names
-#TODO: we have a function for this now
-# stim_nms=[n.replace('./Sounds/','') for n in stims_dict['Name']]
-# #note pretty sure this means the textgrids have time in 16kHz 
-# # fs instead of original audio fs
-# stim_nms=[n.replace('_16K_NM.wav','') for n in stim_nms]
 
 textgrids_path=os.path.join("..","eeg_data","textgrids")
 textgrids_fnms=os.listdir(textgrids_path)
