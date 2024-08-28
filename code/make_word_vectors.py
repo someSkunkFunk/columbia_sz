@@ -172,6 +172,9 @@ def pair_surprisals_with_boundaries(surprisals,boundaries,exclude_stories={'hank
 
     story_nms=list(surprisals.keys())
     surp_bounds_dict={}
+    # keep track of sentence names long for future reference of mismatched stims
+    word_bounds_long_nms=list(word_boundaries.keys())
+    paired_long_nms=[]
     for stnc_nm_long,stnc_word_bounds in word_boundaries.items():
         # get words for current sentence into separate list
         bound_stnc_list=[x[-1].lower() for x in stnc_word_bounds]
@@ -195,14 +198,30 @@ def pair_surprisals_with_boundaries(surprisals,boundaries,exclude_stories={'hank
                 # remove matched element from surprisals so won't re-check on next sentence
                 # surprisals[current_story].pop(ii)
                 current_story_surprisal.pop(ii)
+                paired_long_nms.append(stnc_nm_long)
                 print(f"number remanining in {current_story}: {len(current_story_surprisal)}")
                 # print(f"nmber equals number remaining in surprisals[current_story]: {len(surprisals[current_story])==len(current_story_surprisal)}")
                 break
                 # NOTE: surprisals should ideally have nothing in it by the time this function is done running due to pop?
-
-            # CONTINUE HERE....
             
-    return supr_bounds_dict
+    # print missing long nms before returning paired dict
+    all_nms_wbounds, paired_nms=set(word_bounds_long_nms), set(paired_long_nms)
+    missing_nms_set=all_nms_wbounds-paired_nms
+
+    # get number of remaining surprisal
+    missing_surprisal_stncs=[]
+    for story_nm in story_nms:
+        sentences_surprisals=surprisals[story_nm]
+        for stnc,_ in sentences_surprisals:
+            missing_surprisal_stncs.append((stnc,story_nm))
+    print(f"{len(missing_surprisal_stncs)} sentences with surprisals not paired with corresponding bounds")
+    print(f"sentences with surprisals missing bounds: {missing_surprisal_stncs}")
+    
+
+    print(f"{len(missing_nms_set)} out of {len(all_nms_wbounds)} stimuli with bounds not paired.")
+    print(f"sentences with bounds missing surprisals:\n{[nm for nm in missing_nms_set]}")
+
+    return surp_bounds_dict
     
 # note: seems like below function won't be necessary since surprisals already arranged by sentences
 # instead need to match that back to original stimulus ID somehow
