@@ -157,7 +157,8 @@ def match_short_nm(long_nm,short_nms):
     helper function to match detailed/long name to corresponding short sor
     '''
     pass
-def pair_surprisals_with_boundaries(surprisals,boundaries,exclude_stories={'hankFour','common'}):
+def pair_surprisals_with_boundaries_stupid(surprisals,boundaries,exclude_stories={'hankFour','common'}):
+    # this method didn't work for all the stimuli, and I realized was unnecessarily complicated since we can just keep track of the long names when extracting transcripts for re-mapping
     # get just word boundaries for simplicity
     word_boundaries_temp={lng_nm:stnc['words'] for lng_nm,stnc in boundaries.items()}
     # remove excluded stories
@@ -232,15 +233,41 @@ def pair_surprisals_with_boundaries(surprisals,boundaries,exclude_stories={'hank
 
 #     pass
 def get_sentence_from_bounds(boundaries,skey):
+    '''
+    don't need to prefilter just the word bounds
+    return sentence as one continuous lowercase string AND list of words
+    list useful for comparing with surprisal sentence wordlists
+    '''
     sentence_list=[x[-1].lower() for x in boundaries[skey]['words']]
     sentence_str=' '.join(sentence_list)
-    return sentence_str
+    return sentence_str, sentence_list
 def get_sentence_from_surprisal_tup(surprisal_tup):
     '''
     given particular tuple from surprisals (sentence_list, surprisal_vals), extract just the sentence
-    unlike boundaries, surprisals don't 
+    unlike boundaries, surprisals dont 
     '''
-    sentence_list=surprisal_tup
+    pass
+def get_bounds_for_sentence(boundaries,skey):
+    
+    return 
+def pair_surprisals_with_boundaries(surprisals,boundaries,surprisal_ids):
+    # get just word boundaries for simplicity
+    # word_boundaries={lng_nm:stnc['words'] for lng_nm,stnc in boundaries.items()}
+    # note word_boundaries will contain all the stimuli not just those used in surprisal transcripts
+    paired_suprisal_bounds=[]
+    mismatched_sentences=[]
+    for story in surprisals:
+        for (surprisal_sentence_list,surprisal_vals),(long_nm,stim_id) in zip(surprisals,surprisal_ids):
+            bound_sentence_str,bound_sentence_list=get_sentence_from_bounds(boundaries,long_nm)
+            words_do_match=check_wordlists_match(bound_sentence_list,surprisal_sentence_list)
+            if words_do_match:
+                paired_surprisal_bounds.append((long_nm,boundaries[long_nm],surprisal_vals,stim_id))
+            else:
+                print(f"{long_nm} not found")
+                mismatched_sentences.append((long_nm,surprisal_sentence_list,bound_sentence_list))
+    print(f"mismatched_sentences: {mismatched_sentences}")
+    return paired_surprisal_bounds, mismatched_sentences
+    # still need to loop thru bounds to find which were not paired with a surprisal value.... (those not in exclude stories)
 #%%
 # EXEC
 stim_fl_path=os.path.join("..","eeg_data","stim_info.mat")
@@ -327,6 +354,10 @@ story_nms_detailed=utils.get_story_nms(stims_dict,detailed=True)
 ids_pth=os.path.join("..","eeg_data","grouped_ids.pkl")
 with open(ids_pth,'rb') as f:
     surprisal_ids=pickle.load(f)
+paired_surprisal_bounds,mismatched_sentences=pair_surprisals_with_boundaries(surprisals,boundaries,surprisal_ids)
+
+
+
 # 
 # # for detailed_sntc_nm in story_nms_detailed:
 # #     story_nms=surprisals.keys()
