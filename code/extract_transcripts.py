@@ -7,7 +7,7 @@ from string import punctuation, digits
 import pickle
 
 stims_dict=utils.get_stims_dict()
-#%%
+
 # EXEC
 def check_numbers_consistent(block_parts_tally:dict,exclude_stories=None):
     # check that when story appears in multiple blocks, same number of parts in each block
@@ -51,27 +51,32 @@ def make_story_filter(story_stim_ids,exclude_stories={'hankFour','common'}):
             keep_stories_filter[ii]=True
     return keep_stories_filter
 
-def group_stories(stims_dict,story_nms,story_filter):
+def group_stories(stims_dict,story_nms,story_nms_detailed,story_filter):
     keep_strings=[(stnc,nm) for boo,stnc,nm in 
     zip(story_filter,stims_dict['String'],story_nms) if boo]
+    keep_story_nms_detailed=[long_nm for boo,long_nm in zip(story_filter,story_nms_detailed) if boo]
     # keep IDs to link back into correct trials:
     keep_ids=stims_dict['ID'][story_filter]
     
     grouped_strings={'hank':[],'howOne':[],
     'howTwo':[],'howThree':[],'howFour':[]}
-    for stnc,nm in keep_strings:
+    grouped_ids={k:[] for k in grouped_strings.keys()}
+    for (stnc,nm),id_num,long_nm in zip(keep_strings, keep_ids,keep_story_nms_detailed):
         if isinstance(stnc,np.ndarray):
             stnc=stnc[0] #extract string from array
-        # put sentences in proper list
+        # put sentences in proper list, keeping track of sentence nms and ids in separate file
         if nm.startswith('hank'):
             grouped_strings['hank'].append(stnc)
+            grouped_ids['hank'].append((long_nm,id_num))
         elif nm.startswith('how'):
             grouped_strings[nm].append(stnc)
+            grouped_ids[nm].append((long_nm,id_num))
+            
 
-    return grouped_strings,keep_ids
+    return grouped_strings,grouped_ids
 
-
-
+#%%
+# EXEC
 story_nms_detailed=utils.get_story_nms(stims_dict,detailed=True)
 story_nms=utils.get_story_nms(stims_dict,detailed=False)
 # generate set of unique stories since some are repeated with different speaker/noise but doesn't affect surprisal value:
@@ -93,11 +98,11 @@ print(f"numbers consistent? {consistent_bool}")
 story_filter=make_story_filter(story_stim_ids)
 for story_info,filter_value in zip(story_stim_ids,story_filter):
     print(story_info,filter_value)
-grouped_transcripts,grouped_ids=group_stories(stims_dict,story_nms,story_filter)
+grouped_transcripts,grouped_ids=group_stories(stims_dict,story_nms,
+story_nms_detailed,story_filter)
 print(grouped_transcripts)
 #TODO: re-verify that grouped_ids doesn't contain 
 print(grouped_ids)
-#%%
 tr_pth=os.path.join("..","eeg_data","grouped_transcripts.pkl")
 ids_pth=os.path.join("..","eeg_data","grouped_ids.pkl")
 with open(tr_pth,'wb') as fl:

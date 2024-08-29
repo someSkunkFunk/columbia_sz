@@ -231,6 +231,16 @@ def pair_surprisals_with_boundaries(surprisals,boundaries,exclude_stories={'hank
 #     '''
 
 #     pass
+def get_sentence_from_bounds(boundaries,skey):
+    sentence_list=[x[-1].lower() for x in boundaries[skey]['words']]
+    sentence_str=' '.join(sentence_list)
+    return sentence_str
+def get_sentence_from_surprisal_tup(surprisal_tup):
+    '''
+    given particular tuple from surprisals (sentence_list, surprisal_vals), extract just the sentence
+    unlike boundaries, surprisals don't 
+    '''
+    sentence_list=surprisal_tup
 #%%
 # EXEC
 stim_fl_path=os.path.join("..","eeg_data","stim_info.mat")
@@ -312,9 +322,19 @@ if make_figs==True:
 # dict: {'values, 'words'}
 surprisals=load_surprisal()
 story_nms_detailed=utils.get_story_nms(stims_dict,detailed=True)
-# for detailed_sntc_nm in story_nms_detailed:
-#     story_nms=surprisals.keys()
+# load saved ids for re-mapping surprisals back to sentence nm
+
+ids_pth=os.path.join("..","eeg_data","grouped_ids.pkl")
+with open(ids_pth,'rb') as f:
+    surprisal_ids=pickle.load(f)
+# 
+# # for detailed_sntc_nm in story_nms_detailed:
+# #     story_nms=surprisals.keys()
     
-#     current_story=story_nms[story_idx]
-# NOTE: after this function runs, suprisals should have nothing in it
-poop=pair_surprisals_with_boundaries(surprisals,boundaries)
+# #     current_story=story_nms[story_idx]
+# # NOTE: after this function runs, suprisals should have nothing in it
+# poop=pair_surprisals_with_boundaries(surprisals,boundaries)
+# del surprisals # should be empty, but aren't
+# # investigate unpaired files
+# surprisals=load_surprisal()
+#%%
