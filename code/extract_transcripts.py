@@ -124,7 +124,10 @@ with open(ids_pth,'wb') as fl:
     pickle.dump(grouped_ids,fl)
 # specific stimuli with weird formats
 bad_stim_iis=[258,259]
-
+#verify saved file is actually correct:
+with open(tr_pth,'rb') as fl:
+    output_contents=pickle.load(fl)
+print(f"output pkl has:\n{output_contents}")
 # for sentence,nm in zip(stims_dict['String'],story_nms_detailed):
     
 #     if isinstance(sentence,str):
