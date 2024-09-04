@@ -6,9 +6,6 @@ import numpy as np
 from string import punctuation, digits
 import pickle
 
-stims_dict=utils.get_stims_dict()
-
-# EXEC
 def check_numbers_consistent(block_parts_tally:dict,exclude_stories=None):
     # check that when story appears in multiple blocks, same number of parts in each block
     blocks=list(block_parts_tally.keys())
@@ -74,9 +71,25 @@ def group_stories(stims_dict,story_nms,story_nms_detailed,story_filter):
             
 
     return grouped_strings,grouped_ids
-
+def fix_stim_strings(stims_dict):
+    # fix strings that aren't actually strings for some dumb reason
+    not_strs=np.asarray([True if not isinstance(s,str) else False for s in stims_dict['String']])
+    if np.any(not_strs):
+        string_container=stims_dict['String'][not_strs]
+        for ii,s in enumerate(string_container):
+            string_container[ii]=' '.join(s)
+        stims_dict['String'][not_strs]=string_container
+        print('strings replaced!')
+    else:
+        print('all strings now, this function is unnecessary!')
+    not_strs_after=np.asarray([True if not isinstance(s,str) else False for s in stims_dict['String']])
+    print(f'any nonstrings left? {np.any(not_strs_after)}')
+    return stims_dict
 #%%
 # EXEC
+
+stims_dict=utils.get_stims_dict()
+stims_dict=fix_stim_strings(stims_dict)
 story_nms_detailed=utils.get_story_nms(stims_dict,detailed=True)
 story_nms=utils.get_story_nms(stims_dict,detailed=False)
 # generate set of unique stories since some are repeated with different speaker/noise but doesn't affect surprisal value:
@@ -109,8 +122,8 @@ with open(tr_pth,'wb') as fl:
     pickle.dump(grouped_transcripts,fl)
 with open(ids_pth,'wb') as fl:
     pickle.dump(grouped_ids,fl)
-
-
+# specific stimuli with weird formats
+bad_stim_iis=[258,259]
 
 # for sentence,nm in zip(stims_dict['String'],story_nms_detailed):
     
@@ -120,3 +133,4 @@ with open(ids_pth,'wb') as fl:
 #         print(sentence)
 #         print(sentence[0])
 #         print(type(sentence[0]))
+

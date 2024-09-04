@@ -254,10 +254,10 @@ def pair_surprisals_with_boundaries(surprisals,boundaries,surprisal_ids):
     # get just word boundaries for simplicity
     # word_boundaries={lng_nm:stnc['words'] for lng_nm,stnc in boundaries.items()}
     # note word_boundaries will contain all the stimuli not just those used in surprisal transcripts
-    paired_suprisal_bounds=[]
+    paired_surprisal_bounds=[]
     mismatched_sentences=[]
     for story in surprisals:
-        for (surprisal_sentence_list,surprisal_vals),(long_nm,stim_id) in zip(surprisals,surprisal_ids):
+        for (surprisal_sentence_list,surprisal_vals),(long_nm,stim_id) in zip(surprisals[story],surprisal_ids[story]):
             bound_sentence_str,bound_sentence_list=get_sentence_from_bounds(boundaries,long_nm)
             words_do_match=check_wordlists_match(bound_sentence_list,surprisal_sentence_list)
             if words_do_match:
