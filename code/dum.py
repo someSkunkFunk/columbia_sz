@@ -3,14 +3,22 @@
 #%%
 import utils
 import os
-import scipy.io as spio
+# import scipy.io as spio
 import numpy as np
+from mat4py import loadmat
 
 stimuliFile='speechFeats.mat'
 stimuliPath=os.path.join("..","stimuli",stimuliFile)
-stimData=spio.loadmat(stimuliPath)
+# stimData=spio.loadmat(stimuliPath)
+# note: this function only uses native python types so arrays get unwrapped
+# into nested lists so sgram is a list with outer dimension being time and inner
+# dimension being critical bands
+stimData=loadmat(stimuliPath)
+
+
 fsStim=stimData['fs']
-speechFeats=stimData['speechFeats']
+stimEnvs=[np.asarray(x['env']) for x in stimData['speechFeats']['clean']]
+# speechFeats=stimData['speechFeats']
 #%%
 def matlab_struct_to_dict(mat_struct):
     """ 
@@ -29,4 +37,4 @@ def matlab_struct_to_dict(mat_struct):
         return mat_struct
 
 
-speechFeats=matlab_struct_to_dict(speechFeats)
+speechFeats=matlab_struct_to_dict(stimData['speechFeats'])
