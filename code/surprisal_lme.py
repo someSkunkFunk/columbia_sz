@@ -4,6 +4,7 @@
 # envelope reconstruction analyses with more efficacious envelope representations 
 #%%
 import pickle
+import utils
 flpth='../results/evnt_decimate/thresh_000_5fold_shuffled_b01b02b03b04b05/sp/3244/bkwd_trf_noisy_rms_stims_nested.pkl'
 with open(flpth, 'rb') as fl:
     trf=pickle.load(fl)
@@ -11,3 +12,4 @@ with open(flpth, 'rb') as fl:
 model=trf['trained_models'][0]
 #TODO: choose optimal lambda value, train on entire dataset with that value, predict envelopes, 
 # split (reconstructed AND true) envelopes along word onsets/offsets, pair with surprisal values, run lme model
+stim_envs=utils.load_matlab_envs('clean')

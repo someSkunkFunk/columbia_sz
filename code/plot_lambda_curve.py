@@ -9,7 +9,9 @@ import utils
 
 subjs_list=utils.get_all_subj_nums()
 #NOTE THRESH FOLDS DIR HARDCODED BUT THIS MAY BE CUMBERSOME IN FUTURE
-thresh_folds_dir="thresh_750_5fold_shuffled_b06"
+# blocks=list(range(6))
+# blocks=[bl.]
+thresh_folds_dir="thresh_000_5fold_shuffled_b01b02b03b04b05"
 lambda_dir=os.path.join("..","results","evnt_decimate",
 thresh_folds_dir)
 noisy_or_clean="clean"
@@ -45,6 +47,7 @@ for indx,subj_num in enumerate(subjs_list):
         lambdas,r_vals=extract_tuning_curve(subj_lambda)
     else:
         _,r_vals=extract_tuning_curve(subj_lambda)
+    print(f"{subj_num} max lambda: {lambdas[np.argmax(r_vals)]:.3g}\n(r value:{max(r_vals):.3g})")
     # plot data
     fig,ax=plt.subplots()
     ax.plot(lambdas,r_vals)

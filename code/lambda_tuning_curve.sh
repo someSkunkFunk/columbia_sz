@@ -3,7 +3,7 @@
 
 
 ## bash script for generating lambda tuning curve
-#SBATCH -t 3:00:00
+#SBATCH -t 4:00:00
 #SBATCH --mem=60gb
 #SBATCH -n 22 ##Number of tasks
 #SBATCH -J tuning_curves_block6
@@ -24,15 +24,15 @@ date
 
 hostname
 
-echo "calculate prediction accuracy as function of lambda, only using block 6 clean data"
+echo "calculate prediction accuracy as function of lambda, only using blocks1-5 with clean envelopes, no confidence thresholding"
 
 export which_stmps="evnt"
 export which_xcorr="wavs"
-export evnt_thresh="750"
+export evnt_thresh="000"
 export k_folds="5"
 export shuffle_trials="true"
-export blocks="6"
-## export blocks="1,2,3,4,5"
+# export blocks="6"
+export blocks="1,2,3,4,5"
 ## export blocks="all"
 export which_envs="rms"
 export clean_or_noisy="clean"
