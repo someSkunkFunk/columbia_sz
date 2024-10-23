@@ -809,7 +809,7 @@ import os
 import pickle
 # don't need next line?
 # from .get_subj_cat import get_subj_cat
-def load_preprocessed(subj_num,eeg_dir=None,evnt=False,which_xcorr=None):
+def load_preprocessed(subj_num,eeg_dir=None,evnt=True,which_xcorr=None):
     '''
     helper to load segmented and preprocessed
     subject data as pandas dataframe (from pkl fl)
