@@ -1,4 +1,7 @@
 #script for converting textgrid file information into phoneme and word vectors
+# NOTE: seems we already ran this successfully (should verify)
+# but if that's the case, why did we define two unfinished (and perhaps unnecessary) functions? see below
+# TODO: get_sentence_from_surprisal_tup
 #%%
 # INIT
 import os
@@ -76,11 +79,6 @@ def load_surprisal():
     with open(surprisal_fl_pth,'rb') as fl:
         surprisals=pickle.load(fl)
     return surprisals
-def make_surprisal_vector(onsets,surprisal_vals,fs_output=100):
-    '''
-    onsets are in seconds relative to sentence beginning
-    '''
-    pass
 
 def pair_surp_stims(surprisals, stims_dict):
     '''
@@ -152,13 +150,10 @@ def check_wordlists_match(*word_lists):
             if len(set(words_at_indx))==1:
                 words_match=True
         return words_match
-def match_short_nm(long_nm,short_nms):
-    '''
-    helper function to match detailed/long name to corresponding short sor
-    '''
-    pass
+
 def pair_surprisals_with_boundaries_stupid(surprisals,boundaries,exclude_stories={'hankFour','common'}):
-    # this method didn't work for all the stimuli, and I realized was unnecessarily complicated since we can just keep track of the long names when extracting transcripts for re-mapping
+    # this method didn't work for all the stimuli, and I realized was unnecessarily complicated since 
+    # we can just keep track of the long names when extracting transcripts for re-mapping
     # get just word boundaries for simplicity
     word_boundaries_temp={lng_nm:stnc['words'] for lng_nm,stnc in boundaries.items()}
     # remove excluded stories
@@ -241,15 +236,7 @@ def get_sentence_from_bounds(boundaries,skey):
     sentence_list=[x[-1].lower() for x in boundaries[skey]['words']]
     sentence_str=' '.join(sentence_list)
     return sentence_str, sentence_list
-def get_sentence_from_surprisal_tup(surprisal_tup):
-    '''
-    given particular tuple from surprisals (sentence_list, surprisal_vals), extract just the sentence
-    unlike boundaries, surprisals dont 
-    '''
-    pass
-def get_bounds_for_sentence(boundaries,skey):
-    
-    return 
+
 def pair_surprisals_with_boundaries(surprisals,boundaries,surprisal_ids):
     # get just word boundaries for simplicity
     # word_boundaries={lng_nm:stnc['words'] for lng_nm,stnc in boundaries.items()}
@@ -268,6 +255,31 @@ def pair_surprisals_with_boundaries(surprisals,boundaries,surprisal_ids):
     print(f"mismatched_sentences: {mismatched_sentences}")
     return paired_surprisal_bounds, mismatched_sentences
     # still need to loop thru bounds to find which were not paired with a surprisal value.... (those not in exclude stories)
+#%% unfinished functions? 
+#TODO: determine if necessary?
+# based on the function names, I'm gathering that we might have figured out how to get the word timings 
+# into a dictionary but not how to pair them with surprisal values
+def get_sentence_from_surprisal_tup(surprisal_tup):
+    '''
+    given particular tuple from surprisals (sentence_list, surprisal_vals), extract just the sentence
+    unlike boundaries, surprisals dont 
+    '''
+    pass
+def get_bounds_for_sentence(boundaries,skey):
+    
+    return 
+def match_short_nm(long_nm,short_nms):
+    '''
+    TODO: determine if unnecessary?
+    helper function to match detailed/long name to corresponding short sor
+    '''
+    pass
+def make_surprisal_vector(onsets,surprisal_vals,fs_output=100):
+    '''
+    onsets are in seconds relative to sentence beginning
+    '''
+    pass
+
 #%%
 # EXEC
 stim_fl_path=os.path.join("..","eeg_data","stim_info.mat")
@@ -275,10 +287,13 @@ stims_dict=utils.get_stims_dict(stim_fl_path)
 
 textgrids_path=os.path.join("..","eeg_data","textgrids")
 textgrids_fnms=os.listdir(textgrids_path)
+
+
 extract_bounds=False
 bounds_fl_nm="phn_wrd_bounds.pkl"
 bounds_fl_pth=os.path.join("..","eeg_data",bounds_fl_nm)
 if extract_bounds:
+    # read textgrid info into pkls for easier use - should only need to run once
     boundaries={}
     for ii,stim in enumerate(stim_nms):
         print(f"extracting stim {ii+1} of {len(stim_nms)}...")
