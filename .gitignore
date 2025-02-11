@@ -10,6 +10,11 @@ config.local.yaml
 
 # Ignore eeg data because too large -> TODO: add datalad backup?
 eeg_data/
+Ed/
+data/
+results/
+figures/
+stimuli/
 # Ignore system-specific files
 .DS_Store
 Thumbs.db
