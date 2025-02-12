@@ -1,7 +1,5 @@
-#script for converting textgrid file information into phoneme and word vectors
-# NOTE: seems we already ran this successfully (should verify)
-# but if that's the case, why did we define two unfinished (and perhaps unnecessary) functions? see below
-# TODO: get_sentence_from_surprisal_tup
+# NOTE: not all stimuli were usable for surprisal calculation, so we should filter trf results
+# also need to account for mismatched sentences somehow
 #%%
 # INIT
 import os
@@ -243,7 +241,7 @@ def pair_surprisals_with_boundaries(surprisals,boundaries,surprisal_ids):
     # word_boundaries={lng_nm:stnc['words'] for lng_nm,stnc in boundaries.items()}
     # note word_boundaries will contain all the stimuli not just those used in surprisal transcripts
     paired_surprisal_bounds={}
-    mismatched_sentences=[]
+    mismatched_sentences={}
     for story in surprisals:
         for (surprisal_sentence_list,surprisal_vals),(long_nm,stim_id) in zip(surprisals[story],surprisal_ids[story]):
             bound_sentence_str,bound_sentence_list=get_sentence_from_bounds(boundaries,long_nm)
@@ -255,8 +253,12 @@ def pair_surprisals_with_boundaries(surprisals,boundaries,surprisal_ids):
                 'boundaries':boundaries[long_nm], 'surprisal':surprisal_vals
                 }
             else:
-                print(f"{long_nm} not found")
-                mismatched_sentences.append((long_nm,surprisal_sentence_list,bound_sentence_list))
+                print(f"{long_nm} sentences not matched across tg file and stimuli_info file.")
+                mismatched_sentences[stim_id]={'long_name':long_nm,             
+                    'sentence_words_surprisal': surprisal_sentence_list,
+                    'sentence_words_textgrid': bound_sentence_list
+                }
+                # mismatched_sentences.append((long_nm,surprisal_sentence_list,bound_sentence_list))
     print(f"mismatched_sentences: {mismatched_sentences}")
     return paired_surprisal_bounds, mismatched_sentences
     # still need to loop thru bounds to find which were not paired with a surprisal value.... (those not in exclude stories)
@@ -273,9 +275,13 @@ textgrids_fnms=os.listdir(textgrids_path)
 extract_bounds=False
 bounds_fl_nm="phn_wrd_bounds.pkl"
 bounds_fl_pth=os.path.join("..","eeg_data",bounds_fl_nm)
+# NOTE: stuff below doesn't need to run again unless we want to re-read the 
+# textgrid files but also if we do then we need to make stim_nms variable for it to run
+#  again... which I think came from stims_dict originally...??? 
 if extract_bounds:
     # read textgrid info into pkls for easier use - should only need to run once
     boundaries={}
+
     for ii,stim in enumerate(stim_nms):
         print(f"extracting stim {ii+1} of {len(stim_nms)}...")
         tg_path=os.path.join(textgrids_path,stim)
@@ -352,7 +358,7 @@ with open(ids_pth,'rb') as f:
     surprisal_ids=pkl.load(f)
 paired_surprisal_bounds,mismatched_sentences=pair_surprisals_with_boundaries(surprisals,boundaries,surprisal_ids)
 
-#%%
+#
 # choose an example subject for first run
 subj_trf_flpth='../results/evnt_decimate/thresh_000_5fold_shuffled_b01b02b03b04b05/sp/3244/bkwd_trf_noisy_rms_stims_nested.pkl'
 with open(subj_trf_flpth, 'rb') as fl:
@@ -360,6 +366,33 @@ with open(subj_trf_flpth, 'rb') as fl:
 #%%
 # IN DEVELOPMENT: get word-times and compute correlation between stim and reconstruction per word
 # then put into a dataframe
+def filter_trf_stimuli(trf,surprisal_ids):
+    '''
+    remove stimuli that don't have surprisal values because reasons
+    initiaally thought mismatched sentences should be filtered here too but that would make more sense 
+    when computing word-level correlations i think since should be rare and possibly will be able to fix some in future
+    '''
+    # assume if any of the clips within a trial missing or mismatched, trial is unusable
+    #TODO: stim_nms might be confused with other variables here... maybe 
+    # change to trial_nms since that's more clear in general?
+
+    # surprisal ids is dict organized by stories, each story has tuples 
+    # (both short name, stim_id) - match to stim_id here since that's what trf has
+    ids_with_surprisal=[experiment_id for aliases in surprisal_ids.values() for _,experiment_id in aliases]
+    # ids_without_bounds=list(mismatched_sentences.keys())
+    # NOTE: actually I don't think a trial with a single sentence missing is a problem yet since we 
+    # can use word reconstructions accuracies for rest of sentence still if it has surprisal values
+    # can filter those on a per-sentence basis when calculating correlationsw
+    # NOTE: solution below for filtering assumes relative order in lists being compared doesnt matter
+    # keep trials that have surprisal to begin with
+    indx_good_trials=[ii for ii, trial_nms in enumerate(trf['stim_nms']) if all([nm in ids_with_surprisal for nm in trial_nms])]
+    # NOTE: might not need stimulus and response if we stop saving excessive copies of them in trf:
+    keys_to_fitler=['stimulus','response','stim_nms']
+    for k in keys_to_fitler:
+        trf[k]=[trf[k][ii] for ii in indx_good_trials]
+    # TODO: verify that we dont need to return anything...?
+    # return trf_filtered    
+
 def get_word_reconstruction_accuracies(trf,paired_surprisal_bounds):
     #TODO: call trf.predict to get predicted stim envelopes
     # then use to compute per-word correlation after segmenting 
@@ -404,10 +437,9 @@ def get_word_reconstruction_accuracies(trf,paired_surprisal_bounds):
     pass
 
 #%% TEST FUNCTION HERE:
-#NOTE: I think it's bugging out at line 389 because it's trying to find the mistmatched sentences,
-# so we should account for those but also I inteded for this to stop running before it got to block 5 
-# (breakpoint should have stopped on first trial but didn't since KeyError: 'b05s02p07' is returned)
-# so at some point upstream of that we've mapped out the structures incorrectly...
+#NOTE: we filtered out trials that are unusable bc no surprisal values but still need 
+# to deal with cases whereno bounds (cuz words mismatched)
+filter_trf_stimuli(trf,surprisal_ids)
 get_word_reconstruction_accuracies(trf,paired_surprisal_bounds)
 # checking what is contained in trfs that we saved because I forgot:
 # for model in trf['trained_models']:
