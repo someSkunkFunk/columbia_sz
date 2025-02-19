@@ -395,46 +395,89 @@ def filter_trf_stimuli(trf,surprisal_ids):
 
 def get_word_reconstruction_accuracies(trf,paired_surprisal_bounds):
     #TODO: call trf.predict to get predicted stim envelopes
+    # TODO: expand clip_names_in_trials and segmented corr(stim,prediction) 
+    # into a df for usage with statsmodels LME
     # then use to compute per-word correlation after segmenting 
     # real and predicted envelopes  
     
     def segment_trials_by_words(trf,paired_surprisal_bounds):
         '''
-        TODO: this function might not be necessary...
-        NOTE: I guess we don't need paired_surprisal_bounds here since still just looking at times
+        TODO: get time_between_trials from trf... or somewhere
+        NOTE: this function might not be necessary...
         1. take in trial_nms from trf (trf['stim_nms']), 
         2. lookup corresponding tg info from paired_surprisal_bounds
         3. add durations of preceding sentences 
         to tg info of later sentences in trial 
         4. package into trial_word_times
+
+        returns
+        
+        clip_names_in_trial: list of lists where inner list indicates 
+            names clip wavs composing a trial/sentence (in experiment form) 
+        time_between_trials: list n_trials-1
         '''
         fs=100 # NOTE: i'm pretty sure this is true but should confirm
         #TODO: account for mismatched word lists in paired_surprisal_bounds
-        trial_nms=trf['stim_nms']        
+        clip_names_in_trial=trf['stim_nms']      
 
-        def get_trial_word_times(trial_nms,paired_surprisal_bounds):
+        def get_trial_word_times(clip_names_in_trial,paired_surprisal_bounds):
+            '''
+            NOTE: RELATIVE TO START OF CLIP FILE - WILL NEED TO ADD TIMES BETWEEN TRIALS 
+            TO GET ABSOLUTE TIME IN OUTSIDE SEGMENTING FUCNTION FROM SUBJECT'S TIMESTAMP DATA
+            returns
+            NOTE:sorta seems like we're overcomplicating just reorganizing paired_suprisal_bounds here
+            cuz we should have just started with this format to begin with... I guess this at least pairs
+            with the actual stimuli the subject had during experiment which is useful
+            trial_word_times: list of numpy arrays -
+                         [trials X 2 ~ [list_words_in_trial, np.array(words X 2 ~word_onset,word_offset)]]
+            
+            '''
             # TODO: this might not need to be it's own function really
             # unless we're planning to somehow vectorize the final correlation computation
             # in which case 
-            n_trials=len(trial_nms)
-            for nn_trial, names_in_trial in enumerate(trial_nms):
+            n_trials=len(clip_names_in_trial)
+            #init output
+            trial_words_times=[[[],None] for nn in range(n_trials)]
+            # trial_words=[[None] for nn in range(n_trials)]
+            for nn_trial, names_in_trial in enumerate(clip_names_in_trial):
+                # names_in_trial is list of clip_names for an individual trial
                 # get words in trial
-                trial_words=[paired_surprisal_bounds[nm]['boundaries']['words'] for nm in names_in_trial]
-                #should be a list of lists where sublists: [onset,offset,word_str]
-                n_words=sum([len(tw) for tw in trial_words])
-                trail_word_times=np.nan(n_words,2)
-                trial_words=[None]*n_words
-                # get the durations of each sentence in trial, 
-                # exclude the first one
-                for ss, (stim_id,word_info) in enumerate(names_in_trial[1:],trial_words):
-                    stim_dur=(trf['stimulus'][nn_trial][ss].size-1)/fs
+                
+                trial_word_info=[paired_surprisal_bounds[nm]['boundaries']['words'] for nm in names_in_trial]
+                #^should be a list of lists where sublists: [onset,offset,word_str]
+                #NOTE: might not n_words need but could be useful to check logic later
+                n_words_in_trial=sum([len(twi) for twi in trial_word_info])
+                
+                #init empty array to put word times into
+                trial_words_times[nn_trial][1]=np.empty((n_words_in_trial,2))*np.nan
+                ii_word=0
+                n_words_in_prev_clip=0
+                for nn_clip, clip_words in enumerate(trial_word_info):
+                    #NOTE: might not need enumerate here
+                    
+                    for nn_word, (onset,offset,word) in enumerate(clip_words):
+                        ii_word+=nn_word+n_words_in_prev_clip
+                        trial_word_times[nn_trial][1][ii_word]=[onset,offset]
+                        trial_words_times[nn_trial].append(word)
+                    # trial_words_times[nn_trial][1][nn_clip]=
+                    n_words_in_prev_clip+=len(clip_words)
 
 
-            return (trial_word_times,trial_words)
-        get_trial_word_times(trial_nms,paired_surprisal_bounds)
-        return segmented_trials
-    segment_trials_by_words(trf,paired_surprisal_bounds)
-    pass
+                
+                #NOTE: THINK IT MAKES MORE SENSE TO GET THE TIMES RELATIVE TO TRIAL 
+                # START OUTSIDE OF THIS FUNCTION WHEN SEGMENTING THE STIMULI/PREDICTIONS
+                # SO i MUTED CODE BELOW SINCE THAT'S WHERE THAT WAS GOING... TBD IF MIND CHANGES
+                # for ss, (stim_id,word_info) in enumerate(names_in_trial[1:],trial_words):
+                #     stim_dur=(trf['stimulus'][nn_trial][ss].size-1)/fs
+
+
+            return trial_word_times
+        trial_word_times=get_trial_word_times(clip_names_in_trial,paired_surprisal_bounds)
+        # abstract trials by index, link them via a dictionary
+        #NOTE: not sure if needed to expand correlations into pandas.df or 
+        # if maybe can just index clip_names_in_trial
+        trial_nums=list(range(clip_names_in_trial))  
+        return clip_names_in_trial
 
 #%% TEST FUNCTION HERE:
 #NOTE: we filtered out trials that are unusable bc no surprisal values but still need 
